@@ -1,0 +1,10 @@
+Date: 28 Oct, 2025
+
+Today I started learning about Next.js, backend basics, and CRM systems.
+
+From what I understood so far:
+1. Next.js is like an improved version of React. We can create modern web applications more easily. It includes routing and supports backend functionalities. Both frontend and backend can be managed using it, and within the same project.
+2. Backend is basically the part of the website that runs BTS. It handles storing, organizing data, connecting the website to a database etc. For example, when someone logs into a website or saves information, the backend is what processes and stores that data securely.
+3. A CRM (Customer Relationship Management) system can be used by any companies, and it helps them to save or manage customer details, track sales leads, follow up on clients, record calls, emails, and all that in one place. Basically a CRM helps businesses stay organized and improve their communication with customers.
+
+While learning all this I realized how these three things connect with each other. In a CRM project like ours, Next.js can handle both the visible interface and the backend logic that stores customer information.
