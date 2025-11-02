@@ -1,24 +1,88 @@
-// Leads Page
-
-import React from "react";
-
-const leadsData = [
-  { id: 1, name: "Naafuew Hossain", email: "naafuew@demo.com", status: "New" },
-  { id: 2, name: "Taufiq Hossain", email: "taufiq@demo.com", status: "Contacted" },
-  { id: 3, name: "Nazmul Hasan", email: "nazmul@demo.com", status: "Qualified" },
-  { id: 4, name: "Asif Anik", email: "asif@demo.com", status: "New" },
-  { id: 5, name: "Karim Hossain", email: "karim@demo.com", status: "New" },
-  { id: 6, name: "Rahim Hossain", email: "rahim@demo.com", status: "Contacted" },
-  { id: 7, name: "Rohan Hossain", email: "rohan@demo.com", status: "Qualified" }
-];
+"use client";
+import React, { useState } from "react";
 
 export default function LeadsPage() {
+  const [leads, setLeads] = useState([
+    { id: 1, name: "Naafuew Hossain", email: "naafuew@demo.com", status: "New" },
+    { id: 2, name: "Taufiq Hossain", email: "taufiq@demo.com", status: "Contacted" },
+    { id: 3, name: "Nazmul Hasan", email: "nazmul@demo.com", status: "Qualified" },
+  ]);
+
+  const [form, setForm] = useState({ name: "", email: "", status: "New" });
+
+  const handleSubmit = (e) => {
+    e.preventDefault();
+
+    if (!form.name || !form.email) {
+      alert("Please enter name and email");
+      return;
+    }
+
+    const newLead = {
+      id: leads.length + 1,
+      ...form,
+    };
+
+    setLeads([...leads, newLead]);
+
+    setForm({ name: "", email: "", status: "New" });
+  };
+
   return (
-    <div style={{ padding: "20px", fontFamily: "Arial, sans-serif" }}>
-      <h1>Leads List</h1>
+    <div style={{ padding: "25px", fontFamily: "Arial, sans-serif" }}>
+      <h1 style={{ marginBottom: "20px" }}>Leads Management</h1>
+
+      {/* form for adding leads */}
+      <form
+        onSubmit={handleSubmit}
+        style={{
+          display: "flex",
+          gap: "10px",
+          marginBottom: "20px",
+          alignItems: "center",
+        }}
+      >
+        <input
+          type="text"
+          placeholder="Name"
+          value={form.name}
+          onChange={(e) => setForm({ ...form, name: e.target.value })}
+          style={{ padding: "8px", flex: "1" }}
+        />
+        <input
+          type="email"
+          placeholder="Email"
+          value={form.email}
+          onChange={(e) => setForm({ ...form, email: e.target.value })}
+          style={{ padding: "8px", flex: "1" }}
+        />
+        <select
+          value={form.status}
+          onChange={(e) => setForm({ ...form, status: e.target.value })}
+          style={{ padding: "8px" }}
+        >
+          <option>New</option>
+          <option>Contacted</option>
+          <option>Qualified</option>
+        </select>
+        <button
+          type="submit"
+          style={{
+            padding: "8px 16px",
+            backgroundColor: "#0070f3",
+            color: "#fff",
+            border: "none",
+            cursor: "pointer",
+          }}
+        >
+          Add
+        </button>
+      </form>
+
+      {/* leads table */}
       <table style={{ width: "100%", borderCollapse: "collapse" }}>
         <thead>
-          <tr>
+          <tr style={{ backgroundColor: "#f4f4f4" }}>
             <th style={{ border: "1px solid #ccc", padding: "8px" }}>ID</th>
             <th style={{ border: "1px solid #ccc", padding: "8px" }}>Name</th>
             <th style={{ border: "1px solid #ccc", padding: "8px" }}>Email</th>
@@ -26,7 +90,7 @@ export default function LeadsPage() {
           </tr>
         </thead>
         <tbody>
-          {leadsData.map((lead) => (
+          {leads.map((lead) => (
             <tr key={lead.id}>
               <td style={{ border: "1px solid #ccc", padding: "8px" }}>{lead.id}</td>
               <td style={{ border: "1px solid #ccc", padding: "8px" }}>{lead.name}</td>
@@ -39,4 +103,3 @@ export default function LeadsPage() {
     </div>
   );
 }
-
