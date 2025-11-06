@@ -25,6 +25,12 @@ export default function CustomersPage() {
     setFormData({ name: "", email: "" });
   };
 
+  //Delete customer
+  const handleDeleteCustomer = (id) => {
+    const filtered = customers.filter((c) => c.id !== id);
+    setCustomers(filtered);
+  };
+
   return (
     <div style={{ padding: "20px", fontFamily: "Arial, sans-serif" }}>
       <h2>Customer Management</h2>
@@ -69,6 +75,7 @@ export default function CustomersPage() {
             <th style={{ border: "1px solid #ccc", padding: "8px" }}>ID</th>
             <th style={{ border: "1px solid #ccc", padding: "8px" }}>Name</th>
             <th style={{ border: "1px solid #ccc", padding: "8px" }}>Email</th>
+            <th style={{ border: "1px solid #ccc", padding: "8px" }}>Actions</th>
           </tr>
         </thead>
         <tbody>
@@ -77,6 +84,21 @@ export default function CustomersPage() {
               <td style={{ border: "1px solid #ccc", padding: "8px" }}>{c.id}</td>
               <td style={{ border: "1px solid #ccc", padding: "8px" }}>{c.name}</td>
               <td style={{ border: "1px solid #ccc", padding: "8px" }}>{c.email}</td>
+              <td style={{ border: "1px solid #ccc", padding: "8px" }}>
+                {/* Delete button */}
+                <button
+                  onClick={() => handleDeleteCustomer(c.id)}
+                  style={{
+                    backgroundColor: "#ff4d4f",
+                    color: "#fff",
+                    border: "none",
+                    padding: "5px 10px",
+                    cursor: "pointer",
+                  }}
+                >
+                  Delete
+                </button>
+              </td>
             </tr>
           ))}
         </tbody>
