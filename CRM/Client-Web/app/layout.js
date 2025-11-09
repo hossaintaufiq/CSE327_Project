@@ -30,8 +30,6 @@
 //     </html>
 //   );
 // }
-
-
 "use client";
 
 import Link from "next/link";
@@ -69,9 +67,14 @@ export default function RootLayout({ children }) {
             <Link href="/" className="hover:text-indigo-600">
               Home
             </Link>
-            <Link href="/dashboard" className="hover:text-indigo-600 font-medium">
-              Dashboard
-            </Link>
+
+            {/* Dashboard only visible when logged in */}
+            {user && (
+              <Link href="/dashboard" className="hover:text-indigo-600 font-medium">
+                Dashboard
+              </Link>
+            )}
+
             <Link href="/about" className="hover:text-indigo-600">
               About
             </Link>
@@ -82,6 +85,7 @@ export default function RootLayout({ children }) {
               Contact
             </Link>
 
+            {/* Login/Signup visible only when not logged in */}
             {!user && (
               <>
                 <Link href="/auth/login" className="hover:text-indigo-600">
@@ -93,6 +97,7 @@ export default function RootLayout({ children }) {
               </>
             )}
 
+            {/* Profile/Logout visible only when logged in */}
             {user && (
               <>
                 <Link href="/profile" className="hover:text-indigo-600">
