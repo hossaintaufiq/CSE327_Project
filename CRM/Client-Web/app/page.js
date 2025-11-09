@@ -155,17 +155,17 @@ export default function LandingPage() {
         </div>
       </section>
 
-      {/* Footer */}
+      {/* Footer
       <footer className="bg-zinc-900 text-zinc-400 py-12 px-6 mt-auto">
         <div className="max-w-7xl mx-auto flex flex-col md:flex-row justify-between items-center gap-4">
           <p>© 2025  CRM Prime. All rights reserved.</p>
           <div className="flex gap-4">
             <a href="#" className="hover:text-white transition">Privacy</a>
-            <a href="#" className="hover:text-white transition">Terms</a>
-            <a href="#" className="hover:text-white transition">Contact</a>
+            <a href="/terms" className="hover:text-white transition">Terms</a>
+            <a href="/contact" className="hover:text-white transition">Contact</a>
           </div>
         </div>
-      </footer>
+      </footer> */}
 
     </div>
   );
