@@ -1,19 +1,21 @@
-
 "use client";
 
 import Link from "next/link";
-import { useEffect, useState } from "react";
+import { useEffect, useState, useRef } from "react";
 import { auth } from "@/firebase/config";
 import { useRouter } from "next/navigation";
 import "./globals.css";
 import Footer from "./components/footer/page";
+import { ChevronDown, LogOut, User } from "lucide-react";
 
 export default function RootLayout({ children }) {
   const [user, setUser] = useState(null);
+  const [dropdownOpen, setDropdownOpen] = useState(false);
   const router = useRouter();
+  const dropdownRef = useRef(null);
 
   useEffect(() => {
-    const unsubscribe = auth.onAuthStateChanged(currentUser => {
+    const unsubscribe = auth.onAuthStateChanged((currentUser) => {
       setUser(currentUser);
     });
     return () => unsubscribe();
@@ -24,6 +26,17 @@ export default function RootLayout({ children }) {
     router.push("/auth/login");
   };
 
+  // Close dropdown if clicked outside
+  useEffect(() => {
+    const handleClickOutside = (event) => {
+      if (dropdownRef.current && !dropdownRef.current.contains(event.target)) {
+        setDropdownOpen(false);
+      }
+    };
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, []);
+
   return (
     <html lang="en">
       <body className="bg-zinc-50 dark:bg-black text-zinc-900 dark:text-zinc-100">
@@ -32,12 +45,11 @@ export default function RootLayout({ children }) {
             CRM Prime
           </Link>
 
-          <nav className="flex gap-4 text-sm items-center">
+          <nav className="flex gap-4 text-sm items-center relative">
             <Link href="/" className="hover:text-indigo-600">
               Home
             </Link>
 
-            {/* Dashboard only visible when logged in */}
             {user && (
               <Link href="/dashboard" className="hover:text-indigo-600 font-medium">
                 Dashboard
@@ -54,7 +66,6 @@ export default function RootLayout({ children }) {
               Contact
             </Link>
 
-            {/* Login/Signup visible only when not logged in */}
             {!user && (
               <>
                 <Link href="/auth/login" className="hover:text-indigo-600">
@@ -66,19 +77,41 @@ export default function RootLayout({ children }) {
               </>
             )}
 
-            {/* Profile/Logout visible only when logged in */}
+            {/* Profile Dropdown Menu */}
             {user && (
-              <>
-                <Link href="/profile" className="hover:text-indigo-600">
-                  {user.displayName || "Profile"}
-                </Link>
+              <div className="relative" ref={dropdownRef}>
                 <button
-                  onClick={handleLogout}
-                  className="text-sm hover:text-red-500 transition"
+                  onClick={() => setDropdownOpen(!dropdownOpen)}
+                  className="flex items-center gap-1 font-medium hover:text-indigo-600 transition"
                 >
-                  Logout
+                  <User className="w-4 h-4" />
+                  {user.displayName || user.email.split("@")[0]}
+                  <ChevronDown
+                    className={`w-4 h-4 transition-transform ${
+                      dropdownOpen ? "rotate-180" : ""
+                    }`}
+                  />
                 </button>
-              </>
+
+                {dropdownOpen && (
+                  <div className="absolute right-0 mt-2 w-44 bg-white dark:bg-zinc-900 rounded-lg shadow-lg border border-zinc-200 dark:border-zinc-700 z-50">
+                    <Link
+                      href="/profile"
+                      className="flex items-center gap-2 px-4 py-2 hover:bg-zinc-100 dark:hover:bg-zinc-800 text-sm"
+                      onClick={() => setDropdownOpen(false)}
+                    >
+                      <User className="w-4 h-4" /> View Profile
+                    </Link>
+                    <hr className="border-zinc-200 dark:border-zinc-700" />
+                    <button
+                      onClick={handleLogout}
+                      className="flex items-center gap-2 w-full text-left px-4 py-2 text-red-500 hover:bg-zinc-100 dark:hover:bg-zinc-800 text-sm"
+                    >
+                      <LogOut className="w-4 h-4" /> Logout
+                    </button>
+                  </div>
+                )}
+              </div>
             )}
           </nav>
         </header>
