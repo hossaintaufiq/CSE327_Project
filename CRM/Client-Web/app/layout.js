@@ -1,5 +1,6 @@
 import Link from "next/link";
 import "./globals.css";
+import Footer from "./components/footer/page";
 
 export default function RootLayout({ children }) {
   return (
@@ -13,12 +14,18 @@ export default function RootLayout({ children }) {
             <Link href="/dashboard" className="hover:text-indigo-600 font-medium">
               Dashboard
             </Link>
+            
+            <Link href="/about" className="hover:text-indigo-600">About</Link>
+            <Link href="/terms" className="hover:text-indigo-600">Terms</Link>
+            <Link href="/contact" className="hover:text-indigo-600">Contact</Link>
             <Link href="/auth/login" className="hover:text-indigo-600">Login</Link>
             <Link href="/auth/signup" className="hover:text-indigo-600">Sign Up</Link>
+            
           </nav>
         </header>
 
         <main className="pt-4">{children}</main>
+       <Footer/>
       </body>
     </html>
   );
