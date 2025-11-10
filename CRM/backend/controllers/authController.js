@@ -1,3 +1,4 @@
+<<<<<<< HEAD
 const User = require('../models/User');
 const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
@@ -57,5 +58,30 @@ exports.login = async (req, res) => {
   } catch (err) {
     console.error(err);
     res.status(500).json({ message: 'Server error' });
+=======
+import User from "../models/User.js";
+
+export const registerUser = async (req, res) => {
+  try {
+    const { uid, name, email, role } = req.body;
+    let user = await User.findOne({ uid });
+
+    if (!user) {
+      user = await User.create({ uid, name, email, role });
+    }
+
+    res.json({ success: true, user });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+};
+
+export const getProfile = async (req, res) => {
+  try {
+    const user = await User.findOne({ uid: req.user.uid });
+    res.json(user);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+>>>>>>> f43fda7bb8cfd1d10fda5257e30cb6ae392dc6d3
   }
 };
