@@ -10,7 +10,7 @@ import androidx.navigation.compose.currentBackStackEntryAsState
 data class BottomNavItem(val route: String, val label: String)
 
 @Composable
-fun BottomNavigationBar(navController: NavController) {
+fun BottomNavigation(navController: NavController) {
     val items = listOf(
         BottomNavItem("dashboard", "Dashboard"),
         BottomNavItem("leads", "Leads"),
