@@ -2,13 +2,15 @@
 // "use client";
 // import { useState } from "react";
 // import { createUserWithEmailAndPassword, updateProfile } from "firebase/auth";
-// import { auth } from "@/firebase/config"; // make sure this path matches your setup
+// import { auth } from "@/firebase/config";
 // import { useRouter } from "next/navigation";
+// import { motion, AnimatePresence } from "framer-motion";
 
 // export default function Signup() {
 //   const [form, setForm] = useState({ name: "", email: "", password: "" });
 //   const [showPassword, setShowPassword] = useState(false);
 //   const [loading, setLoading] = useState(false);
+//   const [success, setSuccess] = useState(false);
 //   const router = useRouter();
 
 //   const handleSubmit = async (e) => {
@@ -16,20 +18,25 @@
 //     setLoading(true);
 
 //     try {
-//       // Create user with email and password
+//       // Create user
 //       const userCredential = await createUserWithEmailAndPassword(
 //         auth,
 //         form.email,
 //         form.password
 //       );
 
-//       // Update user profile with display name
+//       // Update display name
 //       await updateProfile(userCredential.user, {
 //         displayName: form.name,
 //       });
 
-//       alert("Account created successfully! 🎉");
-//       router.push("/dashboard"); // redirect wherever you want
+//       // Show animated success popup
+//       setSuccess(true);
+
+//       // Redirect to login after 2 seconds
+//       setTimeout(() => {
+//         router.push("/auth/login");
+//       }, 2000);
 //     } catch (error) {
 //       console.error("Signup error:", error.message);
 //       alert(error.message);
@@ -45,6 +52,21 @@
 //       <div className="absolute top-24 -left-10 w-28 h-28 bg-indigo-600/40 rounded-3xl animate-spin-slow [transform:rotateX(25deg)] shadow-2xl"></div>
 //       <div className="absolute bottom-32 right-10 w-16 h-16 bg-indigo-500/40 rounded-xl animate-bounce"></div>
 //       <div className="absolute top-1/2 left-1/2 w-20 h-20 bg-indigo-800/30 rounded-lg animate-slow-bounce"></div>
+
+//       {/* Animated success popup */}
+//       <AnimatePresence>
+//         {success && (
+//           <motion.div
+//             initial={{ opacity: 0, scale: 0.9, y: -30 }}
+//             animate={{ opacity: 1, scale: 1, y: 0 }}
+//             exit={{ opacity: 0, scale: 0.9, y: -30 }}
+//             transition={{ duration: 0.3 }}
+//             className="fixed top-10 left-1/2 transform -translate-x-1/2 bg-green-500 text-white px-6 py-3 rounded-lg shadow-lg text-sm font-semibold flex items-center space-x-2 z-50"
+//           >
+//             <span>🎉 Account created successfully! Redirecting...</span>
+//           </motion.div>
+//         )}
+//       </AnimatePresence>
 
 //       {/* Form */}
 //       <div className="relative bg-white/10 backdrop-blur-xl p-10 rounded-2xl border border-white/10 w-full max-w-md shadow-2xl transform hover:scale-[1.02] transition">
@@ -105,7 +127,11 @@
 //           <button
 //             type="submit"
 //             disabled={loading}
-//             className="w-full py-3 mt-2 bg-indigo-600 hover:bg-indigo-700 rounded-lg font-semibold shadow-lg transition transform hover:scale-105 disabled:opacity-50"
+//             className={`w-full py-3 mt-2 rounded-lg font-semibold shadow-lg transition transform hover:scale-105 ${
+//               loading
+//                 ? "bg-indigo-400 cursor-not-allowed"
+//                 : "bg-indigo-600 hover:bg-indigo-700"
+//             }`}
 //           >
 //             {loading ? "Creating..." : "Create Account"}
 //           </button>
@@ -124,7 +150,6 @@
 // }
 
 
-// new code 
 "use client";
 import { useState } from "react";
 import { createUserWithEmailAndPassword, updateProfile } from "firebase/auth";
@@ -137,39 +162,72 @@ export default function Signup() {
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
   const [success, setSuccess] = useState(false);
+  const [error, setError] = useState("");
   const router = useRouter();
+
+  // Password validation rules
+  const passwordRules = {
+    minLength: /.{8,}/,
+    upperCase: /[A-Z]/,
+    lowerCase: /[a-z]/,
+    number: /[0-9]/,
+    specialChar: /[!@#$%^&*]/,
+  };
+
+  const validatePassword = (password) => {
+    return Object.values(passwordRules).every((regex) => regex.test(password));
+  };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
     setLoading(true);
+    setError("");
+
+    // Validate password
+    if (!validatePassword(form.password)) {
+      setError(
+        "Password does not meet all requirements. Please fix the issues below."
+      );
+      setLoading(false);
+      return;
+    }
 
     try {
-      // Create user
       const userCredential = await createUserWithEmailAndPassword(
         auth,
         form.email,
         form.password
       );
 
-      // Update display name
       await updateProfile(userCredential.user, {
         displayName: form.name,
       });
 
-      // Show animated success popup
       setSuccess(true);
 
       // Redirect to login after 2 seconds
       setTimeout(() => {
         router.push("/auth/login");
       }, 2000);
-    } catch (error) {
-      console.error("Signup error:", error.message);
-      alert(error.message);
+    } catch (err) {
+      console.error("Signup error:", err.message);
+
+      // Check if email already exists
+      if (err.code === "auth/email-already-in-use") {
+        setError("❌ This email is already registered. Please login or use another email.");
+      } else {
+        setError(err.message);
+      }
     } finally {
       setLoading(false);
     }
   };
+
+  const renderRule = (label, test) => (
+    <p className={`text-sm ${test ? "text-green-400" : "text-red-400"}`}>
+      {test ? "✔️" : "❌"} {label}
+    </p>
+  );
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-black text-white px-4 relative overflow-hidden">
@@ -179,7 +237,7 @@ export default function Signup() {
       <div className="absolute bottom-32 right-10 w-16 h-16 bg-indigo-500/40 rounded-xl animate-bounce"></div>
       <div className="absolute top-1/2 left-1/2 w-20 h-20 bg-indigo-800/30 rounded-lg animate-slow-bounce"></div>
 
-      {/* Animated success popup */}
+      {/* Success popup */}
       <AnimatePresence>
         {success && (
           <motion.div
@@ -200,6 +258,8 @@ export default function Signup() {
         <p className="text-zinc-300 text-center text-sm mb-6">
           AI-powered CRM — Automate & Grow Faster 🚀
         </p>
+
+        {error && <p className="text-red-400 text-sm mb-2">{error}</p>}
 
         <form onSubmit={handleSubmit} className="space-y-5">
           {/* Name */}
@@ -247,6 +307,31 @@ export default function Signup() {
             >
               {showPassword ? "🙈" : "👁️"}
             </button>
+
+            {/* Password rules */}
+            <div className="mt-2 space-y-1">
+              {Object.entries(passwordRules).map(([key, regex]) => {
+                const labelMap = {
+                  minLength: "At least 8 characters",
+                  upperCase: "At least 1 uppercase letter",
+                  lowerCase: "At least 1 lowercase letter",
+                  number: "At least 1 number",
+                  specialChar: "At least 1 special character (!@#$%^&*)",
+                };
+                return (
+                  <p
+                    key={key}
+                    className={`text-sm ${
+                      regex.test(form.password)
+                        ? "text-green-400"
+                        : "text-red-400"
+                    }`}
+                  >
+                    {regex.test(form.password) ? "✔️" : "❌"} {labelMap[key]}
+                  </p>
+                );
+              })}
+            </div>
           </div>
 
           {/* Button */}
