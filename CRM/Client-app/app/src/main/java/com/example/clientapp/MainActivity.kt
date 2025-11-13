@@ -1,11 +1,18 @@
 package com.example.clientapp
 
-import androidx.appcompat.app.AppCompatActivity
 import android.os.Bundle
+import androidx.activity.ComponentActivity
+import androidx.activity.compose.setContent
+import com.example.clientapp.ui.screens.LeadsScreen
+import com.example.clientapp.ui.theme.CRMAppTheme
 
-class MainActivity : AppCompatActivity() {
+class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        println("Hello from ClientApp Kotlin frontend!")
+        setContent {
+            CRMAppTheme {
+                LeadsScreen()
+            }
+        }
     }
 }
