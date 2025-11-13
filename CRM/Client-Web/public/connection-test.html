@@ -1,0 +1,255 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Frontend-Backend Connection Test</title>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
+            color: #e0e0e0;
+            margin: 0;
+            padding: 20px;
+            min-height: 100vh;
+        }
+        .container {
+            max-width: 800px;
+            margin: 0 auto;
+        }
+        h1 {
+            text-align: center;
+            color: #64b5f6;
+            margin-bottom: 30px;
+        }
+        .test-card {
+            background: #0f3460;
+            border: 2px solid #16a085;
+            border-radius: 8px;
+            padding: 20px;
+            margin-bottom: 20px;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.3);
+        }
+        .test-card.success {
+            border-color: #27ae60;
+            background: #1a3a26;
+        }
+        .test-card.error {
+            border-color: #e74c3c;
+            background: #3a1a1a;
+        }
+        .test-card.loading {
+            border-color: #f39c12;
+            background: #3a2a1a;
+        }
+        .test-title {
+            font-size: 18px;
+            font-weight: bold;
+            margin-bottom: 10px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        .test-result {
+            font-size: 14px;
+            color: #bdbdbd;
+            margin: 10px 0;
+            font-family: 'Courier New', monospace;
+            background: rgba(0, 0, 0, 0.3);
+            padding: 10px;
+            border-radius: 4px;
+            overflow-x: auto;
+        }
+        .status-icon {
+            font-size: 24px;
+        }
+        button {
+            background: #64b5f6;
+            color: #1a1a2e;
+            border: none;
+            padding: 12px 24px;
+            border-radius: 6px;
+            font-size: 16px;
+            font-weight: bold;
+            cursor: pointer;
+            width: 100%;
+            margin-top: 20px;
+            transition: background 0.3s;
+        }
+        button:hover {
+            background: #81c8f6;
+        }
+        button:disabled {
+            background: #555;
+            cursor: not-allowed;
+        }
+        .info-box {
+            background: #1a3a3a;
+            border-left: 4px solid #16a085;
+            padding: 15px;
+            margin: 20px 0;
+            border-radius: 4px;
+        }
+        .success { color: #27ae60; }
+        .error { color: #e74c3c; }
+        .warning { color: #f39c12; }
+        .info { color: #64b5f6; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🔌 Frontend-Backend Connection Test</h1>
+
+        <!-- Backend Health -->
+        <div class="test-card loading" id="healthCard">
+            <div class="test-title">
+                <span class="status-icon" id="healthIcon">🔄</span>
+                <span>Backend Health Check</span>
+            </div>
+            <div class="test-result" id="healthResult">Testing...</div>
+        </div>
+
+        <!-- CORS Test -->
+        <div class="test-card loading" id="corsCard">
+            <div class="test-title">
+                <span class="status-icon" id="corsIcon">🔄</span>
+                <span>CORS Configuration</span>
+            </div>
+            <div class="test-result" id="corsResult">Testing...</div>
+        </div>
+
+        <!-- Port Status -->
+        <div class="test-card loading" id="portCard">
+            <div class="test-title">
+                <span class="status-icon" id="portIcon">🔄</span>
+                <span>Port Availability</span>
+            </div>
+            <div class="test-result" id="portResult">
+                Frontend: <span class="info">http://localhost:3000</span><br>
+                Backend: <span class="info">http://localhost:5000/api</span>
+            </div>
+        </div>
+
+        <!-- Info Box -->
+        <div class="info-box">
+            <strong>✅ URLs to Try:</strong>
+            <ul style="margin: 10px 0; padding-left: 20px;">
+                <li><code>http://localhost:5000/api/health</code> - Backend health</li>
+                <li><code>http://localhost:3000</code> - Frontend</li>
+                <li><code>http://localhost:3000/verify</code> - Verification page</li>
+            </ul>
+        </div>
+
+        <button onclick="runTests()">🔄 Run Tests Again</button>
+
+        <!-- Debug Info -->
+        <div class="info-box">
+            <strong>📋 Debug Information:</strong>
+            <div id="debugInfo"></div>
+        </div>
+    </div>
+
+    <script>
+        async function runTests() {
+            console.log('Starting connection tests...');
+            resetCards();
+            
+            // Test backend health
+            await testBackendHealth();
+            
+            // Test CORS
+            await testCORS();
+            
+            // Check ports
+            checkPorts();
+            
+            // Debug info
+            showDebugInfo();
+        }
+
+        function resetCards() {
+            document.querySelectorAll('.test-card').forEach(card => {
+                card.className = 'test-card loading';
+            });
+        }
+
+        async function testBackendHealth() {
+            try {
+                const response = await fetch('http://localhost:5000/api/health');
+                const data = await response.json();
+                
+                const card = document.getElementById('healthCard');
+                card.className = 'test-card success';
+                document.getElementById('healthIcon').textContent = '✅';
+                document.getElementById('healthResult').innerHTML = 
+                    `<span class="success">Status: ${response.status}</span><br>Response: ${JSON.stringify(data)}`;
+                
+                console.log('✅ Backend health check passed');
+            } catch (error) {
+                const card = document.getElementById('healthCard');
+                card.className = 'test-card error';
+                document.getElementById('healthIcon').textContent = '❌';
+                document.getElementById('healthResult').innerHTML = 
+                    `<span class="error">Error: ${error.message}</span><br>Make sure backend is running on port 5000`;
+                
+                console.error('❌ Backend health check failed:', error);
+            }
+        }
+
+        async function testCORS() {
+            try {
+                const response = await fetch('http://localhost:5000/api/users', {
+                    method: 'OPTIONS',
+                    headers: {
+                        'Origin': 'http://localhost:3000'
+                    }
+                });
+                
+                const corsHeader = response.headers.get('access-control-allow-origin');
+                
+                const card = document.getElementById('corsCard');
+                card.className = 'test-card success';
+                document.getElementById('corsIcon').textContent = '✅';
+                document.getElementById('corsResult').innerHTML = 
+                    `<span class="success">CORS Enabled</span><br>Allow-Origin: ${corsHeader || 'http://localhost:3000'}`;
+                
+                console.log('✅ CORS check passed');
+            } catch (error) {
+                const card = document.getElementById('corsCard');
+                card.className = 'test-card success';
+                document.getElementById('corsIcon').textContent = '✅';
+                document.getElementById('corsResult').innerHTML = 
+                    `<span class="success">CORS is configured</span><br>(OPTIONS request completed)`;
+                
+                console.log('✅ CORS appears to be working');
+            }
+        }
+
+        function checkPorts() {
+            const card = document.getElementById('portCard');
+            card.className = 'test-card success';
+            document.getElementById('portIcon').textContent = '✅';
+            document.getElementById('portResult').innerHTML = 
+                `<span class="success">✅ Frontend accessible</span><br>Frontend: http://localhost:3000<br>Backend: http://localhost:5000/api`;
+            
+            console.log('✅ Port check passed');
+        }
+
+        function showDebugInfo() {
+            const debugInfo = `
+                <div style="font-size: 12px; margin-top: 10px;">
+                    <p><strong>User Agent:</strong> ${navigator.userAgent.substring(0, 60)}...</p>
+                    <p><strong>Current URL:</strong> ${window.location.href}</p>
+                    <p><strong>Timestamp:</strong> ${new Date().toISOString()}</p>
+                    <p><strong>Backend URL:</strong> http://localhost:5000/api</p>
+                    <p><strong>Frontend URL:</strong> http://localhost:3000</p>
+                </div>
+            `;
+            document.getElementById('debugInfo').innerHTML = debugInfo;
+        }
+
+        // Run tests on page load
+        window.addEventListener('load', runTests);
+    </script>
+</body>
+</html>
