@@ -24,3 +24,6 @@ const analytics = getAnalytics(app);
 
 
 database configuration
+username: hossainahmmedtaufiq22_db_user
+password: hossainahmmed12345
+connection string : mongodb+srv://hossainahmmedtaufiq22_db_user:hossainahmmed12345@user.9b6agx4.mongodb.net/?appName=User

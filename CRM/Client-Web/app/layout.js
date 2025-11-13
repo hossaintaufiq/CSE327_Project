@@ -65,6 +65,7 @@ export default function RootLayout({ children }) {
             <Link href="/contact" className="hover:text-indigo-600">
               Contact
             </Link>
+            
 
             {!user && (
               <>
