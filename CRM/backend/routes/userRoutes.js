@@ -1,6 +1,8 @@
 import express from "express";
 import { authMiddleware } from "../middleware/authMiddleware.js";
 import User from "../models/user.js";
+// ensure Company model is registered with mongoose before any populate calls
+import Company from "../models/Company.js";
 
 const router = express.Router();
 
