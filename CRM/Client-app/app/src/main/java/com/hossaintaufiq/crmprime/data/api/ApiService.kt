@@ -1,6 +1,6 @@
-package com.crm.clientapp.data.api
+package com.hossaintaufiq.crmprime.data.api
 
-import com.crm.clientapp.data.models.*
+import com.hossaintaufiq.crmprime.data.models.*
 import retrofit2.Response
 import retrofit2.http.*
 

@@ -1,4 +1,4 @@
-package com.crm.clientapp.ui.screens
+package com.hossaintaufiq.crmprime.ui.screens
 
 import androidx.compose.foundation.layout.*
 import androidx.compose.material3.*

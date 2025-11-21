@@ -1,10 +1,10 @@
-package com.crm.clientapp.ui.viewmodel
+package com.hossaintaufiq.crmprime.ui.viewmodel
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import com.crm.clientapp.data.api.ApiClient
-import com.crm.clientapp.data.models.*
-import com.crm.clientapp.data.store.AuthStore
+import com.hossaintaufiq.crmprime.data.api.ApiClient
+import com.hossaintaufiq.crmprime.data.models.*
+import com.hossaintaufiq.crmprime.data.store.AuthStore
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.auth.FirebaseUser
 import kotlinx.coroutines.flow.MutableStateFlow

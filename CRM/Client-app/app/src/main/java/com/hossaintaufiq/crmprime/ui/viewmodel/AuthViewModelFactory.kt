@@ -1,9 +1,9 @@
-package com.crm.clientapp.ui.viewmodel
+package com.hossaintaufiq.crmprime.ui.viewmodel
 
 import android.content.Context
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
-import com.crm.clientapp.data.store.AuthStore
+import com.hossaintaufiq.crmprime.data.store.AuthStore
 
 class AuthViewModelFactory(private val context: Context) : ViewModelProvider.Factory {
     override fun <T : ViewModel> create(modelClass: Class<T>): T {

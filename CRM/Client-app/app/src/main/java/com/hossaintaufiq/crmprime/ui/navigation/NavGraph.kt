@@ -1,4 +1,4 @@
-package com.crm.clientapp.ui.navigation
+package com.hossaintaufiq.crmprime.ui.navigation
 
 import androidx.compose.foundation.layout.*
 import androidx.compose.material3.*
@@ -10,12 +10,12 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavHostController
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
-import com.crm.clientapp.ui.screens.ClientsScreen
-import com.crm.clientapp.ui.screens.DashboardScreen
-import com.crm.clientapp.ui.screens.LoginScreen
-import com.crm.clientapp.ui.screens.SignupScreen
-import com.crm.clientapp.ui.viewmodel.AuthViewModel
-import com.crm.clientapp.ui.viewmodel.AuthViewModelFactory
+import com.hossaintaufiq.crmprime.ui.screens.ClientsScreen
+import com.hossaintaufiq.crmprime.ui.screens.DashboardScreen
+import com.hossaintaufiq.crmprime.ui.screens.LoginScreen
+import com.hossaintaufiq.crmprime.ui.screens.SignupScreen
+import com.hossaintaufiq.crmprime.ui.viewmodel.AuthViewModel
+import com.hossaintaufiq.crmprime.ui.viewmodel.AuthViewModelFactory
 
 sealed class Screen(val route: String) {
     object Login : Screen("login")

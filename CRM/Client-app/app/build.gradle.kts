@@ -5,11 +5,11 @@ plugins {
 }
 
 android {
-    namespace = "com.crm.clientapp"
+    namespace = "com.hossaintaufiq.crmprime"
     compileSdk = 34
 
     defaultConfig {
-        applicationId = "com.crm.clientapp"
+        applicationId = "com.hossaintaufiq.crmprime"
         minSdk = 24
         targetSdk = 34
         versionCode = 1

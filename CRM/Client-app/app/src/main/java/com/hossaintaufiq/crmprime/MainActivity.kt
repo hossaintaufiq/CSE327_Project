@@ -1,4 +1,4 @@
-package com.crm.clientapp
+package com.hossaintaufiq.crmprime
 
 import android.os.Bundle
 import androidx.activity.ComponentActivity
@@ -9,10 +9,10 @@ import androidx.compose.material3.Surface
 import androidx.compose.ui.Modifier
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.compose.rememberNavController
-import com.crm.clientapp.data.store.AuthStore
-import com.crm.clientapp.ui.navigation.NavGraph
-import com.crm.clientapp.ui.theme.CRMClientAppTheme
-import com.crm.clientapp.ui.viewmodel.AuthViewModel
+import com.hossaintaufiq.crmprime.data.store.AuthStore
+import com.hossaintaufiq.crmprime.ui.navigation.NavGraph
+import com.hossaintaufiq.crmprime.ui.theme.CRMClientAppTheme
+import com.hossaintaufiq.crmprime.ui.viewmodel.AuthViewModel
 
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {

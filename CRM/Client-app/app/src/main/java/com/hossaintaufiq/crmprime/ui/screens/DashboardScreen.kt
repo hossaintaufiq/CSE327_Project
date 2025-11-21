@@ -1,4 +1,4 @@
-package com.crm.clientapp.ui.screens
+package com.hossaintaufiq.crmprime.ui.screens
 
 import androidx.compose.foundation.layout.*
 import androidx.compose.material3.*
@@ -9,8 +9,8 @@ import androidx.compose.ui.unit.dp
 import android.content.Context
 import androidx.compose.ui.platform.LocalContext
 import androidx.lifecycle.viewmodel.compose.viewModel
-import com.crm.clientapp.ui.viewmodel.AuthViewModel
-import com.crm.clientapp.ui.viewmodel.AuthViewModelFactory
+import com.hossaintaufiq.crmprime.ui.viewmodel.AuthViewModel
+import com.hossaintaufiq.crmprime.ui.viewmodel.AuthViewModelFactory
 
 @Composable
 fun DashboardScreen(

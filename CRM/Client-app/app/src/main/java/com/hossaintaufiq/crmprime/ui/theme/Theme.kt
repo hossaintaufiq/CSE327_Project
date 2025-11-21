@@ -1,4 +1,4 @@
-package com.crm.clientapp.ui.theme
+package com.hossaintaufiq.crmprime.ui.theme
 
 import android.app.Activity
 import androidx.compose.foundation.isSystemInDarkTheme

@@ -1,4 +1,4 @@
-package com.crm.clientapp.data.store
+package com.hossaintaufiq.crmprime.data.store
 
 import android.content.Context
 import androidx.datastore.core.DataStore
@@ -6,10 +6,10 @@ import androidx.datastore.preferences.core.Preferences
 import androidx.datastore.preferences.core.edit
 import androidx.datastore.preferences.core.stringPreferencesKey
 import androidx.datastore.preferences.preferencesDataStore
-import com.crm.clientapp.data.api.ApiClient
-import com.crm.clientapp.data.models.Company
-import com.crm.clientapp.data.models.CompanyMembership
-import com.crm.clientapp.data.models.User
+import com.hossaintaufiq.crmprime.data.api.ApiClient
+import com.hossaintaufiq.crmprime.data.models.Company
+import com.hossaintaufiq.crmprime.data.models.CompanyMembership
+import com.hossaintaufiq.crmprime.data.models.User
 import kotlinx.coroutines.flow.first
 
 private val Context.dataStore: DataStore<Preferences> by preferencesDataStore(name = "auth_store")

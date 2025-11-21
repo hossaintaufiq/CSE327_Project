@@ -1,4 +1,4 @@
-package com.crm.clientapp.data.models
+package com.hossaintaufiq.crmprime.data.models
 
 import com.google.gson.annotations.SerializedName
 

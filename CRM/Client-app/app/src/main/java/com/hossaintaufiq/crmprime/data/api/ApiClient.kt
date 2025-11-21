@@ -1,6 +1,6 @@
-package com.crm.clientapp.data.api
+package com.hossaintaufiq.crmprime.data.api
 
-import com.crm.clientapp.BuildConfig
+import com.hossaintaufiq.crmprime.BuildConfig
 import okhttp3.Interceptor
 import okhttp3.OkHttpClient
 import okhttp3.logging.HttpLoggingInterceptor
