@@ -1,0 +1,38 @@
+import express from 'express';
+import { verifyFirebaseToken } from '../middleware/auth.js';
+import { verifyCompanyAccess } from '../middleware/companyAccess.js';
+import { checkRole } from '../middleware/roleCheck.js';
+import {
+  createCompany,
+  joinCompany,
+  listMyCompanies,
+  getCompanyMembers,
+} from '../controllers/companyController.js';
+import { getEmployeeProfile } from '../controllers/employeeController.js';
+import { getCompanyProfile, updateCompanyProfile } from '../controllers/companyProfileController.js';
+import { getRolesAndPermissions, updateUserRole, removeUserFromCompany } from '../controllers/rolesPermissionsController.js';
+import { getCompanySettings, updateCompanySettings } from '../controllers/settingsController.js';
+
+const router = express.Router();
+
+router.use(verifyFirebaseToken);
+
+// Routes that don't require company access
+router.post('/create', createCompany);
+router.post('/join', joinCompany);
+router.get('/my-companies', listMyCompanies);
+
+// Routes that require company access
+router.get('/members', verifyCompanyAccess, getCompanyMembers); // Get members of the active company
+router.get('/members/:employeeId/profile', verifyCompanyAccess, checkRole(['company_admin', 'manager']), getEmployeeProfile); // Get employee profile
+router.get('/profile', verifyCompanyAccess, checkRole(['company_admin']), getCompanyProfile); // Get company profile
+router.put('/profile', verifyCompanyAccess, checkRole(['company_admin']), updateCompanyProfile); // Update company profile
+router.get('/roles', verifyCompanyAccess, checkRole(['company_admin']), getRolesAndPermissions); // Get roles and permissions
+router.put('/roles/:userId', verifyCompanyAccess, checkRole(['company_admin']), updateUserRole); // Update user role
+router.delete('/roles/:userId', verifyCompanyAccess, checkRole(['company_admin']), removeUserFromCompany); // Remove user from company
+router.get('/settings', verifyCompanyAccess, checkRole(['company_admin']), getCompanySettings); // Get company settings
+router.put('/settings', verifyCompanyAccess, checkRole(['company_admin']), updateCompanySettings); // Update company settings
+router.get('/:companyId/members', verifyCompanyAccess, checkRole(['company_admin', 'manager']), getCompanyMembers);
+
+export default router;
+

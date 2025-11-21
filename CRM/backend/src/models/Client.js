@@ -1,0 +1,62 @@
+import mongoose from 'mongoose';
+
+const clientSchema = new mongoose.Schema(
+  {
+    companyId: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: 'Company',
+      required: true,
+    },
+    name: {
+      type: String,
+      required: true,
+      trim: true,
+    },
+    email: {
+      type: String,
+      required: false, // Email is optional for leads
+      lowercase: true,
+      trim: true,
+      default: '',
+    },
+    phone: {
+      type: String,
+      trim: true,
+    },
+    address: {
+      type: String,
+      trim: true,
+    },
+    company: {
+      type: String,
+      trim: true,
+    },
+    assignedTo: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: 'User',
+      default: null,
+    },
+    status: {
+      type: String,
+      enum: ['active', 'inactive', 'lead', 'customer'],
+      default: 'lead',
+    },
+    notes: {
+      type: String,
+      trim: true,
+    },
+    isActive: {
+      type: Boolean,
+      default: true,
+    },
+  },
+  { timestamps: true }
+);
+
+clientSchema.index({ companyId: 1, createdAt: -1 });
+clientSchema.index({ assignedTo: 1 });
+clientSchema.index({ email: 1 });
+clientSchema.index({ status: 1 });
+
+export const Client = mongoose.model('Client', clientSchema);
+
