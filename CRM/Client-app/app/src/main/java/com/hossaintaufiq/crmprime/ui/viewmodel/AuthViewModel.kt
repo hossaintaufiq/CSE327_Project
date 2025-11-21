@@ -32,11 +32,11 @@ class AuthViewModel(
         viewModelScope.launch {
             try {
                 authStore.loadFromStorage()
-                checkAuthState()
             } catch (e: Exception) {
-                // Handle initialization errors gracefully
-                _uiState.value = _uiState.value.copy(error = "Initialization error: ${e.message}")
+                // Silently handle initialization errors - don't block app startup
+                android.util.Log.e("AuthViewModel", "Error loading from storage: ${e.message}")
             }
+            checkAuthState()
         }
     }
     
@@ -59,33 +59,43 @@ class AuthViewModel(
                 
                 if (firebaseUser != null) {
                     // Get ID token
-                    val idToken = firebaseUser.getIdToken(false).await().token
+                    val idTokenResult = firebaseUser.getIdToken(false).await()
+                    val idToken = idTokenResult.token
                     
                     if (idToken != null) {
                         authStore.setIdToken(idToken)
                         
                         // Call backend to get user data
-                        val response = ApiClient.apiService.getMe()
-                        if (response.isSuccessful && response.body()?.success == true) {
-                            val user = response.body()?.data
-                            if (user != null) {
-                                authStore.setUser(user)
-                                _uiState.value = _uiState.value.copy(
-                                    isLoading = false,
-                                    user = user,
-                                    isAuthenticated = true,
-                                    error = null
-                                )
+                        try {
+                            val response = ApiClient.apiService.getMe()
+                            if (response.isSuccessful && response.body()?.success == true) {
+                                val user = response.body()?.data
+                                if (user != null) {
+                                    authStore.setUser(user)
+                                    _uiState.value = _uiState.value.copy(
+                                        isLoading = false,
+                                        user = user,
+                                        isAuthenticated = true,
+                                        error = null
+                                    )
+                                } else {
+                                    _uiState.value = _uiState.value.copy(
+                                        isLoading = false,
+                                        error = "User data not found"
+                                    )
+                                }
                             } else {
                                 _uiState.value = _uiState.value.copy(
                                     isLoading = false,
-                                    error = "User data not found"
+                                    error = response.body()?.message ?: "Failed to get user data"
                                 )
                             }
-                        } else {
+                        } catch (apiError: Exception) {
+                            // If API call fails, still mark as authenticated with Firebase
                             _uiState.value = _uiState.value.copy(
                                 isLoading = false,
-                                error = response.body()?.message ?: "Failed to get user data"
+                                error = "Backend connection failed: ${apiError.message}",
+                                isAuthenticated = true // Firebase auth succeeded
                             )
                         }
                     } else {
@@ -120,37 +130,47 @@ class AuthViewModel(
                 
                 if (firebaseUser != null) {
                     // Get ID token
-                    val idToken = firebaseUser.getIdToken(false).await().token
+                    val idTokenResult = firebaseUser.getIdToken(false).await()
+                    val idToken = idTokenResult.token
                     
                     if (idToken != null) {
                         authStore.setIdToken(idToken)
                         
                         // Call backend signup endpoint
-                        val signupRequest = SignupRequest(email, password, name, companyName)
-                        val response = ApiClient.apiService.signup(signupRequest)
-                        
-                        if (response.isSuccessful && response.body()?.success == true) {
-                            val authResponse = response.body()?.data
-                            val user = authResponse?.user
+                        try {
+                            val signupRequest = SignupRequest(email, password, name, companyName)
+                            val response = ApiClient.apiService.signup(signupRequest)
                             
-                            if (user != null) {
-                                authStore.setUser(user)
-                                _uiState.value = _uiState.value.copy(
-                                    isLoading = false,
-                                    user = user,
-                                    isAuthenticated = true,
-                                    error = null
-                                )
+                            if (response.isSuccessful && response.body()?.success == true) {
+                                val authResponse = response.body()?.data
+                                val user = authResponse?.user
+                                
+                                if (user != null) {
+                                    authStore.setUser(user)
+                                    _uiState.value = _uiState.value.copy(
+                                        isLoading = false,
+                                        user = user,
+                                        isAuthenticated = true,
+                                        error = null
+                                    )
+                                } else {
+                                    _uiState.value = _uiState.value.copy(
+                                        isLoading = false,
+                                        error = "User data not found"
+                                    )
+                                }
                             } else {
                                 _uiState.value = _uiState.value.copy(
                                     isLoading = false,
-                                    error = "User data not found"
+                                    error = response.body()?.message ?: "Signup failed"
                                 )
                             }
-                        } else {
+                        } catch (apiError: Exception) {
+                            // If API call fails, still mark as authenticated with Firebase
                             _uiState.value = _uiState.value.copy(
                                 isLoading = false,
-                                error = response.body()?.message ?: "Signup failed"
+                                error = "Backend connection failed: ${apiError.message}",
+                                isAuthenticated = true // Firebase auth succeeded
                             )
                         }
                     } else {

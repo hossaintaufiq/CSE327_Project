@@ -11,6 +11,7 @@ import com.hossaintaufiq.crmprime.data.models.Company
 import com.hossaintaufiq.crmprime.data.models.CompanyMembership
 import com.hossaintaufiq.crmprime.data.models.User
 import kotlinx.coroutines.flow.first
+import android.util.Log
 
 private val Context.dataStore: DataStore<Preferences> by preferencesDataStore(name = "auth_store")
 
@@ -120,16 +121,21 @@ class AuthStore(private val context: Context) {
     }
     
     suspend fun loadFromStorage() {
-        val prefs = context.dataStore.data.first()
-        idToken = prefs[ID_TOKEN_KEY]
-        activeCompanyId = prefs[ACTIVE_COMPANY_ID_KEY]
-        activeCompanyRole = prefs[ACTIVE_COMPANY_ROLE_KEY]
-        
-        if (idToken != null) {
-            ApiClient.setAuthToken(idToken)
-        }
-        if (activeCompanyId != null) {
-            ApiClient.setCompanyId(activeCompanyId)
+        try {
+            val prefs = context.dataStore.data.first()
+            idToken = prefs[ID_TOKEN_KEY]
+            activeCompanyId = prefs[ACTIVE_COMPANY_ID_KEY]
+            activeCompanyRole = prefs[ACTIVE_COMPANY_ROLE_KEY]
+            
+            if (idToken != null) {
+                ApiClient.setAuthToken(idToken)
+            }
+            if (activeCompanyId != null) {
+                ApiClient.setCompanyId(activeCompanyId)
+            }
+        } catch (e: Exception) {
+            // If DataStore fails, just continue with empty state
+            android.util.Log.e("AuthStore", "Error loading from storage: ${e.message}")
         }
     }
     
