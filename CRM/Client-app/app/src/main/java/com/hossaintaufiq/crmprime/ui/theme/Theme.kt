@@ -35,7 +35,8 @@ fun CRMClientAppTheme(
         SideEffect {
             val window = (view.context as Activity).window
             window.statusBarColor = colorScheme.primary.toArgb()
-            WindowCompat.getWindowInsetsController(window, view).isAppearanceLightStatusBars = darkTheme
+            val windowInsetsController = WindowCompat.getWindowInsetsController(window, view)
+            windowInsetsController.isAppearanceLightStatusBars = !darkTheme
         }
     }
     
