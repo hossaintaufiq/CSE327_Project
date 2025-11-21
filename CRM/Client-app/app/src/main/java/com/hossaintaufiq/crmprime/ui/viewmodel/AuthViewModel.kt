@@ -30,8 +30,13 @@ class AuthViewModel(
     
     init {
         viewModelScope.launch {
-            authStore.loadFromStorage()
-            checkAuthState()
+            try {
+                authStore.loadFromStorage()
+                checkAuthState()
+            } catch (e: Exception) {
+                // Handle initialization errors gracefully
+                _uiState.value = _uiState.value.copy(error = "Initialization error: ${e.message}")
+            }
         }
     }
     

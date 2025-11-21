@@ -19,9 +19,11 @@ fun LoginScreen(
     onNavigateToSignup: () -> Unit
 ) {
     val context = LocalContext.current
-    val viewModel: AuthViewModel = viewModel(factory = AuthViewModelFactory(context))
     var email by remember { mutableStateOf("") }
     var password by remember { mutableStateOf("") }
+    
+    val viewModel: AuthViewModel = viewModel(factory = AuthViewModelFactory(context))
+    
     val uiState by viewModel.uiState.collectAsState()
     
     LaunchedEffect(uiState.isAuthenticated) {

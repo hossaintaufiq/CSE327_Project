@@ -23,8 +23,18 @@ fun ClientsScreen(
         
         Text(
             text = "Clients management screen - Coming soon",
-            style = MaterialTheme.typography.bodyMedium
+            style = MaterialTheme.typography.bodyMedium,
+            modifier = Modifier.padding(bottom = 16.dp)
         )
+        
+        Spacer(modifier = Modifier.weight(1f))
+        
+        Button(
+            onClick = onNavigateBack,
+            modifier = Modifier.fillMaxWidth()
+        ) {
+            Text("Go Back")
+        }
     }
 }
 

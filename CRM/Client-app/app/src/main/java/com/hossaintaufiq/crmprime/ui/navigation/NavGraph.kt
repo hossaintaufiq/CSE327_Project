@@ -168,6 +168,13 @@ fun PlaceholderScreen(
             text = "This screen is under development",
             modifier = Modifier.padding(top = 16.dp)
         )
+        Spacer(modifier = Modifier.weight(1f))
+        Button(
+            onClick = onNavigateBack,
+            modifier = Modifier.fillMaxWidth()
+        ) {
+            Text("Go Back")
+        }
     }
 }
 
