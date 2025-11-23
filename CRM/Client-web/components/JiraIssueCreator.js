@@ -67,9 +67,9 @@ export default function JiraIssueCreator({
       case 'primary':
         return `${baseClasses} bg-blue-600 text-white hover:bg-blue-700`;
       case 'outline':
-        return `${baseClasses} border border-gray-300 text-gray-700 hover:bg-gray-50`;
+        return `${baseClasses} border border-gray-600 text-gray-300 hover:bg-gray-700 hover:text-white`;
       default: // secondary
-        return `${baseClasses} bg-gray-100 text-gray-700 hover:bg-gray-200`;
+        return `${baseClasses} bg-gray-700 text-gray-300 hover:bg-gray-600 hover:text-white`;
     }
   };
 
@@ -85,61 +85,61 @@ export default function JiraIssueCreator({
       </button>
 
       {isOpen && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-          <div className="bg-white rounded-lg p-6 w-full max-w-md mx-4">
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+          <div className="bg-gray-800 rounded-lg p-6 w-full max-w-md border border-gray-700">
             <div className="flex items-center justify-between mb-4">
-              <h3 className="text-lg font-semibold flex items-center gap-2">
-                <Bug className="w-5 h-5" />
+              <h3 className="text-lg font-semibold text-white flex items-center gap-2">
+                <Bug className="w-5 h-5 text-blue-400" />
                 Create Jira Issue
               </h3>
               <button
                 onClick={() => setIsOpen(false)}
-                className="text-gray-400 hover:text-gray-600"
+                className="text-gray-400 hover:text-white transition-colors"
               >
                 ✕
               </button>
             </div>
 
-            <div className="text-sm text-gray-600 mb-4">
-              Creating issue for: <strong>{entityName}</strong>
+            <div className="text-sm text-gray-300 mb-4">
+              Creating issue for: <strong className="text-white">{entityName}</strong>
             </div>
 
             <form onSubmit={handleSubmit} className="space-y-4">
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
+                <label className="block text-sm font-medium text-gray-200 mb-1">
                   Summary *
                 </label>
                 <input
                   type="text"
                   value={formData.summary}
                   onChange={(e) => setFormData(prev => ({ ...prev, summary: e.target.value }))}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  className="w-full px-3 py-2 bg-gray-700 border border-gray-600 rounded-md text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                   placeholder={`Issue with ${entityName}`}
                   required
                 />
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
+                <label className="block text-sm font-medium text-gray-200 mb-1">
                   Description
                 </label>
                 <textarea
                   value={formData.description}
                   onChange={(e) => setFormData(prev => ({ ...prev, description: e.target.value }))}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  className="w-full px-3 py-2 bg-gray-700 border border-gray-600 rounded-md text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                   rows="3"
                   placeholder="Describe the issue..."
                 />
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
+                <label className="block text-sm font-medium text-gray-200 mb-1">
                   Issue Type
                 </label>
                 <select
                   value={formData.issuetype}
                   onChange={(e) => setFormData(prev => ({ ...prev, issuetype: e.target.value }))}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  className="w-full px-3 py-2 bg-gray-700 border border-gray-600 rounded-md text-white focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                 >
                   <option value="Task">Task</option>
                   <option value="Bug">Bug</option>
@@ -152,7 +152,7 @@ export default function JiraIssueCreator({
                 <button
                   type="button"
                   onClick={() => setIsOpen(false)}
-                  className="flex-1 px-4 py-2 text-gray-700 bg-gray-100 rounded-lg hover:bg-gray-200 transition-colors"
+                  className="flex-1 px-4 py-2 text-gray-300 bg-gray-700 rounded-lg hover:bg-gray-600 hover:text-white transition-colors"
                 >
                   Cancel
                 </button>

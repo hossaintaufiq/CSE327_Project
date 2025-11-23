@@ -498,6 +498,7 @@ export default function ProjectsPage() {
                         entityId={project._id}
                         entityName={project.name}
                         onIssueCreated={loadProjects}
+                        buttonVariant="outline"
                       />
                     </div>
                   </div>
