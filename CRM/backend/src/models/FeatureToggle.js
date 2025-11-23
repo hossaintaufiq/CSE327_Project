@@ -27,7 +27,6 @@ const featureToggleSchema = new mongoose.Schema(
   { timestamps: true }
 );
 
-featureToggleSchema.index({ feature: 1 });
 featureToggleSchema.index({ enabled: 1 });
 
 export const FeatureToggle = mongoose.model('FeatureToggle', featureToggleSchema);

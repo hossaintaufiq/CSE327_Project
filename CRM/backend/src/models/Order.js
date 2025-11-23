@@ -62,7 +62,6 @@ orderSchema.index({ companyId: 1, createdAt: -1 });
 orderSchema.index({ clientId: 1 });
 orderSchema.index({ assignedTo: 1 });
 orderSchema.index({ status: 1 });
-orderSchema.index({ orderNumber: 1 });
 
 export const Order = mongoose.model('Order', orderSchema);
 

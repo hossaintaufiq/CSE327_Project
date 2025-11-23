@@ -32,7 +32,6 @@ const platformSettingsSchema = new mongoose.Schema(
   { timestamps: true }
 );
 
-platformSettingsSchema.index({ key: 1 });
 platformSettingsSchema.index({ category: 1 });
 
 export const PlatformSettings = mongoose.model('PlatformSettings', platformSettingsSchema);

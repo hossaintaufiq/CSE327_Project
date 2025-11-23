@@ -26,7 +26,6 @@ const companySchema = new mongoose.Schema(
 );
 
 companySchema.index({ adminId: 1 });
-companySchema.index({ name: 1 });
 
 export const Company = mongoose.model('Company', companySchema);
 

@@ -56,8 +56,6 @@ const userSchema = new mongoose.Schema(
   { timestamps: true }
 );
 
-userSchema.index({ email: 1 });
-userSchema.index({ firebaseUid: 1 });
 userSchema.index({ 'companies.companyId': 1 });
 
 // Pre-save hook: Security validation - only super admin email can have super_admin role
