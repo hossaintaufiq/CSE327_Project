@@ -15,6 +15,7 @@ import projectRoutes from './src/routes/projectRoutes.js';
 import taskRoutes from './src/routes/taskRoutes.js';
 import testRoutes from './src/routes/testRoutes.js';
 import { errorHandler } from './src/middleware/errorHandler.js';
+import jiraRoutes from './src/routes/jiraRoutes.js';
 
 dotenv.config();
 
@@ -25,6 +26,7 @@ const PORT = process.env.PORT || 5000;
 app.use(cors({ origin: process.env.CLIENT_ORIGIN || 'http://localhost:3000', credentials: true }));
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
+app.use('/api/jira', jiraRoutes);
 
 // Initialize Firebase Admin
 initFirebaseAdmin();
