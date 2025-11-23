@@ -1,6 +1,7 @@
 import mongoose from 'mongoose';
 import { Client } from '../models/Client.js';
 import { User } from '../models/User.js';
+import { createIssue } from '../jiraClient.js';
 
 export const getClients = async (req, res) => {
   try {
@@ -174,6 +175,58 @@ export const deleteClient = async (req, res) => {
   } catch (error) {
     console.error('Error deleting client:', error);
     res.status(500).json({ message: 'Error deleting client', error: error.message });
+  }
+};
+
+/**
+ * Create a Jira issue linked to a client
+ */
+export const createJiraIssueForClient = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const companyId = req.companyId;
+    const { summary, description, issuetype = 'Bug' } = req.body;
+
+    // Find the client
+    const client = await Client.findOne({ _id: id, companyId, isActive: true });
+    if (!client) {
+      return res.status(404).json({ message: 'Client not found' });
+    }
+
+    // Create Jira issue
+    const jiraIssueData = {
+      summary: summary || `Support: ${client.name}`,
+      description: description || `Client: ${client.name}\nEmail: ${client.email}\nPhone: ${client.phone}\nIssue: ${description || 'Support request'}`,
+      issuetype,
+    };
+
+    const jiraIssue = await createIssue(jiraIssueData);
+
+    // Link Jira issue to client
+    const jiraIssueLink = {
+      issueKey: jiraIssue.key,
+      issueUrl: `${process.env.JIRA_BASE_URL}/browse/${jiraIssue.key}`,
+      createdAt: new Date(),
+    };
+
+    client.jiraIssues.push(jiraIssueLink);
+    await client.save();
+
+    res.json({
+      success: true,
+      message: 'Jira issue created and linked to client',
+      data: {
+        jiraIssue,
+        client: {
+          id: client._id,
+          name: client.name,
+          jiraIssues: client.jiraIssues,
+        },
+      },
+    });
+  } catch (error) {
+    console.error('Error creating Jira issue for client:', error);
+    res.status(500).json({ message: 'Error creating Jira issue', error: error.message });
   }
 };
 

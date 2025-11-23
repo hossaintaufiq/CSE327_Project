@@ -2,6 +2,7 @@ import mongoose from 'mongoose';
 import { Project } from '../models/Project.js';
 import { Task } from '../models/Task.js';
 import { User } from '../models/User.js';
+import { createIssue } from '../jiraClient.js';
 
 /**
  * Get all projects for a company
@@ -236,6 +237,58 @@ export const deleteProject = async (req, res) => {
   } catch (error) {
     console.error('Error deleting project:', error);
     res.status(500).json({ message: 'Error deleting project', error: error.message });
+  }
+};
+
+/**
+ * Create a Jira issue linked to a project
+ */
+export const createJiraIssueForProject = async (req, res) => {
+  try {
+    const { projectId } = req.params;
+    const companyId = req.companyId;
+    const { summary, description, issuetype = 'Bug' } = req.body;
+
+    // Find the project
+    const project = await Project.findOne({ _id: projectId, companyId, isActive: true });
+    if (!project) {
+      return res.status(404).json({ message: 'Project not found' });
+    }
+
+    // Create Jira issue
+    const jiraIssueData = {
+      summary: summary || `Project Issue: ${project.name}`,
+      description: description || `Project: ${project.name}\nDescription: ${project.description}\nIssue: ${description || 'Project blocker'}`,
+      issuetype,
+    };
+
+    const jiraIssue = await createIssue(jiraIssueData);
+
+    // Link Jira issue to project
+    const jiraIssueLink = {
+      issueKey: jiraIssue.key,
+      issueUrl: `${process.env.JIRA_BASE_URL}/browse/${jiraIssue.key}`,
+      createdAt: new Date(),
+    };
+
+    project.jiraIssues.push(jiraIssueLink);
+    await project.save();
+
+    res.json({
+      success: true,
+      message: 'Jira issue created and linked to project',
+      data: {
+        jiraIssue,
+        project: {
+          id: project._id,
+          name: project.name,
+          jiraIssues: project.jiraIssues,
+        },
+      },
+    });
+  } catch (error) {
+    console.error('Error creating Jira issue for project:', error);
+    res.status(500).json({ message: 'Error creating Jira issue', error: error.message });
   }
 };
 

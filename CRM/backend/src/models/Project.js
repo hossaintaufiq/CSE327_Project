@@ -66,6 +66,20 @@ const projectSchema = new mongoose.Schema(
       type: String,
       trim: true,
     },
+    jiraIssues: [{
+      issueKey: {
+        type: String,
+        required: true,
+      },
+      issueUrl: {
+        type: String,
+        required: true,
+      },
+      createdAt: {
+        type: Date,
+        default: Date.now,
+      },
+    }],
     isActive: {
       type: Boolean,
       default: true,

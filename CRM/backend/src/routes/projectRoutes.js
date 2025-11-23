@@ -8,6 +8,7 @@ import {
   createProject,
   updateProject,
   deleteProject,
+  createJiraIssueForProject,
 } from '../controllers/projectController.js';
 
 const router = express.Router();
@@ -31,6 +32,9 @@ router.put('/:projectId', checkRole(['company_admin', 'manager']), updateProject
 
 // Delete project (company_admin only)
 router.delete('/:projectId', checkRole(['company_admin']), deleteProject);
+
+// Create Jira issue for project
+router.post('/:projectId/jira-issue', checkRole(['company_admin', 'manager', 'employee']), createJiraIssueForProject);
 
 export default router;
 

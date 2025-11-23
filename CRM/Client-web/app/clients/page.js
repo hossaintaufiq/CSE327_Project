@@ -5,6 +5,8 @@ import { useRouter } from "next/navigation";
 import useAuthStore from "@/store/authStore";
 import apiClient from "@/utils/api";
 import Sidebar from "@/components/Sidebar";
+import JiraIssueCreator from "@/components/JiraIssueCreator";
+import JiraIssuesList from "@/components/JiraIssuesList";
 import { Plus, Edit, Trash2, Search, UserCheck, Mail, Phone, Building } from "lucide-react";
 
 export default function ClientsPage() {
@@ -320,6 +322,18 @@ export default function ClientsPage() {
                         <span className="text-sm">Assigned to: {client.assignedTo.name}</span>
                       </div>
                     )}
+                  </div>
+
+                  {/* Jira Integration */}
+                  <div className="mt-4 flex items-center justify-between">
+                    <JiraIssuesList jiraIssues={client.jiraIssues} />
+                    <JiraIssueCreator
+                      entityType="client"
+                      entityId={client._id}
+                      entityName={client.name}
+                      onIssueCreated={() => loadClients()} // Refresh the client list
+                      buttonVariant="outline"
+                    />
                   </div>
                 </div>
               ))

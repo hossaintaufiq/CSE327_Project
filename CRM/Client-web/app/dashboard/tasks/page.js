@@ -5,6 +5,8 @@ import { useRouter } from "next/navigation";
 import useAuthStore from "@/store/authStore";
 import apiClient from "@/utils/api";
 import Sidebar from "@/components/Sidebar";
+import JiraIssueCreator from "@/components/JiraIssueCreator";
+import JiraIssuesList from "@/components/JiraIssuesList";
 import { Plus, Edit, Trash2, Search, CheckSquare, Calendar, User, AlertCircle, X, FolderKanban } from "lucide-react";
 
 export default function TasksPage() {
@@ -504,6 +506,18 @@ export default function TasksPage() {
                         <span className="text-xs">Tags: {task.tags.join(', ')}</span>
                       </div>
                     )}
+                  </div>
+
+                  {/* Jira Integration */}
+                  <div className="mt-4 flex items-center justify-between">
+                    <JiraIssuesList jiraIssues={task.jiraIssues} />
+                    <JiraIssueCreator
+                      entityType="task"
+                      entityId={task._id}
+                      entityName={task.title}
+                      onIssueCreated={() => loadTasks()} // Refresh the task list
+                      buttonVariant="outline"
+                    />
                   </div>
                 </div>
               ))

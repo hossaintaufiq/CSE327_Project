@@ -8,6 +8,7 @@ import {
   createTask,
   updateTask,
   deleteTask,
+  createJiraIssueForTask,
 } from '../controllers/taskController.js';
 
 const router = express.Router();
@@ -31,6 +32,9 @@ router.put('/:taskId', checkRole(['company_admin', 'manager', 'employee']), upda
 
 // Delete task (company_admin, manager)
 router.delete('/:taskId', checkRole(['company_admin', 'manager']), deleteTask);
+
+// Create Jira issue for task
+router.post('/:taskId/jira-issue', checkRole(['company_admin', 'manager', 'employee']), createJiraIssueForTask);
 
 export default router;
 

@@ -2,6 +2,7 @@ import mongoose from 'mongoose';
 import { Task } from '../models/Task.js';
 import { Project } from '../models/Project.js';
 import { User } from '../models/User.js';
+import { createIssue } from '../jiraClient.js';
 
 /**
  * Get all tasks for a company
@@ -225,6 +226,58 @@ export const deleteTask = async (req, res) => {
   } catch (error) {
     console.error('Error deleting task:', error);
     res.status(500).json({ message: 'Error deleting task', error: error.message });
+  }
+};
+
+/**
+ * Create a Jira issue linked to a task
+ */
+export const createJiraIssueForTask = async (req, res) => {
+  try {
+    const { taskId } = req.params;
+    const companyId = req.companyId;
+    const { summary, description, issuetype = 'Task' } = req.body;
+
+    // Find the task
+    const task = await Task.findOne({ _id: taskId, companyId, isActive: true });
+    if (!task) {
+      return res.status(404).json({ message: 'Task not found' });
+    }
+
+    // Create Jira issue
+    const jiraIssueData = {
+      summary: summary || `Task: ${task.title}`,
+      description: description || task.description || `Task details: ${task.title}`,
+      issuetype,
+    };
+
+    const jiraIssue = await createIssue(jiraIssueData);
+
+    // Link Jira issue to task
+    const jiraIssueLink = {
+      issueKey: jiraIssue.key,
+      issueUrl: `${process.env.JIRA_BASE_URL}/browse/${jiraIssue.key}`,
+      createdAt: new Date(),
+    };
+
+    task.jiraIssues.push(jiraIssueLink);
+    await task.save();
+
+    res.json({
+      success: true,
+      message: 'Jira issue created and linked to task',
+      data: {
+        jiraIssue,
+        task: {
+          id: task._id,
+          title: task.title,
+          jiraIssues: task.jiraIssues,
+        },
+      },
+    });
+  } catch (error) {
+    console.error('Error creating Jira issue for task:', error);
+    res.status(500).json({ message: 'Error creating Jira issue', error: error.message });
   }
 };
 

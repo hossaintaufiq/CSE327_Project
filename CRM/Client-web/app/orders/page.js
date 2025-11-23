@@ -5,6 +5,8 @@ import { useRouter } from "next/navigation";
 import useAuthStore from "@/store/authStore";
 import apiClient from "@/utils/api";
 import Sidebar from "@/components/Sidebar";
+import JiraIssueCreator from "@/components/JiraIssueCreator";
+import JiraIssuesList from "@/components/JiraIssuesList";
 import { Plus, Edit, Trash2, Search, ShoppingCart, User, Calendar, DollarSign, Package, X, TrendingUp } from "lucide-react";
 
 export default function OrdersPage() {
@@ -510,6 +512,18 @@ export default function OrdersPage() {
                       Notes: {order.notes}
                     </div>
                   )}
+
+                  {/* Jira Integration */}
+                  <div className="mt-4 flex items-center justify-between">
+                    <JiraIssuesList jiraIssues={order.jiraIssues} />
+                    <JiraIssueCreator
+                      entityType="order"
+                      entityId={order._id}
+                      entityName={`Order ${order.orderNumber}`}
+                      onIssueCreated={() => loadOrders()} // Refresh the order list
+                      buttonVariant="outline"
+                    />
+                  </div>
                 </div>
               ))
             )}

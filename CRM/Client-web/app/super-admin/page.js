@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, Suspense } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import apiClient from "@/utils/api";
 import useAuthStore from "@/store/authStore";
@@ -34,7 +34,7 @@ import {
   Calendar,
 } from "lucide-react";
 
-function SuperAdminPage() {
+function SuperAdminPageContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const { user, isSuperAdmin } = useAuthStore();
@@ -1110,6 +1110,19 @@ function AdminAccountsTab({ loading }) {
       <h2 className="text-xl font-bold text-white mb-6">Admin Accounts</h2>
       <p className="text-gray-400">Admin account management coming soon...</p>
     </div>
+  );
+}
+
+function SuperAdminPage() {
+  return (
+    <Suspense fallback={<div className="min-h-screen flex items-center justify-center bg-gray-900">
+      <div className="text-center">
+        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-500 mx-auto"></div>
+        <p className="mt-4 text-gray-400">Loading...</p>
+      </div>
+    </div>}>
+      <SuperAdminPageContent />
+    </Suspense>
   );
 }
 

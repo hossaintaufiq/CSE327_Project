@@ -59,6 +59,20 @@ const taskSchema = new mongoose.Schema(
       type: String,
       trim: true,
     },
+    jiraIssues: [{
+      issueKey: {
+        type: String,
+        required: true,
+      },
+      issueUrl: {
+        type: String,
+        required: true,
+      },
+      createdAt: {
+        type: Date,
+        default: Date.now,
+      },
+    }],
     isActive: {
       type: Boolean,
       default: true,
@@ -67,6 +81,7 @@ const taskSchema = new mongoose.Schema(
   { timestamps: true }
 );
 
+taskSchema.index({ companyId: 1, createdAt: -1 });
 taskSchema.index({ companyId: 1, createdAt: -1 });
 taskSchema.index({ projectId: 1 });
 taskSchema.index({ assignedTo: 1 });

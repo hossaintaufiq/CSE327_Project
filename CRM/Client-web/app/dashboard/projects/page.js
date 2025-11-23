@@ -5,6 +5,8 @@ import { useRouter } from "next/navigation";
 import useAuthStore from "@/store/authStore";
 import apiClient from "@/utils/api";
 import Sidebar from "@/components/Sidebar";
+import JiraIssueCreator from "@/components/JiraIssueCreator";
+import JiraIssuesList from "@/components/JiraIssuesList";
 import { Plus, Edit, Trash2, Search, FolderKanban, Calendar, User, Target, X, TrendingUp, Users } from "lucide-react";
 
 export default function ProjectsPage() {
@@ -482,6 +484,22 @@ export default function ProjectsPage() {
                         </div>
                       </div>
                     )}
+
+                    {/* Jira Issues Section */}
+                    <div className="pt-4 border-t border-gray-700">
+                      <JiraIssuesList
+                        entityType="project"
+                        entityId={project._id}
+                        jiraIssues={project.jiraIssues || []}
+                        onRefresh={loadProjects}
+                      />
+                      <JiraIssueCreator
+                        entityType="project"
+                        entityId={project._id}
+                        entityName={project.name}
+                        onIssueCreated={loadProjects}
+                      />
+                    </div>
                   </div>
                 </div>
               ))

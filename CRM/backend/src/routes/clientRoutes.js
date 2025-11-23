@@ -8,6 +8,7 @@ import {
   createClient,
   updateClient,
   deleteClient,
+  createJiraIssueForClient,
 } from '../controllers/clientController.js';
 
 const router = express.Router();
@@ -20,6 +21,9 @@ router.get('/:id', getClientById);
 router.post('/', checkRole(['company_admin', 'manager', 'employee']), createClient);
 router.put('/:id', checkRole(['company_admin', 'manager', 'employee']), updateClient);
 router.delete('/:id', checkRole(['company_admin', 'manager']), deleteClient);
+
+// Create Jira issue for client
+router.post('/:id/jira-issue', checkRole(['company_admin', 'manager', 'employee']), createJiraIssueForClient);
 
 export default router;
 

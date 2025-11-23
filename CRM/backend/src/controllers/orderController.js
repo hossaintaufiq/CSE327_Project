@@ -2,6 +2,7 @@ import mongoose from 'mongoose';
 import { Order } from '../models/Order.js';
 import { Client } from '../models/Client.js';
 import { User } from '../models/User.js';
+import { createIssue } from '../jiraClient.js';
 
 /**
  * Get all orders for a company
@@ -242,6 +243,58 @@ export const deleteOrder = async (req, res) => {
   } catch (error) {
     console.error('Error deleting order:', error);
     res.status(500).json({ message: 'Error deleting order', error: error.message });
+  }
+};
+
+/**
+ * Create a Jira issue linked to an order
+ */
+export const createJiraIssueForOrder = async (req, res) => {
+  try {
+    const { orderId } = req.params;
+    const companyId = req.companyId;
+    const { summary, description, issuetype = 'Bug' } = req.body;
+
+    // Find the order
+    const order = await Order.findOne({ _id: orderId, companyId }).populate('clientId', 'name email');
+    if (!order) {
+      return res.status(404).json({ message: 'Order not found' });
+    }
+
+    // Create Jira issue
+    const jiraIssueData = {
+      summary: summary || `Order Issue: ${order.orderNumber}`,
+      description: description || `Order: ${order.orderNumber}\nClient: ${order.clientId?.name || 'N/A'}\nStatus: ${order.status}\nIssue: ${description || 'Order problem'}`,
+      issuetype,
+    };
+
+    const jiraIssue = await createIssue(jiraIssueData);
+
+    // Link Jira issue to order
+    const jiraIssueLink = {
+      issueKey: jiraIssue.key,
+      issueUrl: `${process.env.JIRA_BASE_URL}/browse/${jiraIssue.key}`,
+      createdAt: new Date(),
+    };
+
+    order.jiraIssues.push(jiraIssueLink);
+    await order.save();
+
+    res.json({
+      success: true,
+      message: 'Jira issue created and linked to order',
+      data: {
+        jiraIssue,
+        order: {
+          id: order._id,
+          orderNumber: order.orderNumber,
+          jiraIssues: order.jiraIssues,
+        },
+      },
+    });
+  } catch (error) {
+    console.error('Error creating Jira issue for order:', error);
+    res.status(500).json({ message: 'Error creating Jira issue', error: error.message });
   }
 };
 

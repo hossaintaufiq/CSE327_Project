@@ -41,6 +41,20 @@ const clientSchema = new mongoose.Schema(
       type: String,
       trim: true,
     },
+    jiraIssues: [{
+      issueKey: {
+        type: String,
+        required: true,
+      },
+      issueUrl: {
+        type: String,
+        required: true,
+      },
+      createdAt: {
+        type: Date,
+        default: Date.now,
+      },
+    }],
     isActive: {
       type: Boolean,
       default: true,
@@ -49,6 +63,7 @@ const clientSchema = new mongoose.Schema(
   { timestamps: true }
 );
 
+clientSchema.index({ companyId: 1, createdAt: -1 });
 clientSchema.index({ companyId: 1, createdAt: -1 });
 clientSchema.index({ assignedTo: 1 });
 clientSchema.index({ email: 1 });

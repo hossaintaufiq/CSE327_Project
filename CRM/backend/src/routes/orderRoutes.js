@@ -8,6 +8,7 @@ import {
   createOrder,
   updateOrder,
   deleteOrder,
+  createJiraIssueForOrder,
 } from '../controllers/orderController.js';
 
 const router = express.Router();
@@ -31,6 +32,9 @@ router.put('/:orderId', checkRole(['company_admin', 'manager']), updateOrder);
 
 // Delete order (company_admin only)
 router.delete('/:orderId', checkRole(['company_admin']), deleteOrder);
+
+// Create Jira issue for order
+router.post('/:orderId/jira-issue', checkRole(['company_admin', 'manager', 'employee']), createJiraIssueForOrder);
 
 export default router;
 
