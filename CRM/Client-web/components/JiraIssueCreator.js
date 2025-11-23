@@ -22,30 +22,38 @@ export default function JiraIssueCreator({
     if (!formData.summary.trim()) return;
 
     setLoading(true);
+    const issueData = { ...formData };
+    console.log('Creating Jira issue:', { entityType, entityId, issueData });
+
     try {
       let result;
-      const issueData = { ...formData };
 
       // Import the appropriate function dynamically
       const { createJiraIssueForTask, createJiraIssueForClient, createJiraIssueForOrder, createJiraIssueForProject } = await import('@/utils/jiraApi.js');
+      console.log('Imported Jira API functions successfully');
 
       switch (entityType) {
         case 'task':
+          console.log('Calling createJiraIssueForTask');
           result = await createJiraIssueForTask(entityId, issueData);
           break;
         case 'client':
+          console.log('Calling createJiraIssueForClient');
           result = await createJiraIssueForClient(entityId, issueData);
           break;
         case 'order':
+          console.log('Calling createJiraIssueForOrder');
           result = await createJiraIssueForOrder(entityId, issueData);
           break;
         case 'project':
+          console.log('Calling createJiraIssueForProject');
           result = await createJiraIssueForProject(entityId, issueData);
           break;
         default:
-          throw new Error('Invalid entity type');
+          throw new Error(`Invalid entity type: ${entityType}`);
       }
 
+      console.log('Jira issue created successfully:', result);
       alert(`Jira issue created: ${result.data.jiraIssue.key}`);
       setIsOpen(false);
       setFormData({ summary: '', description: '', issuetype: 'Task' });
@@ -55,7 +63,15 @@ export default function JiraIssueCreator({
         onIssueCreated(result.data);
       }
     } catch (error) {
-      alert('Failed to create Jira issue: ' + (error.response?.data?.message || error.message));
+      console.error('Jira creation error:', error);
+      const errorMessage = error.response?.data?.message || error.response?.data?.error || error.message || 'Unknown error occurred';
+      console.error('Error details:', {
+        status: error.response?.status,
+        statusText: error.response?.statusText,
+        data: error.response?.data,
+        message: error.message
+      });
+      alert(`Failed to create Jira issue: ${errorMessage}`);
     } finally {
       setLoading(false);
     }

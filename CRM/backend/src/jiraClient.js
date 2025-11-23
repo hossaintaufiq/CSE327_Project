@@ -8,14 +8,16 @@ function getAuthHeader() {
 }
 
 const api = axios.create({
-  baseURL: (process.env.JIRA_BASE_URL || '').replace(/\/$/, '') + '/rest/api/3',
   headers: {
     'Content-Type': 'application/json',
   },
   timeout: 15000
 });
 
+// Set baseURL dynamically
 api.interceptors.request.use(config => {
+  const baseURL = (process.env.JIRA_BASE_URL || '').replace(/\/$/, '') + '/rest/api/3';
+  config.baseURL = baseURL;
   config.headers = config.headers || {};
   config.headers.Authorization = getAuthHeader();
   return config;
@@ -23,17 +25,50 @@ api.interceptors.request.use(config => {
 
 // Create an issue
 async function createIssue({ projectKey = process.env.JIRA_PROJECT_KEY, summary, description = '', issuetype = 'Task' }) {
+  console.log('Creating Jira issue:', { projectKey, summary, description, issuetype });
+  console.log('JIRA_BASE_URL:', process.env.JIRA_BASE_URL);
+  console.log('JIRA_PROJECT_KEY:', process.env.JIRA_PROJECT_KEY);
+
+  // Format description as Atlassian Document Format (ADF)
+  const formattedDescription = description ? {
+    type: 'doc',
+    version: 1,
+    content: [
+      {
+        type: 'paragraph',
+        content: [
+          {
+            type: 'text',
+            text: description
+          }
+        ]
+      }
+    ]
+  } : undefined;
+
   const body = {
     fields: {
       project: { key: projectKey },
       summary,
-      description,
+      ...(formattedDescription && { description: formattedDescription }),
       issuetype: { name: issuetype }
     }
   };
+  console.log('Jira API request body:', JSON.stringify(body, null, 2));
+  console.log('Making request to:', api.defaults.baseURL + '/issue');
   const resp = await api.post('/issue', body);
+  console.log('Jira API response:', resp.data);
   return resp.data; // contains key, id, self
 }
+
+// Add error handling
+api.interceptors.response.use(
+  response => response,
+  error => {
+    console.log('Jira API Error Response:', error.response?.data);
+    throw error;
+  }
+);
 
 // Add a comment
 async function addComment(issueKey, comment) {

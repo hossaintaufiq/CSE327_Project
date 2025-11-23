@@ -1,7 +1,8 @@
+import dotenv from 'dotenv';
+dotenv.config();
+
 import express from 'express';
 import cors from 'cors';
-import dotenv from 'dotenv';
-import 'express-async-errors';
 import { connectDB } from './src/config/db.js';
 import { initFirebaseAdmin } from './src/config/firebaseAdmin.js';
 import authRoutes from './src/routes/authRoutes.js';
@@ -17,7 +18,9 @@ import testRoutes from './src/routes/testRoutes.js';
 import { errorHandler } from './src/middleware/errorHandler.js';
 import jiraRoutes from './src/routes/jiraRoutes.js';
 
-dotenv.config();
+console.log('JIRA_BASE_URL:', process.env.JIRA_BASE_URL);
+console.log('JIRA_EMAIL:', process.env.JIRA_EMAIL ? 'SET' : 'NOT SET');
+console.log('JIRA_API_TOKEN:', process.env.JIRA_API_TOKEN ? 'SET' : 'NOT SET');
 
 const app = express();
 const PORT = process.env.PORT || 5000;
@@ -63,6 +66,7 @@ app.use('/api/orders', orderRoutes);
 app.use('/api/projects', projectRoutes);
 app.use('/api/tasks', taskRoutes);
 app.use('/api/test', testRoutes);
+app.use('/api/jira', jiraRoutes);
 
 // Error handling
 app.use(errorHandler);

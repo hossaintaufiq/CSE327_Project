@@ -234,6 +234,7 @@ export const deleteTask = async (req, res) => {
  */
 export const createJiraIssueForTask = async (req, res) => {
   try {
+    console.log('Creating Jira issue for task:', req.params, req.body);
     const { taskId } = req.params;
     const companyId = req.companyId;
     const { summary, description, issuetype = 'Task' } = req.body;
