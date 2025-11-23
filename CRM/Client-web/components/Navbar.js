@@ -55,8 +55,44 @@ export default function Navbar() {
           href="/" 
           className="text-2xl font-bold text-blue-400 no-underline hover:text-blue-300 transition-colors"
         >
-          CRM Platform
+          CRM Prime
         </Link>
+
+        {/* Public navigation links - show when not logged in or on public pages */}
+        {!user && (
+          <div className="flex gap-6 items-center">
+            <Link
+              href="/"
+              className={`no-underline px-4 py-2 rounded transition-all ${
+                isActive("/")
+                  ? "text-blue-400 font-semibold bg-blue-500/20"
+                  : "text-gray-400 font-normal hover:text-blue-400 hover:bg-gray-800"
+              }`}
+            >
+              Home
+            </Link>
+            <Link
+              href="/about"
+              className={`no-underline px-4 py-2 rounded transition-all ${
+                isActive("/about")
+                  ? "text-blue-400 font-semibold bg-blue-500/20"
+                  : "text-gray-400 font-normal hover:text-blue-400 hover:bg-gray-800"
+              }`}
+            >
+              About
+            </Link>
+            <Link
+              href="/pricing"
+              className={`no-underline px-4 py-2 rounded transition-all ${
+                isActive("/pricing")
+                  ? "text-blue-400 font-semibold bg-blue-500/20"
+                  : "text-gray-400 font-normal hover:text-blue-400 hover:bg-gray-800"
+              }`}
+            >
+              Pricing
+            </Link>
+          </div>
+        )}
 
         {/* Hide navigation links on dashboard pages - they're in the sidebar */}
         {user && !pathname?.startsWith("/dashboard") && (

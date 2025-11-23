@@ -1,17 +1,19 @@
 import "./globals.css";
 import Navbar from "@/components/Navbar";
+import Footer from "@/components/Footer";
 
 export const metadata = {
-  title: "CRM SaaS Platform",
-  description: "Multi-tenant CRM with role-based access",
+  title: "CRM Prime - Powerful CRM for Modern Businesses",
+  description: "Manage your customers, projects, and teams all in one place. Streamline your workflow and boost productivity.",
 };
 
 export default function RootLayout({ children }) {
   return (
-    <html lang="en">
-      <body style={{ margin: 0, padding: 0 }}>
+    <html lang="en" className="dark">
+      <body style={{ margin: 0, padding: 0, minHeight: "100vh", display: "flex", flexDirection: "column" }}>
         <Navbar/>
-        <main>{children}</main>
+        <main style={{ flex: 1 }}>{children}</main>
+        <Footer/>
       </body>
     </html>
   );

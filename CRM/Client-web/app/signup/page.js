@@ -93,128 +93,85 @@ export default function SignupPage() {
   };
 
   return (
-    <div style={{
-      minHeight: "100vh",
-      display: "flex",
-      alignItems: "center",
-      justifyContent: "center",
-      backgroundColor: "#f5f5f5"
-    }}>
-      <div style={{
-        backgroundColor: "white",
-        padding: "2rem",
-        borderRadius: "8px",
-        boxShadow: "0 2px 10px rgba(0,0,0,0.1)",
-        width: "100%",
-        maxWidth: "400px"
-      }}>
-        <h1 style={{ marginBottom: "1.5rem", textAlign: "center" }}>Sign Up</h1>
+    <div className="min-h-screen flex items-center justify-center bg-black py-12 px-4">
+      <div className="w-full max-w-md bg-gray-900 border border-gray-800 rounded-lg p-8 shadow-2xl">
+        <h1 className="text-3xl font-bold mb-6 text-center text-white">Sign Up</h1>
 
         {error && (
-          <div style={{
-            padding: "0.75rem",
-            backgroundColor: "#fee",
-            color: "#c33",
-            borderRadius: "4px",
-            marginBottom: "1rem"
-          }}>
+          <div className="mb-4 p-3 bg-red-900/30 border border-red-700 text-red-300 rounded-lg text-sm">
             {error}
           </div>
         )}
 
         <form onSubmit={handleSignup}>
-          <div style={{ marginBottom: "1rem" }}>
-            <label style={{ display: "block", marginBottom: "0.5rem" }}>Name</label>
+          <div className="mb-4">
+            <label className="block mb-2 text-gray-300">Name</label>
             <input
               type="text"
               required
               value={formData.name}
               onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-              style={{
-                width: "100%",
-                padding: "0.75rem",
-                border: "1px solid #ddd",
-                borderRadius: "4px"
-              }}
+              className="w-full px-4 py-3 bg-gray-800 border border-gray-700 rounded-lg text-white placeholder-gray-500 focus:outline-none focus:border-blue-500 transition-colors"
+              placeholder="Your name"
             />
           </div>
 
-          <div style={{ marginBottom: "1rem" }}>
-            <label style={{ display: "block", marginBottom: "0.5rem" }}>Email</label>
+          <div className="mb-4">
+            <label className="block mb-2 text-gray-300">Email</label>
             <input
               type="email"
               required
               value={formData.email}
               onChange={(e) => setFormData({ ...formData, email: e.target.value })}
-              style={{
-                width: "100%",
-                padding: "0.75rem",
-                border: "1px solid #ddd",
-                borderRadius: "4px"
-              }}
+              className="w-full px-4 py-3 bg-gray-800 border border-gray-700 rounded-lg text-white placeholder-gray-500 focus:outline-none focus:border-blue-500 transition-colors"
+              placeholder="your@email.com"
             />
           </div>
 
-          <div style={{ marginBottom: "1rem" }}>
-            <label style={{ display: "block", marginBottom: "0.5rem" }}>Password</label>
+          <div className="mb-4">
+            <label className="block mb-2 text-gray-300">Password</label>
             <input
               type="password"
               required
               value={formData.password}
               onChange={(e) => setFormData({ ...formData, password: e.target.value })}
-              style={{
-                width: "100%",
-                padding: "0.75rem",
-                border: "1px solid #ddd",
-                borderRadius: "4px"
-              }}
+              className="w-full px-4 py-3 bg-gray-800 border border-gray-700 rounded-lg text-white placeholder-gray-500 focus:outline-none focus:border-blue-500 transition-colors"
+              placeholder="••••••••"
             />
           </div>
 
-          <div style={{ marginBottom: "1.5rem" }}>
-            <label style={{ display: "block", marginBottom: "0.5rem" }}>
-              Company Name (optional - leave blank to join existing company)
+          <div className="mb-6">
+            <label className="block mb-2 text-gray-300">
+              Company Name <span className="text-gray-500 text-sm">(optional)</span>
             </label>
             <input
               type="text"
               value={formData.companyName}
               onChange={(e) => setFormData({ ...formData, companyName: e.target.value })}
               placeholder="Create new company"
-              style={{
-                width: "100%",
-                padding: "0.75rem",
-                border: "1px solid #ddd",
-                borderRadius: "4px"
-              }}
+              className="w-full px-4 py-3 bg-gray-800 border border-gray-700 rounded-lg text-white placeholder-gray-500 focus:outline-none focus:border-blue-500 transition-colors"
             />
-            <small style={{ color: "#666", fontSize: "0.875rem" }}>
+            <small className="text-gray-400 text-sm mt-1 block">
               {formData.companyName
-                ? "You will be assigned as Company Admin"
-                : "You will be assigned as Employee"}
+                ? "✓ You will be assigned as Company Admin"
+                : "Leave blank to join existing company as Employee"}
             </small>
           </div>
 
           <button
             type="submit"
             disabled={loading}
-            style={{
-              width: "100%",
-              padding: "0.75rem",
-              backgroundColor: "#0070f3",
-              color: "white",
-              border: "none",
-              borderRadius: "4px",
-              cursor: loading ? "not-allowed" : "pointer",
-              opacity: loading ? 0.6 : 1
-            }}
+            className="w-full py-3 bg-blue-600 text-white rounded-lg font-semibold hover:bg-blue-700 transition-all disabled:opacity-50 disabled:cursor-not-allowed shadow-lg shadow-blue-500/50"
           >
             {loading ? "Signing up..." : "Sign Up"}
           </button>
         </form>
 
-        <p style={{ marginTop: "1rem", textAlign: "center", color: "#666" }}>
+        <p className="mt-6 text-center text-gray-400">
           Already have an account?{" "}
-          <a href="/login" style={{ color: "#0070f3" }}>Login</a>
+          <a href="/login" className="text-blue-400 hover:text-blue-300 transition-colors font-semibold">
+            Login
+          </a>
         </p>
       </div>
     </div>
