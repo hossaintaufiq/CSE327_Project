@@ -4,10 +4,11 @@ import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import useAuthStore from "@/store/authStore";
 import apiClient from "@/utils/api";
+import { syncAllEntitiesNow } from "@/utils/jiraApi";
 import Sidebar from "@/components/Sidebar";
 import JiraIssueCreator from "@/components/JiraIssueCreator";
 import JiraIssuesList from "@/components/JiraIssuesList";
-import { Plus, Edit, Trash2, Search, CheckSquare, Calendar, User, AlertCircle, X, FolderKanban } from "lucide-react";
+import { Plus, Edit, Trash2, Search, CheckSquare, Calendar, User, AlertCircle, X, FolderKanban, RefreshCw } from "lucide-react";
 
 export default function TasksPage() {
   const router = useRouter();
@@ -17,6 +18,7 @@ export default function TasksPage() {
   const [deleting, setDeleting] = useState(null);
   const [loadingProjects, setLoadingProjects] = useState(false);
   const [loadingEmployees, setLoadingEmployees] = useState(false);
+  const [syncing, setSyncing] = useState(false);
   const [tasks, setTasks] = useState([]);
   const [projects, setProjects] = useState([]);
   const [employees, setEmployees] = useState([]);
@@ -41,6 +43,24 @@ export default function TasksPage() {
 
   useEffect(() => {
     if (typeof window === "undefined") return;
+    
+    // Check if user is authenticated
+    const token = localStorage.getItem('idToken');
+    const userData = localStorage.getItem('user');
+    
+    if (!token || !userData) {
+      console.log("No authentication data found - redirecting to login");
+      router.push("/login");
+      return;
+    }
+    
+    // Debug authentication state
+    console.log("Auth Debug - User:", user);
+    console.log("Auth Debug - Active Company ID:", activeCompanyId);
+    console.log("Auth Debug - Is Super Admin:", isSuperAdmin());
+    console.log("Auth Debug - localStorage idToken:", !!localStorage.getItem('idToken'));
+    console.log("Auth Debug - localStorage companyId:", localStorage.getItem('companyId'));
+    
     if (isSuperAdmin()) {
       router.push("/super-admin");
       return;
@@ -71,6 +91,17 @@ export default function TasksPage() {
       }
     } catch (error) {
       console.error("Error loading tasks:", error);
+      
+      // Handle authentication errors
+      if (error.response?.status === 401) {
+        console.log("Authentication error - redirecting to login");
+        // Clear auth data
+        const { default: useAuthStore } = await import("@/store/authStore");
+        useAuthStore.getState().logout();
+        router.push("/login");
+        return;
+      }
+      
       setError(error.response?.data?.message || "Failed to load tasks");
       setTasks([]);
     } finally {
@@ -111,6 +142,21 @@ export default function TasksPage() {
       setEmployees([]);
     } finally {
       setLoadingEmployees(false);
+    }
+  };
+
+  const handleSyncAll = async () => {
+    try {
+      setSyncing(true);
+      await syncAllEntitiesNow();
+      // Reload tasks to show any synced changes
+      await loadTasks();
+      alert("Sync completed successfully!");
+    } catch (error) {
+      console.error("Error syncing:", error);
+      alert("Failed to sync entities. Check console for details.");
+    } finally {
+      setSyncing(false);
     }
   };
 
@@ -309,19 +355,29 @@ export default function TasksPage() {
               <h1 className="text-3xl font-bold text-white mb-2">Tasks</h1>
               <p className="text-gray-400">Manage your tasks</p>
             </div>
-            {(activeCompanyRole === "company_admin" || activeCompanyRole === "manager" || activeCompanyRole === "employee") && (
+            <div className="flex gap-3">
               <button
-                onClick={() => {
-                  setEditingTask(null);
-                  resetForm();
-                  setShowModal(true);
-                }}
-                className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+                onClick={handleSyncAll}
+                disabled={syncing}
+                className="flex items-center gap-2 px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
               >
-                <Plus className="w-5 h-5" />
-                Create Task
+                <RefreshCw className={`w-5 h-5 ${syncing ? 'animate-spin' : ''}`} />
+                {syncing ? 'Syncing...' : 'Sync Now'}
               </button>
-            )}
+              {(activeCompanyRole === "company_admin" || activeCompanyRole === "manager" || activeCompanyRole === "employee") && (
+                <button
+                  onClick={() => {
+                    setEditingTask(null);
+                    resetForm();
+                    setShowModal(true);
+                  }}
+                  className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+                >
+                  <Plus className="w-5 h-5" />
+                  Create Task
+                </button>
+              )}
+            </div>
           </div>
 
           {/* Statistics Cards */}

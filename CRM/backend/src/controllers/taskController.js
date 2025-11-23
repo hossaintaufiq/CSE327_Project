@@ -3,6 +3,7 @@ import { Task } from '../models/Task.js';
 import { Project } from '../models/Project.js';
 import { User } from '../models/User.js';
 import { createIssue } from '../jiraClient.js';
+import { syncStatusToJira, updateJiraIssue, cleanupJiraReferencesOnEntityDeletion } from '../utils/jiraSync.js';
 
 /**
  * Get all tasks for a company
@@ -185,6 +186,24 @@ export const updateTask = async (req, res) => {
     await task.populate('projectId', 'name');
     await task.populate('assignedTo', 'name email');
 
+    // Sync with Jira if status changed or other important fields updated
+    try {
+      const statusChanged = updateData.status !== undefined && updateData.status !== task.status;
+      const importantFieldsChanged = updateData.title !== undefined || updateData.description !== undefined ||
+                                   updateData.priority !== undefined || updateData.dueDate !== undefined;
+
+      if (statusChanged) {
+        await syncStatusToJira('task', task, task.status);
+      }
+
+      if (importantFieldsChanged) {
+        await updateJiraIssue('task', task);
+      }
+    } catch (syncError) {
+      console.error('Error syncing task to Jira:', syncError);
+      // Don't fail the update if sync fails, just log it
+    }
+
     res.json({
       success: true,
       message: 'Task updated successfully',
@@ -218,6 +237,14 @@ export const deleteTask = async (req, res) => {
     // Soft delete - set isActive to false
     task.isActive = false;
     await task.save();
+
+    // Clean up Jira references for the deleted task
+    try {
+      await cleanupJiraReferencesOnEntityDeletion('task', taskId);
+    } catch (cleanupError) {
+      console.error('Error cleaning up Jira references:', cleanupError);
+      // Don't fail the deletion if cleanup fails
+    }
 
     res.json({
       success: true,

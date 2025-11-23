@@ -72,7 +72,24 @@ api.interceptors.response.use(
 
 // Add a comment
 async function addComment(issueKey, comment) {
-  const resp = await api.post(`/issue/${encodeURIComponent(issueKey)}/comment`, { body: comment });
+  // Convert plain text to Atlassian Document Format (ADF)
+  const adfBody = {
+    type: "doc",
+    version: 1,
+    content: [
+      {
+        type: "paragraph",
+        content: [
+          {
+            type: "text",
+            text: comment
+          }
+        ]
+      }
+    ]
+  };
+
+  const resp = await api.post(`/issue/${encodeURIComponent(issueKey)}/comment`, { body: adfBody });
   return resp.data;
 }
 

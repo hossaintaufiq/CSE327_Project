@@ -3,6 +3,7 @@ import { Order } from '../models/Order.js';
 import { Client } from '../models/Client.js';
 import { User } from '../models/User.js';
 import { createIssue } from '../jiraClient.js';
+import { syncStatusToJira, updateJiraIssue, cleanupJiraReferencesOnEntityDeletion } from '../utils/jiraSync.js';
 
 /**
  * Get all orders for a company
@@ -206,6 +207,23 @@ export const updateOrder = async (req, res) => {
     await order.populate('clientId', 'name email phone company');
     await order.populate('assignedTo', 'name email');
 
+    // Sync with Jira if status changed or other important fields updated
+    try {
+      const statusChanged = status !== undefined && status !== order.status;
+      const importantFieldsChanged = items !== undefined || notes !== undefined;
+
+      if (statusChanged) {
+        await syncStatusToJira('order', order, order.status);
+      }
+
+      if (importantFieldsChanged) {
+        await updateJiraIssue('order', order);
+      }
+    } catch (syncError) {
+      console.error('Error syncing order to Jira:', syncError);
+      // Don't fail the update if sync fails, just log it
+    }
+
     res.json({
       success: true,
       message: 'Order updated successfully',
@@ -229,6 +247,14 @@ export const deleteOrder = async (req, res) => {
     // Only company admin can delete orders
     if (userRole !== 'company_admin') {
       return res.status(403).json({ message: 'Access denied. Only company admin can delete orders.' });
+    }
+
+    // Clean up Jira references before deleting the order
+    try {
+      await cleanupJiraReferencesOnEntityDeletion('order', orderId);
+    } catch (cleanupError) {
+      console.error('Error cleaning up Jira references:', cleanupError);
+      // Don't fail the deletion if cleanup fails
     }
 
     const order = await Order.findOneAndDelete({ _id: orderId, companyId });

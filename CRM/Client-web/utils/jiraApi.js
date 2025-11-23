@@ -48,6 +48,28 @@ export const getJiraTransitions = async (issueKey) => {
   }
 };
 
+// Manual sync all entities for the current company
+export const syncAllEntities = async () => {
+  try {
+    const response = await apiClient.post('/jira/sync-all');
+    return response.data;
+  } catch (error) {
+    console.error('Error syncing entities:', error);
+    throw error;
+  }
+};
+
+// Immediate sync all entities for the current company (instant)
+export const syncAllEntitiesNow = async () => {
+  try {
+    const response = await apiClient.post('/jira/sync-now');
+    return response.data;
+  } catch (error) {
+    console.error('Error performing immediate sync:', error);
+    throw error;
+  }
+};
+
 // Create Jira issue linked to a task
 export const createJiraIssueForTask = async (taskId, issueData) => {
   try {

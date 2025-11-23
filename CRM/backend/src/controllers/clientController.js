@@ -2,6 +2,7 @@ import mongoose from 'mongoose';
 import { Client } from '../models/Client.js';
 import { User } from '../models/User.js';
 import { createIssue } from '../jiraClient.js';
+import { syncStatusToJira, updateJiraIssue, cleanupJiraReferencesOnEntityDeletion } from '../utils/jiraSync.js';
 
 export const getClients = async (req, res) => {
   try {
@@ -137,6 +138,23 @@ export const updateClient = async (req, res) => {
     await client.save();
     await client.populate('assignedTo', 'name email');
 
+    // Sync with Jira if status changed or other important fields updated
+    try {
+      const statusChanged = status !== undefined && status !== client.status;
+      const importantFieldsChanged = name !== undefined || email !== undefined || notes !== undefined;
+
+      if (statusChanged) {
+        await syncStatusToJira('client', client, client.status);
+      }
+
+      if (importantFieldsChanged) {
+        await updateJiraIssue('client', client);
+      }
+    } catch (syncError) {
+      console.error('Error syncing client to Jira:', syncError);
+      // Don't fail the update if sync fails, just log it
+    }
+
     res.json({
       success: true,
       message: 'Client updated successfully',
@@ -167,6 +185,14 @@ export const deleteClient = async (req, res) => {
 
     client.isActive = false;
     await client.save();
+
+    // Clean up Jira references for the deleted client
+    try {
+      await cleanupJiraReferencesOnEntityDeletion('client', id);
+    } catch (cleanupError) {
+      console.error('Error cleaning up Jira references:', cleanupError);
+      // Don't fail the deletion if cleanup fails
+    }
 
     res.json({
       success: true,
