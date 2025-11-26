@@ -48,24 +48,24 @@ export const getJiraTransitions = async (issueKey) => {
   }
 };
 
-// Manual sync all entities for the current company
-export const syncAllEntities = async () => {
-  try {
-    const response = await apiClient.post('/jira/sync-all');
-    return response.data;
-  } catch (error) {
-    console.error('Error syncing entities:', error);
-    throw error;
-  }
-};
-
-// Immediate sync all entities for the current company (instant)
+// Manual sync all entities for the company
 export const syncAllEntitiesNow = async () => {
   try {
     const response = await apiClient.post('/jira/sync-now');
     return response.data;
   } catch (error) {
-    console.error('Error performing immediate sync:', error);
+    console.error('Error syncing all entities:', error);
+    throw error;
+  }
+};
+
+// Manual sync all entities (alternative endpoint)
+export const syncAllEntities = async () => {
+  try {
+    const response = await apiClient.post('/jira/sync-all');
+    return response.data;
+  } catch (error) {
+    console.error('Error syncing all entities:', error);
     throw error;
   }
 };

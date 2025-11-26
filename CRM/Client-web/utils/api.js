@@ -71,12 +71,12 @@ apiClient.interceptors.response.use(
   async (error) => {
     if (error.response?.status === 401) {
       console.log("401 error detected - clearing auth and redirecting to login");
-      
+
       // Clear authentication data
       localStorage.removeItem('idToken');
       localStorage.removeItem('user');
       localStorage.removeItem('companyId');
-      
+
       // Clear auth store
       try {
         const { default: useAuthStore } = await import('@/store/authStore');
@@ -84,14 +84,71 @@ apiClient.interceptors.response.use(
       } catch (e) {
         // Store not available
       }
-      
+
+      // Clear notification store
+      try {
+        const { default: useNotificationStore } = await import('@/store/notificationStore');
+        useNotificationStore.getState().clearNotifications();
+      } catch (e) {
+        // Store not available
+      }
+
       // Redirect to login if in browser
       if (typeof window !== 'undefined') {
         window.location.href = '/login';
       }
     }
-    
+
     return Promise.reject(error);
   }
 );
+
+// Notification API functions
+export const notificationAPI = {
+  // Get all notifications for the user
+  getNotifications: async (params = {}) => {
+    const { limit = 50, offset = 0, isRead } = params;
+    const queryParams = new URLSearchParams({
+      limit: limit.toString(),
+      offset: offset.toString(),
+    });
+
+    if (isRead !== undefined) {
+      queryParams.append('isRead', isRead.toString());
+    }
+
+    const response = await apiClient.get(`/notifications?${queryParams}`);
+    return response.data;
+  },
+
+  // Get specific notification by ID
+  getNotificationById: async (notificationId) => {
+    const response = await apiClient.get(`/notifications/${notificationId}`);
+    return response.data;
+  },
+
+  // Create a new notification
+  createNotification: async (notificationData) => {
+    const response = await apiClient.post('/notifications', notificationData);
+    return response.data;
+  },
+
+  // Mark notification as read
+  markAsRead: async (notificationId) => {
+    const response = await apiClient.put(`/notifications/${notificationId}/read`);
+    return response.data;
+  },
+
+  // Mark all notifications as read
+  markAllAsRead: async () => {
+    const response = await apiClient.put('/notifications/read-all');
+    return response.data;
+  },
+
+  // Delete notification
+  deleteNotification: async (notificationId) => {
+    const response = await apiClient.delete(`/notifications/${notificationId}`);
+    return response.data;
+  },
+};
 

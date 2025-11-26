@@ -4,10 +4,11 @@ import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import useAuthStore from "@/store/authStore";
 import apiClient from "@/utils/api";
+import { syncAllEntitiesNow } from "@/utils/jiraApi";
 import Sidebar from "@/components/Sidebar";
 import JiraIssueCreator from "@/components/JiraIssueCreator";
 import JiraIssuesList from "@/components/JiraIssuesList";
-import { Plus, Edit, Trash2, Search, UserCheck, Mail, Phone, Building } from "lucide-react";
+import { Plus, Edit, Trash2, Search, UserCheck, Mail, Phone, Building, RefreshCw } from "lucide-react";
 
 export default function ClientsPage() {
   const router = useRouter();
@@ -16,6 +17,7 @@ export default function ClientsPage() {
   const [submitting, setSubmitting] = useState(false);
   const [deleting, setDeleting] = useState(null);
   const [loadingEmployees, setLoadingEmployees] = useState(false);
+  const [syncing, setSyncing] = useState(false);
   const [clients, setClients] = useState([]);
   const [searchTerm, setSearchTerm] = useState("");
   const [showModal, setShowModal] = useState(false);
@@ -89,6 +91,21 @@ export default function ClientsPage() {
       setEmployees([]);
     } finally {
       setLoadingEmployees(false);
+    }
+  };
+
+  const handleSyncAll = async () => {
+    try {
+      setSyncing(true);
+      await syncAllEntitiesNow();
+      // Reload clients to show any synced changes
+      await loadClients();
+      alert("Sync completed successfully!");
+    } catch (error) {
+      console.error("Error syncing:", error);
+      alert("Failed to sync entities. Check console for details.");
+    } finally {
+      setSyncing(false);
     }
   };
 
@@ -207,26 +224,36 @@ export default function ClientsPage() {
               <p className="text-gray-400">Manage your company leads</p>
             </div>
             {(activeCompanyRole === "company_admin" || activeCompanyRole === "manager" || activeCompanyRole === "employee") && (
-              <button
-                onClick={() => {
-                  setEditingClient(null);
-                  setFormData({
-                    name: "",
-                    email: "",
-                    phone: "",
-                    address: "",
-                    company: "",
-                    assignedTo: "",
-                    status: "lead",
-                    notes: "",
-                  });
-                  setShowModal(true);
-                }}
-                className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
-              >
-                <Plus className="w-5 h-5" />
-                Add Lead
-              </button>
+              <div className="flex items-center gap-3">
+                <button
+                  onClick={handleSyncAll}
+                  disabled={syncing}
+                  className="flex items-center gap-2 px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  <RefreshCw className={`w-5 h-5 ${syncing ? 'animate-spin' : ''}`} />
+                  {syncing ? 'Syncing...' : 'Sync Now'}
+                </button>
+                <button
+                  onClick={() => {
+                    setEditingClient(null);
+                    setFormData({
+                      name: "",
+                      email: "",
+                      phone: "",
+                      address: "",
+                      company: "",
+                      assignedTo: "",
+                      status: "lead",
+                      notes: "",
+                    });
+                    setShowModal(true);
+                  }}
+                  className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+                >
+                  <Plus className="w-5 h-5" />
+                  Add Lead
+                </button>
+              </div>
             )}
           </div>
 

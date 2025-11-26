@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import Link from "next/link";
 import { useRouter, usePathname } from "next/navigation";
 import useAuthStore from "@/store/authStore";
+import NotificationDropdown from "./NotificationDropdown";
 
 export default function Navbar() {
   const router = useRouter();
@@ -134,6 +135,9 @@ export default function Navbar() {
           {/* Auth Buttons / User Info */}
           {user ? (
             <div className="flex items-center gap-3">
+              {/* Notifications - only show for logged in users */}
+              <NotificationDropdown />
+
               <div className="flex items-center gap-2 px-3 py-2 bg-gray-800 rounded-lg border border-gray-700">
                 <span className="text-xs md:text-sm text-gray-300">
                   {user.name || user.email}

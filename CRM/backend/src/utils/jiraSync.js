@@ -1,4 +1,5 @@
 import { createIssue, addComment, getTransitions, transitionIssue } from '../jiraClient.js';
+import { createNotificationForStatusChange } from '../services/notificationService.js';
 
 // Status mappings between CRM and Jira
 export const STATUS_MAPPINGS = {
@@ -73,6 +74,15 @@ export const syncStatusToJira = async (entityType, entity, newStatus) => {
     }
 
     console.log(`✅ Successfully synced ${entityType} status to Jira`);
+
+    // Create notifications for status change
+    try {
+      await createNotificationForStatusChange(entityType, entity, newStatus);
+      console.log(`🔔 Notifications created for ${entityType} status change`);
+    } catch (notificationError) {
+      console.warn(`⚠️ Failed to create notifications for ${entityType} status change:`, notificationError.message);
+      // Don't fail the sync if notifications fail
+    }
   } catch (error) {
     console.error(`❌ Error syncing ${entityType} status to Jira:`, error);
     throw error;

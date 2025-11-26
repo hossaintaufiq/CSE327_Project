@@ -15,6 +15,7 @@ import orderRoutes from './src/routes/orderRoutes.js';
 import projectRoutes from './src/routes/projectRoutes.js';
 import taskRoutes from './src/routes/taskRoutes.js';
 import testRoutes from './src/routes/testRoutes.js';
+import notificationRoutes from './src/routes/notificationRoutes.js';
 import { errorHandler } from './src/middleware/errorHandler.js';
 import jiraRoutes from './src/routes/jiraRoutes.js';
 import { jiraSyncService } from './src/services/jiraSyncService.js';
@@ -84,6 +85,7 @@ const initializeServer = async () => {
   app.use('/api/tasks', taskRoutes);
   app.use('/api/test', testRoutes);
   app.use('/api/jira', jiraRoutes);
+  app.use('/api/notifications', notificationRoutes);
 
   // Error handling
   app.use(errorHandler);

@@ -4,10 +4,11 @@ import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import useAuthStore from "@/store/authStore";
 import apiClient from "@/utils/api";
+import { syncAllEntitiesNow } from "@/utils/jiraApi";
 import Sidebar from "@/components/Sidebar";
 import JiraIssueCreator from "@/components/JiraIssueCreator";
 import JiraIssuesList from "@/components/JiraIssuesList";
-import { Plus, Edit, Trash2, Search, FolderKanban, Calendar, User, Target, X, TrendingUp, Users } from "lucide-react";
+import { Plus, Edit, Trash2, Search, FolderKanban, Calendar, User, Target, X, TrendingUp, Users, RefreshCw } from "lucide-react";
 
 export default function ProjectsPage() {
   const router = useRouter();
@@ -16,6 +17,7 @@ export default function ProjectsPage() {
   const [submitting, setSubmitting] = useState(false);
   const [deleting, setDeleting] = useState(null);
   const [loadingEmployees, setLoadingEmployees] = useState(false);
+  const [syncing, setSyncing] = useState(false);
   const [projects, setProjects] = useState([]);
   const [employees, setEmployees] = useState([]);
   const [searchTerm, setSearchTerm] = useState("");
@@ -92,6 +94,21 @@ export default function ProjectsPage() {
       setEmployees([]);
     } finally {
       setLoadingEmployees(false);
+    }
+  };
+
+  const handleSyncAll = async () => {
+    try {
+      setSyncing(true);
+      await syncAllEntitiesNow();
+      // Reload projects to show any synced changes
+      await loadProjects();
+      alert("Sync completed successfully!");
+    } catch (error) {
+      console.error("Error syncing:", error);
+      alert("Failed to sync entities. Check console for details.");
+    } finally {
+      setSyncing(false);
     }
   };
 
@@ -281,17 +298,27 @@ export default function ProjectsPage() {
               <p className="text-gray-400">Manage your company projects</p>
             </div>
             {(activeCompanyRole === "company_admin" || activeCompanyRole === "manager" || activeCompanyRole === "employee") && (
-              <button
-                onClick={() => {
-                  setEditingProject(null);
-                  resetForm();
-                  setShowModal(true);
-                }}
-                className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
-              >
-                <Plus className="w-5 h-5" />
-                Create Project
-              </button>
+              <div className="flex items-center gap-3">
+                <button
+                  onClick={handleSyncAll}
+                  disabled={syncing}
+                  className="flex items-center gap-2 px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  <RefreshCw className={`w-5 h-5 ${syncing ? 'animate-spin' : ''}`} />
+                  {syncing ? 'Syncing...' : 'Sync Now'}
+                </button>
+                <button
+                  onClick={() => {
+                    setEditingProject(null);
+                    resetForm();
+                    setShowModal(true);
+                  }}
+                  className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+                >
+                  <Plus className="w-5 h-5" />
+                  Create Project
+                </button>
+              </div>
             )}
           </div>
 

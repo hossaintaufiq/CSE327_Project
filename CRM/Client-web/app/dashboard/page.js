@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import useAuthStore from "@/store/authStore";
 import apiClient from "@/utils/api";
+import { useNotifications } from "@/utils/useNotifications";
 import Sidebar from "@/components/Sidebar";
 import {
   DollarSign,
@@ -24,6 +25,7 @@ import {
 export default function DashboardPage() {
   const router = useRouter();
   const { user, activeCompanyId, activeCompanyRole, companies, isSuperAdmin } = useAuthStore();
+  const { refreshNotifications } = useNotifications();
   const [loading, setLoading] = useState(true);
   const [stats, setStats] = useState(null);
   const [revenueTrend, setRevenueTrend] = useState([]);
