@@ -82,7 +82,6 @@ const taskSchema = new mongoose.Schema(
 );
 
 taskSchema.index({ companyId: 1, createdAt: -1 });
-taskSchema.index({ companyId: 1, createdAt: -1 });
 taskSchema.index({ projectId: 1 });
 taskSchema.index({ assignedTo: 1 });
 taskSchema.index({ status: 1 });

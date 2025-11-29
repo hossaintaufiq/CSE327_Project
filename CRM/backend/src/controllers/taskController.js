@@ -3,7 +3,7 @@ import { Task } from '../models/Task.js';
 import { Project } from '../models/Project.js';
 import { User } from '../models/User.js';
 import { createIssue } from '../jiraClient.js';
-import { syncStatusToJira, updateJiraIssue, cleanupJiraReferencesOnEntityDeletion } from '../utils/jiraSync.js';
+import { createNotificationForStatusChange } from '../services/notificationService.js';
 
 /**
  * Get all tasks for a company
@@ -188,12 +188,15 @@ export const updateTask = async (req, res) => {
 
     // Sync with Jira if status changed or other important fields updated
     try {
+      const oldStatus = task.status; // Store old status before potential change
       const statusChanged = updateData.status !== undefined && updateData.status !== task.status;
       const importantFieldsChanged = updateData.title !== undefined || updateData.description !== undefined ||
                                    updateData.priority !== undefined || updateData.dueDate !== undefined;
 
       if (statusChanged) {
         await syncStatusToJira('task', task, task.status);
+        // Create notification for manual status change
+        await createNotificationForStatusChange('task', task, task.status);
       }
 
       if (importantFieldsChanged) {

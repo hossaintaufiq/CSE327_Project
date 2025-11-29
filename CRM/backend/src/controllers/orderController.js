@@ -3,7 +3,7 @@ import { Order } from '../models/Order.js';
 import { Client } from '../models/Client.js';
 import { User } from '../models/User.js';
 import { createIssue } from '../jiraClient.js';
-import { syncStatusToJira, updateJiraIssue, cleanupJiraReferencesOnEntityDeletion } from '../utils/jiraSync.js';
+import { createNotificationForStatusChange } from '../services/notificationService.js';
 
 /**
  * Get all orders for a company
@@ -209,11 +209,14 @@ export const updateOrder = async (req, res) => {
 
     // Sync with Jira if status changed or other important fields updated
     try {
+      const oldStatus = order.status; // Store old status before potential change
       const statusChanged = status !== undefined && status !== order.status;
       const importantFieldsChanged = items !== undefined || notes !== undefined;
 
       if (statusChanged) {
         await syncStatusToJira('order', order, order.status);
+        // Create notification for manual status change
+        await createNotificationForStatusChange('order', order, order.status);
       }
 
       if (importantFieldsChanged) {

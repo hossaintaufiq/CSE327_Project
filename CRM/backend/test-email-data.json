@@ -1,0 +1,5 @@
+{
+  "to": "nazmul.sakib01@northsouth.edu",
+  "subject": "CRM Test Email",
+  "html": "<h1>Test Email</h1><p>This is a test from the CRM system.</p><p>Timestamp: " + new Date().toISOString() + "</p>"
+}

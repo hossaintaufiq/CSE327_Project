@@ -167,20 +167,21 @@ export const createChatRoom = async (req, res) => {
     const { companyId } = req;
     const { type, leadId, clientId, participantIds, title, metadata } = req.body;
 
-    // Validate input based on type
-    if (type === 'lead' && !leadId) {
-      return res.status(400).json({
-        success: false,
-        message: 'Lead ID is required for lead conversations',
-      });
-    }
+    // Validate input based on type - make leadId/clientId optional for now
+    // TODO: Implement proper client/lead selection in frontend
+    // if (type === 'lead' && !leadId) {
+    //   return res.status(400).json({
+    //     success: false,
+    //     message: 'Lead ID is required for lead conversations',
+    //   });
+    // }
 
-    if (type === 'client' && !clientId) {
-      return res.status(400).json({
-        success: false,
-        message: 'Client ID is required for client conversations',
-      });
-    }
+    // if (type === 'client' && !clientId) {
+    //   return res.status(400).json({
+    //     success: false,
+    //     message: 'Client ID is required for client conversations',
+    //   });
+    // }
 
     // Create participants array
     const participants = [{

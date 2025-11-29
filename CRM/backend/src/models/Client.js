@@ -64,7 +64,6 @@ const clientSchema = new mongoose.Schema(
 );
 
 clientSchema.index({ companyId: 1, createdAt: -1 });
-clientSchema.index({ companyId: 1, createdAt: -1 });
 clientSchema.index({ assignedTo: 1 });
 clientSchema.index({ email: 1 });
 clientSchema.index({ status: 1 });

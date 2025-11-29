@@ -71,11 +71,10 @@ function AnnouncementsPage() {
 
   const loadAnnouncements = async () => {
     try {
-      const endpoint = isSuperAdmin ? '/messages/all' : '/messages';
-      const response = await apiClient.get(endpoint);
+      const response = await apiClient.get('/company/announcements');
       
       if (response.data.success) {
-        setAnnouncements(response.data.data.messages);
+        setAnnouncements(response.data.data.announcements);
       }
     } catch (error) {
       console.error("Error loading announcements:", error);
@@ -87,7 +86,7 @@ function AnnouncementsPage() {
   const handleCompose = async (e) => {
     e.preventDefault();
     try {
-      await apiClient.post('/messages', formData);
+      await apiClient.post('/company/announcements', formData);
       setShowCompose(false);
       setFormData({
         recipientId: "",
@@ -379,4 +378,4 @@ function AnnouncementsPage() {
   );
 }
 
-export default MessagesPage;
+export default AnnouncementsPage;

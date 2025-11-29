@@ -12,6 +12,7 @@ import { getEmployeeProfile } from '../controllers/employeeController.js';
 import { getCompanyProfile, updateCompanyProfile } from '../controllers/companyProfileController.js';
 import { getRolesAndPermissions, updateUserRole, removeUserFromCompany } from '../controllers/rolesPermissionsController.js';
 import { getCompanySettings, updateCompanySettings } from '../controllers/settingsController.js';
+import { getCompanyAnnouncements, createCompanyAnnouncement } from '../controllers/announcementController.js';
 
 const router = express.Router();
 
@@ -32,6 +33,8 @@ router.put('/roles/:userId', verifyCompanyAccess, checkRole(['company_admin']), 
 router.delete('/roles/:userId', verifyCompanyAccess, checkRole(['company_admin']), removeUserFromCompany); // Remove user from company
 router.get('/settings', verifyCompanyAccess, checkRole(['company_admin']), getCompanySettings); // Get company settings
 router.put('/settings', verifyCompanyAccess, checkRole(['company_admin']), updateCompanySettings); // Update company settings
+router.get('/announcements', verifyCompanyAccess, getCompanyAnnouncements); // Get company announcements
+router.post('/announcements', verifyCompanyAccess, checkRole(['company_admin']), createCompanyAnnouncement); // Create company announcement
 router.get('/:companyId/members', verifyCompanyAccess, checkRole(['company_admin', 'manager']), getCompanyMembers);
 
 export default router;

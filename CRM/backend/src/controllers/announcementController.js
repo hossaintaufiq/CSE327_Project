@@ -138,3 +138,98 @@ export const deleteAnnouncement = async (req, res) => {
   }
 };
 
+/**
+ * Get announcements for company users
+ */
+export const getCompanyAnnouncements = async (req, res) => {
+  try {
+    const companyId = req.companyId;
+    const userRole = req.companyRole;
+
+    // Build query to get announcements relevant to this company
+    const query = {
+      isActive: true,
+      $or: [
+        { targetType: 'all' },
+        { targetType: 'companies' },
+        { targetType: 'users' },
+        { 
+          targetType: 'specific_companies',
+          targetCompanies: companyId
+        }
+      ]
+    };
+
+    // Add date filtering
+    const now = new Date();
+    query.$or.forEach(condition => {
+      condition.startDate = { $lte: now };
+      if (condition.endDate) {
+        condition.endDate = { $gte: now };
+      }
+    });
+
+    const announcements = await Announcement.find(query)
+      .populate('createdBy', 'name email')
+      .populate('targetCompanies', 'name')
+      .sort({ priority: -1, createdAt: -1 })
+      .lean();
+
+    res.json({
+      success: true,
+      data: { announcements },
+    });
+  } catch (error) {
+    console.error('Error fetching company announcements:', error);
+    res.status(500).json({ message: 'Error fetching announcements', error: error.message });
+  }
+};
+
+/**
+ * Create announcement for company
+ */
+export const createCompanyAnnouncement = async (req, res) => {
+  try {
+    const companyId = req.companyId;
+    const { title, content, type, priority, targetType, targetCompanies } = req.body;
+
+    if (!title || !content) {
+      return res.status(400).json({ message: 'Title and content are required' });
+    }
+
+    // For company announcements, default to company scope
+    const announcementData = {
+      createdBy: req.user._id,
+      targetType: targetType || 'companies',
+      targetCompanies: targetType === 'specific_companies' ? targetCompanies : [companyId],
+      title,
+      content,
+      type: type || 'announcement',
+      priority: priority || 'medium',
+    };
+
+    const announcement = await Announcement.create(announcementData);
+
+    await announcement.populate('createdBy', 'name email');
+    await announcement.populate('targetCompanies', 'name');
+
+    // Log activity
+    await ActivityLog.create({
+      userId: req.user._id,
+      companyId,
+      action: 'announcement_created',
+      description: `Company announcement created: ${title}`,
+      metadata: { announcementId: announcement._id },
+    });
+
+    res.json({
+      success: true,
+      message: 'Announcement created successfully',
+      data: { announcement },
+    });
+  } catch (error) {
+    console.error('Error creating company announcement:', error);
+    res.status(500).json({ message: 'Error creating announcement', error: error.message });
+  }
+};
+

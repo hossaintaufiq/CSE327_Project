@@ -347,9 +347,6 @@ export const createNotificationForStatusChange = async (entityType, entity, newS
       notifications.push(notification);
     }
 
-    // Send emails for status changes
-    await sendStatusChangeEmails(notifications, entityType, entity, null, newStatus);
-
     console.log(`✅ Created ${notifications.length} notifications for ${entityType} status change`);
     return notifications;
   } catch (error) {

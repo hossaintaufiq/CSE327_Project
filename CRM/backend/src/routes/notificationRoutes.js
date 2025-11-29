@@ -17,9 +17,9 @@ router.post('/test-email', async (req, res) => {
   try {
     const { sendEmail } = await import('../services/emailService.js');
     const result = await sendEmail({
-      to: 'nazmul.sakib01@northsouth.edu',
-      subject: 'Test Email from CRM',
-      html: '<h1>Test Email</h1><p>This is a test email to verify Gmail SMTP configuration.</p>'
+      to: req.body.to || 'nazmul.sakib01@northsouth.edu',
+      subject: req.body.subject || 'CRM Test Email',
+      html: req.body.html || '<h1>Test Email</h1><p>This is a test email from your CRM system.</p>'
     });
     res.json({ success: true, message: 'Test email sent successfully', result });
   } catch (error) {

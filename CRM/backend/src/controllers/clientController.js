@@ -2,7 +2,7 @@ import mongoose from 'mongoose';
 import { Client } from '../models/Client.js';
 import { User } from '../models/User.js';
 import { createIssue } from '../jiraClient.js';
-import { syncStatusToJira, updateJiraIssue, cleanupJiraReferencesOnEntityDeletion } from '../utils/jiraSync.js';
+import { createNotificationForStatusChange } from '../services/notificationService.js';
 
 export const getClients = async (req, res) => {
   try {
@@ -140,11 +140,14 @@ export const updateClient = async (req, res) => {
 
     // Sync with Jira if status changed or other important fields updated
     try {
+      const oldStatus = client.status; // Store old status before potential change
       const statusChanged = status !== undefined && status !== client.status;
       const importantFieldsChanged = name !== undefined || email !== undefined || notes !== undefined;
 
       if (statusChanged) {
         await syncStatusToJira('client', client, client.status);
+        // Create notification for manual status change
+        await createNotificationForStatusChange('client', client, client.status);
       }
 
       if (importantFieldsChanged) {

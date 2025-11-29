@@ -65,7 +65,6 @@ const subscriptionSchema = new mongoose.Schema(
   { timestamps: true }
 );
 
-subscriptionSchema.index({ companyId: 1 });
 subscriptionSchema.index({ status: 1 });
 subscriptionSchema.index({ plan: 1 });
 subscriptionSchema.index({ nextBillingDate: 1 });
