@@ -22,6 +22,7 @@ import notificationRoutes from './src/routes/notificationRoutes.js';
 import jiraRoutes from './src/routes/jiraRoutes.js';
 import voipRoutes from './src/routes/voipRoutes.js';
 import telegramRoutes from './src/routes/telegramRoutes.js';
+import employeeRoutes from './src/routes/employeeRoutes.js';
 
 // Import services
 import { initTwilioClient } from './src/services/twilioService.js';
@@ -64,6 +65,7 @@ app.use('/api/notifications', notificationRoutes);
 app.use('/api/jira', jiraRoutes);
 app.use('/api/voip', voipRoutes);
 app.use('/api/telegram', telegramRoutes);
+app.use('/api/employees', employeeRoutes);
 
 // 404 handler
 app.use((req, res) => {

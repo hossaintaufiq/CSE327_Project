@@ -112,3 +112,89 @@ export const getEmployeeProfile = async (req, res) => {
   }
 };
 
+/**
+ * Search employees in a company
+ */
+export const searchEmployees = async (req, res) => {
+  try {
+    const companyId = req.companyId;
+    const { q = '' } = req.query;
+
+    // Find all users that are members of this company
+    const users = await User.find({
+      'companies.companyId': companyId,
+      'companies.isActive': true,
+      isActive: true,
+      $or: [
+        { name: { $regex: q, $options: 'i' } },
+        { email: { $regex: q, $options: 'i' } },
+      ],
+    })
+      .select('_id name email avatar globalRole companies')
+      .limit(20)
+      .lean();
+
+    // Format the response
+    const employees = users.map(user => {
+      const membership = user.companies?.find(c => 
+        c.companyId?.toString() === companyId.toString()
+      );
+      return {
+        id: user._id,
+        name: user.name,
+        email: user.email,
+        avatar: user.avatar,
+        role: membership?.role || 'employee',
+      };
+    });
+
+    res.json({
+      success: true,
+      data: { employees },
+    });
+  } catch (error) {
+    console.error('Error searching employees:', error);
+    res.status(500).json({ message: 'Error searching employees', error: error.message });
+  }
+};
+
+/**
+ * Get all employees in a company
+ */
+export const getEmployees = async (req, res) => {
+  try {
+    const companyId = req.companyId;
+
+    // Find all users that are members of this company
+    const users = await User.find({
+      'companies.companyId': companyId,
+      'companies.isActive': true,
+      isActive: true,
+    })
+      .select('_id name email avatar globalRole companies')
+      .lean();
+
+    // Format the response
+    const employees = users.map(user => {
+      const membership = user.companies?.find(c => 
+        c.companyId?.toString() === companyId.toString()
+      );
+      return {
+        id: user._id,
+        name: user.name,
+        email: user.email,
+        avatar: user.avatar,
+        role: membership?.role || 'employee',
+      };
+    });
+
+    res.json({
+      success: true,
+      data: { employees },
+    });
+  } catch (error) {
+    console.error('Error fetching employees:', error);
+    res.status(500).json({ message: 'Error fetching employees', error: error.message });
+  }
+};
+

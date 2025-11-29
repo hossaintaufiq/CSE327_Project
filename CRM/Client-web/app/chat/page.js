@@ -1,10 +1,10 @@
 "use client";
 
-import { useEffect, useState, useRef } from "react";
+import { useEffect, useState, useRef, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import apiClient, { chatApi } from "@/utils/api";
 import Sidebar from "@/components/Sidebar";
-import { Send, Plus, Users, MessageCircle, Search, MoreVertical, Phone, Video } from "lucide-react";
+import { Send, Plus, Users, MessageCircle, Search, MoreVertical, Phone, Video, User, X } from "lucide-react";
 
 function ChatPage() {
   const router = useRouter();
@@ -18,7 +18,18 @@ function ChatPage() {
   const [searchTerm, setSearchTerm] = useState("");
   const [isSuperAdmin, setIsSuperAdmin] = useState(false);
   const messagesEndRef = useRef(null);
+  const messagesContainerRef = useRef(null);
   const [isTyping, setIsTyping] = useState(false);
+  const [isUserScrolling, setIsUserScrolling] = useState(false);
+  const lastMessageCountRef = useRef(0);
+  
+  // Individual chat state
+  const [showUserSearch, setShowUserSearch] = useState(false);
+  const [userSearchTerm, setUserSearchTerm] = useState("");
+  const [searchResults, setSearchResults] = useState([]);
+  const [searchingUsers, setSearchingUsers] = useState(false);
+  const [currentUser, setCurrentUser] = useState(null);
+
   const handleInputChange = (e) => {
     setNewMessage(e.target.value);
     
@@ -32,6 +43,23 @@ function ChatPage() {
       setIsTyping(false);
     }
   };
+
+  // Handle scroll detection to prevent auto-scroll when user is reading
+  const handleScroll = useCallback(() => {
+    if (!messagesContainerRef.current) return;
+    
+    const container = messagesContainerRef.current;
+    const isAtBottom = container.scrollHeight - container.scrollTop - container.clientHeight < 100;
+    
+    setIsUserScrolling(!isAtBottom);
+  }, []);
+
+  // Smart scroll - only scroll to bottom for new messages when user is at bottom
+  const scrollToBottom = useCallback((force = false) => {
+    if (force || !isUserScrolling) {
+      messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
+    }
+  }, [isUserScrolling]);
 
   useEffect(() => {
     setMounted(true);
@@ -50,6 +78,7 @@ function ChatPage() {
 
       try {
         const parsedUser = JSON.parse(storedUser);
+        setCurrentUser(parsedUser);
         const isSuperAdminUser = parsedUser.globalRole === 'super_admin';
         setIsSuperAdmin(isSuperAdminUser);
 
@@ -87,20 +116,24 @@ function ChatPage() {
       
       // Set up polling for new messages
       const interval = setInterval(() => {
-        loadMessages(selectedRoom.id);
+        loadMessages(selectedRoom.id, true); // Pass flag for polling
       }, 3000); // Poll every 3 seconds
       
       return () => clearInterval(interval);
     }
   }, [selectedRoom]);
 
+  // Only auto-scroll on initial load or when new messages arrive and user is at bottom
   useEffect(() => {
-    scrollToBottom();
-  }, [messages]);
-
-  const scrollToBottom = () => {
-    messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
-  };
+    const newMessageCount = messages.length;
+    const hadNewMessages = newMessageCount > lastMessageCountRef.current;
+    
+    if (hadNewMessages) {
+      scrollToBottom();
+    }
+    
+    lastMessageCountRef.current = newMessageCount;
+  }, [messages, scrollToBottom]);
 
   const loadChatRooms = async () => {
     try {
@@ -115,7 +148,7 @@ function ChatPage() {
     }
   };
 
-  const loadMessages = async (roomId) => {
+  const loadMessages = async (roomId, isPolling = false) => {
     try {
       const response = await chatApi.getChatMessages(roomId);
       if (response.success) {
@@ -139,12 +172,102 @@ function ChatPage() {
       if (response.success) {
         setMessages(prev => [...prev, response.data.message]);
         setNewMessage("");
+        // Scroll to bottom when user sends a message
+        setTimeout(() => scrollToBottom(true), 100);
         // Update chat room's last message
         loadChatRooms();
       }
     } catch (error) {
       console.error("Error sending message:", error);
       alert("Failed to send message: " + (error.response?.data?.message || error.message));
+    }
+  };
+
+  // Search for users to start individual chat
+  const searchUsers = async (term) => {
+    if (!term.trim()) {
+      setSearchResults([]);
+      return;
+    }
+    
+    setSearchingUsers(true);
+    try {
+      const response = await apiClient.get(`/employees/search?q=${encodeURIComponent(term)}`);
+      if (response.data.success) {
+        // Filter out current user
+        const filtered = response.data.data.employees.filter(
+          emp => emp.id !== currentUser?.id && emp.id !== currentUser?._id
+        );
+        setSearchResults(filtered);
+      }
+    } catch (error) {
+      console.error("Error searching users:", error);
+      // Fallback: try to get all employees
+      try {
+        const response = await apiClient.get('/employees');
+        if (response.data.success) {
+          const filtered = response.data.data.employees.filter(emp => {
+            const matchesSearch = emp.name?.toLowerCase().includes(term.toLowerCase()) ||
+                                  emp.email?.toLowerCase().includes(term.toLowerCase());
+            const isNotCurrentUser = emp.id !== currentUser?.id && emp.id !== currentUser?._id;
+            return matchesSearch && isNotCurrentUser;
+          });
+          setSearchResults(filtered);
+        }
+      } catch (fallbackError) {
+        console.error("Fallback search failed:", fallbackError);
+      }
+    } finally {
+      setSearchingUsers(false);
+    }
+  };
+
+  // Debounced user search
+  useEffect(() => {
+    const timeoutId = setTimeout(() => {
+      if (userSearchTerm) {
+        searchUsers(userSearchTerm);
+      }
+    }, 300);
+    return () => clearTimeout(timeoutId);
+  }, [userSearchTerm]);
+
+  // Start individual chat with a user
+  const startIndividualChat = async (targetUser) => {
+    try {
+      // Check if chat room already exists
+      const existingRoom = chatRooms.find(room => 
+        room.type === 'internal' && 
+        room.participants.length === 2 &&
+        room.participants.some(p => p.userId?._id === targetUser.id || p.userId === targetUser.id)
+      );
+
+      if (existingRoom) {
+        setSelectedRoom(existingRoom);
+        setShowUserSearch(false);
+        setUserSearchTerm("");
+        setSearchResults([]);
+        return;
+      }
+
+      // Create new chat room
+      const response = await chatApi.createChatRoom({
+        type: 'internal',
+        title: `Chat with ${targetUser.name}`,
+        participantIds: [targetUser.id],
+      });
+
+      if (response.success) {
+        setChatRooms(prev => [response.data.chatRoom, ...prev]);
+        setSelectedRoom(response.data.chatRoom);
+        setShowUserSearch(false);
+        setUserSearchTerm("");
+        setSearchResults([]);
+        setShowNewChat(false);
+      }
+    } catch (error) {
+      console.error("Error starting individual chat:", error);
+      alert("Failed to start chat: " + (error.response?.data?.message || error.message));
     }
   };
 
@@ -238,6 +361,22 @@ function ChatPage() {
             <div className="p-4 border-b border-gray-700 bg-gray-750">
               <h3 className="text-sm font-medium text-gray-300 mb-3">Start New Conversation</h3>
               <div className="space-y-2">
+                {/* Individual Chat Option */}
+                <button
+                  onClick={() => {
+                    setShowUserSearch(true);
+                    setShowNewChat(false);
+                  }}
+                  className="w-full p-3 bg-indigo-600/20 hover:bg-indigo-600/30 rounded-lg text-left transition-colors"
+                >
+                  <div className="flex items-center space-x-3">
+                    <User className="w-5 h-5 text-indigo-400" />
+                    <div>
+                      <div className="font-medium">Individual Chat</div>
+                      <div className="text-sm text-gray-400">Message a specific person</div>
+                    </div>
+                  </div>
+                </button>
                 <button
                   onClick={() => createChatRoom('internal')}
                   className="w-full p-3 bg-purple-600/20 hover:bg-purple-600/30 rounded-lg text-left transition-colors"
@@ -245,8 +384,8 @@ function ChatPage() {
                   <div className="flex items-center space-x-3">
                     <Users className="w-5 h-5 text-purple-400" />
                     <div>
-                      <div className="font-medium">Internal Chat</div>
-                      <div className="text-sm text-gray-400">Chat with team members</div>
+                      <div className="font-medium">Group Chat</div>
+                      <div className="text-sm text-gray-400">Create a group conversation</div>
                     </div>
                   </div>
                 </button>
@@ -278,6 +417,65 @@ function ChatPage() {
             </div>
           )}
 
+          {/* User Search for Individual Chat */}
+          {showUserSearch && (
+            <div className="p-4 border-b border-gray-700 bg-gray-750">
+              <div className="flex items-center justify-between mb-3">
+                <h3 className="text-sm font-medium text-gray-300">Find a person</h3>
+                <button
+                  onClick={() => {
+                    setShowUserSearch(false);
+                    setUserSearchTerm("");
+                    setSearchResults([]);
+                  }}
+                  className="p-1 hover:bg-gray-600 rounded"
+                >
+                  <X className="w-4 h-4" />
+                </button>
+              </div>
+              <div className="relative mb-3">
+                <Search className="w-4 h-4 absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" />
+                <input
+                  type="text"
+                  placeholder="Search by name or email..."
+                  value={userSearchTerm}
+                  onChange={(e) => setUserSearchTerm(e.target.value)}
+                  className="w-full pl-10 pr-4 py-2 bg-gray-700 border border-gray-600 rounded-lg focus:outline-none focus:border-blue-500"
+                  autoFocus
+                />
+              </div>
+              <div className="max-h-48 overflow-y-auto space-y-1">
+                {searchingUsers ? (
+                  <div className="text-center py-4 text-gray-400">
+                    <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-blue-500 mx-auto"></div>
+                  </div>
+                ) : searchResults.length > 0 ? (
+                  searchResults.map((user) => (
+                    <button
+                      key={user.id}
+                      onClick={() => startIndividualChat(user)}
+                      className="w-full p-2 hover:bg-gray-600 rounded-lg flex items-center space-x-3 text-left transition-colors"
+                    >
+                      <div className="w-8 h-8 bg-blue-600 rounded-full flex items-center justify-center shrink-0">
+                        <span className="text-sm font-medium">
+                          {user.name?.charAt(0).toUpperCase() || '?'}
+                        </span>
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <div className="font-medium truncate">{user.name}</div>
+                        <div className="text-sm text-gray-400 truncate">{user.email}</div>
+                      </div>
+                    </button>
+                  ))
+                ) : userSearchTerm ? (
+                  <p className="text-center py-4 text-gray-400">No users found</p>
+                ) : (
+                  <p className="text-center py-4 text-gray-400">Type to search...</p>
+                )}
+              </div>
+            </div>
+          )}
+
           {/* Chat Rooms List */}
           <div className="flex-1 overflow-y-auto">
             {filteredRooms.length === 0 ? (
@@ -303,14 +501,14 @@ function ChatPage() {
                   </div>
                   {room.lastMessage && (
                     <p className="text-sm text-gray-400 truncate">
-                      {room.lastMessage.sender.name}: {room.lastMessage.content}
+                      {room.lastMessage.sender?.name || 'Unknown'}: {room.lastMessage.content}
                     </p>
                   )}
                   <div className="flex items-center justify-between mt-2">
                     <span className="text-xs text-gray-500">
                       {new Date(room.lastActivity).toLocaleDateString()}
                     </span>
-                    {room.participants.length > 2 && (
+                    {room.participants?.length > 2 && (
                       <span className="text-xs text-gray-500">
                         {room.participants.length} members
                       </span>
@@ -323,7 +521,7 @@ function ChatPage() {
         </div>
 
         {/* Chat Area */}
-        <div className="flex-1 flex flex-col">
+        <div className="flex-1 flex flex-col relative">
           {selectedRoom ? (
             <>
               {/* Chat Header */}
@@ -336,7 +534,7 @@ function ChatPage() {
                     <div>
                       <h2 className="font-medium">{getRoomDisplayName(selectedRoom)}</h2>
                       <p className="text-sm text-gray-400">
-                        {selectedRoom.participants.length} members
+                        {selectedRoom.participants?.length || 0} members
                       </p>
                     </div>
                   </div>
@@ -355,17 +553,21 @@ function ChatPage() {
               </div>
 
               {/* Messages Area */}
-              <div className="flex-1 overflow-y-auto p-4 space-y-4">
+              <div 
+                ref={messagesContainerRef}
+                onScroll={handleScroll}
+                className="flex-1 overflow-y-auto p-4 space-y-4"
+              >
                 {messages.map((message) => (
                   <div key={message.id} className="flex space-x-3">
                     <div className="w-8 h-8 bg-gray-600 rounded-full flex items-center justify-center shrink-0">
                       <span className="text-sm font-medium">
-                        {message.sender.name.charAt(0).toUpperCase()}
+                        {message.sender?.name?.charAt(0).toUpperCase() || '?'}
                       </span>
                     </div>
                     <div className="flex-1">
                       <div className="flex items-center space-x-2 mb-1">
-                        <span className="font-medium text-white">{message.sender.name}</span>
+                        <span className="font-medium text-white">{message.sender?.name || 'Unknown'}</span>
                         <span className="text-xs text-gray-500">
                           {new Date(message.createdAt).toLocaleTimeString()}
                         </span>
@@ -395,6 +597,21 @@ function ChatPage() {
                 
                 <div ref={messagesEndRef} />
               </div>
+
+              {/* Scroll to bottom button - shows when user has scrolled up */}
+              {isUserScrolling && messages.length > 5 && (
+                <div className="absolute bottom-24 right-8">
+                  <button
+                    onClick={() => scrollToBottom(true)}
+                    className="p-2 bg-blue-600 hover:bg-blue-700 rounded-full shadow-lg transition-colors"
+                    title="Scroll to bottom"
+                  >
+                    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 14l-7 7m0 0l-7-7m7 7V3" />
+                    </svg>
+                  </button>
+                </div>
+              )}
 
               {/* Message Input */}
               <div className="p-4 border-t border-gray-700 bg-gray-800">

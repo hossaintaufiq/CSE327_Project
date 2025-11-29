@@ -8,7 +8,7 @@ import {
   listMyCompanies,
   getCompanyMembers,
 } from '../controllers/companyController.js';
-import { getEmployeeProfile } from '../controllers/employeeController.js';
+import { getEmployeeProfile, searchEmployees, getEmployees } from '../controllers/employeeController.js';
 import { getCompanyProfile, updateCompanyProfile } from '../controllers/companyProfileController.js';
 import { getRolesAndPermissions, updateUserRole, removeUserFromCompany } from '../controllers/rolesPermissionsController.js';
 import { getCompanySettings, updateCompanySettings } from '../controllers/settingsController.js';

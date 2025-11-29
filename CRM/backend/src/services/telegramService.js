@@ -1,15 +1,14 @@
-import TelegramBot from 'node-telegram-bot-api';
+import { Bot, InlineKeyboard } from 'grammy';
 import crypto from 'crypto';
 import { User } from '../models/User.js';
 import { ChatRoom } from '../models/ChatRoom.js';
 import { ChatMessage } from '../models/ChatMessage.js';
-import { Client } from '../models/Client.js';
 
 let bot = null;
 const pendingVerifications = new Map(); // Store pending verifications
 
 /**
- * Initialize Telegram Bot
+ * Initialize Telegram Bot using grammY
  */
 export const initTelegramBot = () => {
   const token = process.env.TELEGRAM_BOT_TOKEN;
@@ -20,12 +19,16 @@ export const initTelegramBot = () => {
   }
 
   try {
-    bot = new TelegramBot(token, { polling: true });
+    bot = new Bot(token);
     
     // Set up message handlers
     setupBotHandlers();
     
-    console.log('✅ Telegram bot initialized');
+    // Start the bot
+    bot.start({
+      onStart: () => console.log('✅ Telegram bot initialized and running'),
+    });
+    
     return true;
   } catch (error) {
     console.error('❌ Failed to initialize Telegram bot:', error.message);
@@ -43,16 +46,21 @@ export const getTelegramBot = () => bot;
  */
 const setupBotHandlers = () => {
   // Start command - Initial greeting and verification
-  bot.onText(/\/start(.*)/, async (msg, match) => {
-    const chatId = msg.chat.id;
-    const verificationCode = match[1]?.trim();
+  bot.command('start', async (ctx) => {
+    const chatId = ctx.chat.id;
+    const args = ctx.match?.trim();
 
-    if (verificationCode) {
+    if (args) {
       // User came from a verification link
-      await handleVerification(chatId, verificationCode, msg.from);
+      await handleVerification(ctx, args);
     } else {
       // New user - show welcome message
-      await bot.sendMessage(chatId, 
+      const keyboard = new InlineKeyboard()
+        .text('🔗 Link Account', 'link_account')
+        .row()
+        .text('❓ Help', 'help');
+
+      await ctx.reply(
         `👋 Welcome to CRM Prime Bot!\n\n` +
         `This bot allows you to:\n` +
         `• Receive notifications from your CRM\n` +
@@ -63,85 +71,75 @@ const setupBotHandlers = () => {
         `2. Go to Settings > Integrations\n` +
         `3. Click "Connect Telegram"\n` +
         `4. Enter the code shown there, or use the link provided`,
-        {
-          reply_markup: {
-            inline_keyboard: [
-              [{ text: '🔗 Link Account', callback_data: 'link_account' }],
-              [{ text: '❓ Help', callback_data: 'help' }]
-            ]
-          }
-        }
+        { reply_markup: keyboard }
       );
     }
   });
 
   // Help command
-  bot.onText(/\/help/, async (msg) => {
-    const chatId = msg.chat.id;
-    await sendHelpMessage(chatId);
+  bot.command('help', async (ctx) => {
+    await sendHelpMessage(ctx);
   });
 
   // Status command
-  bot.onText(/\/status/, async (msg) => {
-    const chatId = msg.chat.id;
-    await handleStatusCommand(chatId);
+  bot.command('status', async (ctx) => {
+    await handleStatusCommand(ctx);
   });
 
   // Tasks command
-  bot.onText(/\/tasks/, async (msg) => {
-    const chatId = msg.chat.id;
-    await handleTasksCommand(chatId);
+  bot.command('tasks', async (ctx) => {
+    await handleTasksCommand(ctx);
   });
 
   // Unlink command
-  bot.onText(/\/unlink/, async (msg) => {
-    const chatId = msg.chat.id;
-    await handleUnlinkCommand(chatId, msg.from);
+  bot.command('unlink', async (ctx) => {
+    await handleUnlinkCommand(ctx);
   });
 
   // Handle callback queries (button clicks)
-  bot.on('callback_query', async (query) => {
-    const chatId = query.message.chat.id;
-    const data = query.data;
+  bot.callbackQuery('link_account', async (ctx) => {
+    await ctx.answerCallbackQuery();
+    const chatId = ctx.chat.id;
+    await ctx.reply(
+      `To link your account:\n\n` +
+      `1. Go to your CRM dashboard\n` +
+      `2. Navigate to Settings > Integrations\n` +
+      `3. Click "Connect Telegram"\n` +
+      `4. Enter code: \`${chatId}\`\n\n` +
+      `Or scan the QR code from the dashboard.`,
+      { parse_mode: 'Markdown' }
+    );
+  });
 
-    await bot.answerCallbackQuery(query.id);
-
-    switch (data) {
-      case 'link_account':
-        await bot.sendMessage(chatId,
-          `To link your account:\n\n` +
-          `1. Go to your CRM dashboard\n` +
-          `2. Navigate to Settings > Integrations\n` +
-          `3. Click "Connect Telegram"\n` +
-          `4. Enter code: \`${chatId}\`\n\n` +
-          `Or scan the QR code from the dashboard.`,
-          { parse_mode: 'Markdown' }
-        );
-        break;
-      case 'help':
-        await sendHelpMessage(chatId);
-        break;
-    }
+  bot.callbackQuery('help', async (ctx) => {
+    await ctx.answerCallbackQuery();
+    await sendHelpMessage(ctx);
   });
 
   // Handle regular messages (potential chat messages)
-  bot.on('message', async (msg) => {
-    if (msg.text?.startsWith('/')) return; // Ignore commands
+  bot.on('message:text', async (ctx) => {
+    if (ctx.message.text?.startsWith('/')) return; // Ignore commands
+    await handleIncomingMessage(ctx);
+  });
 
-    const chatId = msg.chat.id;
-    await handleIncomingMessage(chatId, msg);
+  // Error handler
+  bot.catch((err) => {
+    console.error('Telegram bot error:', err);
   });
 };
 
 /**
  * Handle verification from CRM link
  */
-const handleVerification = async (chatId, code, telegramUser) => {
+const handleVerification = async (ctx, code) => {
+  const chatId = ctx.chat.id;
+  const telegramUser = ctx.from;
+
   try {
     const verification = pendingVerifications.get(code);
     
     if (!verification) {
-      await bot.sendMessage(chatId,
+      await ctx.reply(
         `❌ Invalid or expired verification code.\n\n` +
         `Please request a new link from your CRM dashboard.`
       );
@@ -151,7 +149,7 @@ const handleVerification = async (chatId, code, telegramUser) => {
     // Find and update user
     const user = await User.findById(verification.userId);
     if (!user) {
-      await bot.sendMessage(chatId, `❌ User not found. Please try again.`);
+      await ctx.reply(`❌ User not found. Please try again.`);
       return;
     }
 
@@ -164,7 +162,7 @@ const handleVerification = async (chatId, code, telegramUser) => {
     // Remove pending verification
     pendingVerifications.delete(code);
 
-    await bot.sendMessage(chatId,
+    await ctx.reply(
       `✅ Account linked successfully!\n\n` +
       `Welcome, ${user.name}!\n\n` +
       `You will now receive notifications and can chat with your leads/clients here.\n\n` +
@@ -176,7 +174,7 @@ const handleVerification = async (chatId, code, telegramUser) => {
     );
   } catch (error) {
     console.error('Verification error:', error);
-    await bot.sendMessage(chatId, `❌ An error occurred. Please try again.`);
+    await ctx.reply(`❌ An error occurred. Please try again.`);
   }
 };
 
@@ -208,7 +206,7 @@ export const generateVerificationCode = (userId) => {
 export const getBotUsername = async () => {
   if (!bot) return null;
   try {
-    const me = await bot.getMe();
+    const me = await bot.api.getMe();
     return me.username;
   } catch (error) {
     console.error('Failed to get bot info:', error);
@@ -220,13 +218,17 @@ export const getBotUsername = async () => {
  * Send notification to user
  */
 export const sendNotification = async (userId, message, options = {}) => {
+  if (!bot) {
+    return { success: false, reason: 'Telegram bot not initialized' };
+  }
+
   try {
     const user = await User.findById(userId);
     if (!user?.telegramChatId) {
       return { success: false, reason: 'User not linked to Telegram' };
     }
 
-    await bot.sendMessage(user.telegramChatId, message, {
+    await bot.api.sendMessage(user.telegramChatId, message, {
       parse_mode: 'Markdown',
       ...options,
     });
@@ -234,6 +236,26 @@ export const sendNotification = async (userId, message, options = {}) => {
     return { success: true };
   } catch (error) {
     console.error('Failed to send Telegram notification:', error);
+    return { success: false, error: error.message };
+  }
+};
+
+/**
+ * Send notification to a specific chat ID (direct)
+ */
+export const sendDirectNotification = async (chatId, message, options = {}) => {
+  if (!bot) {
+    return { success: false, reason: 'Telegram bot not initialized' };
+  }
+
+  try {
+    await bot.api.sendMessage(chatId, message, {
+      parse_mode: 'Markdown',
+      ...options,
+    });
+    return { success: true };
+  } catch (error) {
+    console.error('Failed to send direct Telegram notification:', error);
     return { success: false, error: error.message };
   }
 };
@@ -255,15 +277,16 @@ export const broadcastNotification = async (userIds, message, options = {}) => {
 /**
  * Handle incoming chat messages
  */
-const handleIncomingMessage = async (chatId, msg) => {
+const handleIncomingMessage = async (ctx) => {
+  const chatId = ctx.chat.id;
+  const msg = ctx.message;
+
   try {
     // Find user by Telegram chat ID
     const user = await User.findOne({ telegramChatId: chatId.toString() });
     
     if (!user) {
-      await bot.sendMessage(chatId,
-        `Please link your account first using /start`
-      );
+      await ctx.reply(`Please link your account first using /start`);
       return;
     }
 
@@ -295,9 +318,9 @@ const handleIncomingMessage = async (chatId, msg) => {
       activeRoom.lastActivity = new Date();
       await activeRoom.save();
 
-      await bot.sendMessage(chatId, `✓ Message sent`);
+      await ctx.reply(`✓ Message sent`);
     } else {
-      await bot.sendMessage(chatId,
+      await ctx.reply(
         `You don't have an active chat session.\n\n` +
         `To start a chat, please use the CRM dashboard to open a conversation.`
       );
@@ -310,13 +333,15 @@ const handleIncomingMessage = async (chatId, msg) => {
 /**
  * Handle status command
  */
-const handleStatusCommand = async (chatId) => {
+const handleStatusCommand = async (ctx) => {
+  const chatId = ctx.chat.id;
+
   try {
     const user = await User.findOne({ telegramChatId: chatId.toString() })
       .populate('companies.companyId');
     
     if (!user) {
-      await bot.sendMessage(chatId, `Please link your account first using /start`);
+      await ctx.reply(`Please link your account first using /start`);
       return;
     }
 
@@ -325,7 +350,7 @@ const handleStatusCommand = async (chatId) => {
       ? companies.map(c => `• ${c.companyId?.name || 'Unknown'} (${c.role})`).join('\n')
       : 'No active companies';
 
-    await bot.sendMessage(chatId,
+    await ctx.reply(
       `📊 *Your CRM Status*\n\n` +
       `*Name:* ${user.name}\n` +
       `*Email:* ${user.email}\n` +
@@ -335,19 +360,21 @@ const handleStatusCommand = async (chatId) => {
     );
   } catch (error) {
     console.error('Error handling status command:', error);
-    await bot.sendMessage(chatId, `❌ Failed to fetch status. Please try again.`);
+    await ctx.reply(`❌ Failed to fetch status. Please try again.`);
   }
 };
 
 /**
  * Handle tasks command
  */
-const handleTasksCommand = async (chatId) => {
+const handleTasksCommand = async (ctx) => {
+  const chatId = ctx.chat.id;
+
   try {
     const user = await User.findOne({ telegramChatId: chatId.toString() });
     
     if (!user) {
-      await bot.sendMessage(chatId, `Please link your account first using /start`);
+      await ctx.reply(`Please link your account first using /start`);
       return;
     }
 
@@ -361,7 +388,7 @@ const handleTasksCommand = async (chatId) => {
       .limit(10);
 
     if (tasks.length === 0) {
-      await bot.sendMessage(chatId, `✅ You have no pending tasks!`);
+      await ctx.reply(`✅ You have no pending tasks!`);
       return;
     }
 
@@ -371,25 +398,27 @@ const handleTasksCommand = async (chatId) => {
       return `${priority} *${t.title}*\n   Status: ${t.status} | Due: ${dueDate}`;
     }).join('\n\n');
 
-    await bot.sendMessage(chatId,
+    await ctx.reply(
       `📋 *Your Tasks* (${tasks.length})\n\n${taskList}`,
       { parse_mode: 'Markdown' }
     );
   } catch (error) {
     console.error('Error handling tasks command:', error);
-    await bot.sendMessage(chatId, `❌ Failed to fetch tasks. Please try again.`);
+    await ctx.reply(`❌ Failed to fetch tasks. Please try again.`);
   }
 };
 
 /**
  * Handle unlink command
  */
-const handleUnlinkCommand = async (chatId, telegramUser) => {
+const handleUnlinkCommand = async (ctx) => {
+  const chatId = ctx.chat.id;
+
   try {
     const user = await User.findOne({ telegramChatId: chatId.toString() });
     
     if (!user) {
-      await bot.sendMessage(chatId, `Your account is not linked.`);
+      await ctx.reply(`Your account is not linked.`);
       return;
     }
 
@@ -398,22 +427,22 @@ const handleUnlinkCommand = async (chatId, telegramUser) => {
     user.telegramLinkedAt = null;
     await user.save();
 
-    await bot.sendMessage(chatId,
+    await ctx.reply(
       `✅ Account unlinked successfully.\n\n` +
       `You will no longer receive notifications here.\n` +
       `Use /start to link again.`
     );
   } catch (error) {
     console.error('Error handling unlink command:', error);
-    await bot.sendMessage(chatId, `❌ Failed to unlink. Please try again.`);
+    await ctx.reply(`❌ Failed to unlink. Please try again.`);
   }
 };
 
 /**
  * Send help message
  */
-const sendHelpMessage = async (chatId) => {
-  await bot.sendMessage(chatId,
+const sendHelpMessage = async (ctx) => {
+  await ctx.reply(
     `❓ *CRM Prime Bot Help*\n\n` +
     `*Commands:*\n` +
     `/start - Start the bot and link your account\n` +
@@ -428,4 +457,14 @@ const sendHelpMessage = async (chatId) => {
     `For support, contact your CRM administrator.`,
     { parse_mode: 'Markdown' }
   );
+};
+
+/**
+ * Graceful shutdown
+ */
+export const stopTelegramBot = () => {
+  if (bot) {
+    bot.stop();
+    console.log('Telegram bot stopped');
+  }
 };
