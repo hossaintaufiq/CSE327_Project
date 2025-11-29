@@ -152,3 +152,48 @@ export const notificationAPI = {
   },
 };
 
+// Chat API functions
+export const chatApi = {
+  // Get all chat rooms for the user
+  getChatRooms: async (params = {}) => {
+    const response = await apiClient.get('/chat/rooms', { params });
+    return response.data;
+  },
+
+  // Get messages for a specific chat room
+  getChatMessages: async (roomId, params = {}) => {
+    const response = await apiClient.get(`/chat/rooms/${roomId}/messages`, { params });
+    return response.data;
+  },
+
+  // Create a new chat room
+  createChatRoom: async (roomData) => {
+    const response = await apiClient.post('/chat/rooms', roomData);
+    return response.data;
+  },
+
+  // Send a message to a chat room
+  sendMessage: async (roomId, messageData) => {
+    const response = await apiClient.post(`/chat/rooms/${roomId}/messages`, messageData);
+    return response.data;
+  },
+
+  // Add participant to chat room
+  addParticipant: async (roomId, userId, role = 'member') => {
+    const response = await apiClient.post(`/chat/rooms/${roomId}/participants`, { userId, role });
+    return response.data;
+  },
+
+  // Update chat room
+  updateChatRoom: async (roomId, updates) => {
+    const response = await apiClient.put(`/chat/rooms/${roomId}`, updates);
+    return response.data;
+  },
+
+  // Set typing status
+  setTypingStatus: async (roomId, isTyping) => {
+    const response = await apiClient.post(`/chat/rooms/${roomId}/typing`, { isTyping });
+    return response.data;
+  },
+};
+

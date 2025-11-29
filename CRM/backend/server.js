@@ -9,6 +9,7 @@ import authRoutes from './src/routes/authRoutes.js';
 import companyRoutes from './src/routes/companyRoutes.js';
 import superAdminRoutes from './src/routes/superAdminRoutes.js';
 import messageRoutes from './src/routes/messageRoutes.js';
+import chatRoutes from './src/routes/chatRoutes.js';
 import dashboardRoutes from './src/routes/dashboardRoutes.js';
 import clientRoutes from './src/routes/clientRoutes.js';
 import orderRoutes from './src/routes/orderRoutes.js';
@@ -78,6 +79,7 @@ const initializeServer = async () => {
   app.use('/api/company', companyRoutes);
   app.use('/api/super-admin', superAdminRoutes);
   app.use('/api/messages', messageRoutes);
+  app.use('/api/chat', chatRoutes);
   app.use('/api/dashboard', dashboardRoutes);
   app.use('/api/clients', clientRoutes);
   app.use('/api/orders', orderRoutes);

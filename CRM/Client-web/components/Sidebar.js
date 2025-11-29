@@ -48,7 +48,8 @@ export default function Sidebar() {
         { icon: Users, label: "Employees", href: "/dashboard/employees" },
         { icon: FolderKanban, label: "Projects", href: "/dashboard/projects" },
         { icon: CheckSquare, label: "Tasks", href: "/dashboard/tasks" },
-        { icon: MessageSquare, label: "Messages", href: "/messages" },
+        { icon: MessageSquare, label: "Announcements", href: "/announcements" },
+        { icon: MessageSquare, label: "Chat", href: "/chat" },
         { icon: Building2, label: "Company Profile", href: "/dashboard/company-profile" }
       );
     }
@@ -66,14 +67,16 @@ export default function Sidebar() {
         { icon: UserCheck, label: "My Leads", href: "/clients" },
         { icon: ShoppingCart, label: "My Sales", href: "/orders" },
         { icon: CheckSquare, label: "Tasks", href: "/dashboard/tasks" },
-        { icon: MessageSquare, label: "Messages", href: "/messages" }
+        { icon: MessageSquare, label: "Announcements", href: "/announcements" },
+        { icon: MessageSquare, label: "Chat", href: "/chat" }
       );
     }
     // For Client
     else if (activeCompanyRole === "client") {
       companyMenuItems.push(
         { icon: ShoppingCart, label: "My Sales", href: "/orders" },
-        { icon: MessageSquare, label: "Messages", href: "/messages" }
+        { icon: MessageSquare, label: "Announcements", href: "/announcements" },
+        { icon: MessageSquare, label: "Chat", href: "/chat" }
       );
     }
 

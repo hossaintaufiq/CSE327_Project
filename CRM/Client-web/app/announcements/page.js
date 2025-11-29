@@ -5,11 +5,11 @@ import { useRouter } from "next/navigation";
 import apiClient from "@/utils/api";
 import Sidebar from "@/components/Sidebar";
 
-function MessagesPage() {
+function AnnouncementsPage() {
   const router = useRouter();
   const [mounted, setMounted] = useState(false);
   const [loading, setLoading] = useState(true);
-  const [messages, setMessages] = useState([]);
+  const [announcements, setAnnouncements] = useState([]);
   const [selectedMessage, setSelectedMessage] = useState(null);
   const [showCompose, setShowCompose] = useState(false);
   const [formData, setFormData] = useState({
@@ -59,7 +59,7 @@ function MessagesPage() {
           }
         }
 
-        loadMessages();
+        loadAnnouncements();
       } catch (error) {
         console.error("Error checking auth:", error);
         router.push("/login");
@@ -69,16 +69,16 @@ function MessagesPage() {
     checkAuth();
   }, [router]);
 
-  const loadMessages = async () => {
+  const loadAnnouncements = async () => {
     try {
       const endpoint = isSuperAdmin ? '/messages/all' : '/messages';
       const response = await apiClient.get(endpoint);
       
       if (response.data.success) {
-        setMessages(response.data.data.messages);
+        setAnnouncements(response.data.data.messages);
       }
     } catch (error) {
-      console.error("Error loading messages:", error);
+      console.error("Error loading announcements:", error);
     } finally {
       setLoading(false);
     }
@@ -96,7 +96,7 @@ function MessagesPage() {
         priority: "medium",
         category: "general",
       });
-      loadMessages();
+      loadAnnouncements();
     } catch (error) {
       console.error("Error sending message:", error);
       alert("Failed to send message: " + (error.response?.data?.message || error.message));
@@ -106,7 +106,7 @@ function MessagesPage() {
   const handleMarkAsRead = async (messageId) => {
     try {
       await apiClient.patch(`/messages/${messageId}/read`);
-      loadMessages();
+      loadAnnouncements();
       if (selectedMessage?.id === messageId) {
         setSelectedMessage({ ...selectedMessage, isRead: true });
       }
@@ -123,7 +123,7 @@ function MessagesPage() {
       if (selectedMessage?.id === messageId) {
         setSelectedMessage(null);
       }
-      loadMessages();
+      loadAnnouncements();
     } catch (error) {
       console.error("Error deleting message:", error);
       alert("Failed to delete message");
@@ -135,13 +135,13 @@ function MessagesPage() {
       <div className="min-h-screen flex items-center justify-center bg-gray-900">
         <div className="text-center">
           <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-500 mx-auto"></div>
-          <p className="mt-4 text-gray-400">Loading messages...</p>
+          <p className="mt-4 text-gray-400">Loading announcements...</p>
         </div>
       </div>
     );
   }
 
-  const unreadCount = messages.filter((m) => !m.isRead).length;
+  const unreadCount = announcements.filter((m) => !m.isRead).length;
   const priorityColors = {
     low: "bg-gray-500/20 text-gray-400",
     medium: "bg-blue-500/20 text-blue-400",
@@ -155,9 +155,9 @@ function MessagesPage() {
       <div className="lg:ml-64 p-4 sm:p-6 lg:p-8">
         <div className="mb-8 flex justify-between items-center">
           <div>
-            <h1 className="text-3xl font-bold mb-2 text-white">Messages</h1>
-            <p className="text-gray-400">
-              {isSuperAdmin ? "All platform messages" : "Company messages"}
+            <h1 className="text-3xl font-bold mb-2 text-white">Announcements</h1>
+            <p className="text-gray-400 mb-6">
+              {isSuperAdmin ? "All platform announcements" : "Company-wide announcements and updates"}
             </p>
           </div>
           <button
@@ -169,7 +169,7 @@ function MessagesPage() {
         </div>
 
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-          {/* Messages List */}
+          {/* Announcements List */}
           <div className="lg:col-span-1 bg-gray-800 rounded-lg border border-gray-700 overflow-hidden">
             <div className="px-4 py-3 border-b border-gray-700 bg-gray-900">
               <div className="flex justify-between items-center">
