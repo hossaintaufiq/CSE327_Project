@@ -13,10 +13,12 @@ import { verifyCompanyAccess } from '../middleware/companyAccess.js';
 
 const router = express.Router();
 
-// Test endpoint (no auth required)
-router.get('/test', (req, res) => {
-  res.json({ success: true, message: 'Chat API is working' });
-});
+// Test endpoint - only enabled in development
+if (process.env.NODE_ENV !== 'production') {
+  router.get('/test', (req, res) => {
+    res.json({ success: true, message: 'Chat API is working' });
+  });
+}
 
 // All chat routes require authentication and company access
 router.use(verifyFirebaseToken);

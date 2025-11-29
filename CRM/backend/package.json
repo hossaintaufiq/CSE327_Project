@@ -25,7 +25,9 @@
     "firebase-admin": "^12.6.0",
     "mongoose": "^8.19.3",
     "node-cron": "^4.2.1",
-    "nodemailer": "^7.0.10"
+    "node-telegram-bot-api": "^0.66.0",
+    "nodemailer": "^7.0.10",
+    "twilio": "^5.10.6"
   },
   "devDependencies": {
     "nodemon": "^3.1.11"

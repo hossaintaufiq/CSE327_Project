@@ -2,12 +2,27 @@ import nodemailer from 'nodemailer';
 
 // Create transporter for Gmail SMTP
 const createTransporter = () => {
+  const user = process.env.GMAIL_USER;
+  const pass = process.env.GMAIL_APP_PASSWORD;
+  
+  if (!user || !pass) {
+    console.error('❌ Email configuration missing: GMAIL_USER or GMAIL_APP_PASSWORD not set');
+    return null;
+  }
+
   return nodemailer.createTransport({
     service: 'gmail',
+    host: 'smtp.gmail.com',
+    port: 587,
+    secure: false, // Use TLS
     auth: {
-      user: process.env.GMAIL_USER,
-      pass: process.env.GMAIL_APP_PASSWORD,
+      user,
+      pass,
     },
+    tls: {
+      rejectUnauthorized: false,
+    },
+    debug: process.env.NODE_ENV !== 'production',
   });
 };
 
@@ -62,21 +77,34 @@ const emailTemplates = {
 export const sendEmail = async (to, templateType, templateData) => {
   try {
     const transporter = createTransporter();
+    
+    if (!transporter) {
+      console.error('❌ Email transporter not available - check configuration');
+      return { success: false, error: 'Email service not configured' };
+    }
+
+    if (!emailTemplates[templateType]) {
+      console.error(`❌ Unknown email template: ${templateType}`);
+      return { success: false, error: 'Unknown email template' };
+    }
+
     const template = emailTemplates[templateType](templateData);
 
     const mailOptions = {
-      from: process.env.GMAIL_USER,
+      from: `"CRM Prime" <${process.env.GMAIL_USER}>`,
       to,
       subject: template.subject,
       html: template.html,
     };
 
+    console.log(`📧 Attempting to send email to ${to}...`);
     const info = await transporter.sendMail(mailOptions);
-    console.log(`📧 Email sent successfully to ${to}: ${info.messageId}`);
+    console.log(`✅ Email sent successfully to ${to}: ${info.messageId}`);
     return { success: true, messageId: info.messageId };
   } catch (error) {
-    console.error(`❌ Error sending email to ${to}:`, error);
-    throw error;
+    console.error(`❌ Error sending email to ${to}:`, error.message);
+    console.error('Error details:', error.code, error.response);
+    return { success: false, error: error.message };
   }
 };
 
@@ -84,11 +112,22 @@ export const sendEmail = async (to, templateType, templateData) => {
 export const testEmailConfig = async () => {
   try {
     const transporter = createTransporter();
+    
+    if (!transporter) {
+      console.log('⚠️ Email transporter not created - missing credentials');
+      return false;
+    }
+
     await transporter.verify();
-    console.log('✅ Email configuration is valid');
+    console.log('✅ Email configuration verified');
     return true;
   } catch (error) {
-    console.error('❌ Email configuration test failed:', error);
+    console.error('❌ Email configuration test failed:', error.message);
+    console.error('Make sure you have:');
+    console.error('1. GMAIL_USER set to your Gmail address');
+    console.error('2. GMAIL_APP_PASSWORD set to an App Password (not your regular password)');
+    console.error('3. 2-Step Verification enabled on your Google account');
+    console.error('4. App Password generated at: https://myaccount.google.com/apppasswords');
     return false;
   }
 };

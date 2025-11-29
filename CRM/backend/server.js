@@ -20,6 +20,13 @@ import taskRoutes from './src/routes/taskRoutes.js';
 import testRoutes from './src/routes/testRoutes.js';
 import notificationRoutes from './src/routes/notificationRoutes.js';
 import jiraRoutes from './src/routes/jiraRoutes.js';
+import voipRoutes from './src/routes/voipRoutes.js';
+import telegramRoutes from './src/routes/telegramRoutes.js';
+
+// Import services
+import { initTwilioClient } from './src/services/twilioService.js';
+import { initTelegramBot } from './src/services/telegramService.js';
+import { testEmailConfig } from './src/services/emailService.js';
 
 const app = express();
 const PORT = process.env.PORT || 5000;
@@ -55,6 +62,8 @@ app.use('/api/tasks', taskRoutes);
 app.use('/api/test', testRoutes);
 app.use('/api/notifications', notificationRoutes);
 app.use('/api/jira', jiraRoutes);
+app.use('/api/voip', voipRoutes);
+app.use('/api/telegram', telegramRoutes);
 
 // 404 handler
 app.use((req, res) => {
@@ -78,6 +87,16 @@ const startServer = async () => {
     // Connect to MongoDB
     await mongoose.connect(process.env.MONGO_URI);
     console.log('✅ MongoDB Connected');
+
+    // Initialize optional services
+    initTwilioClient();
+    initTelegramBot();
+    
+    // Test email configuration
+    const emailOk = await testEmailConfig();
+    if (!emailOk) {
+      console.log('⚠️ Email service may not work - check GMAIL_USER and GMAIL_APP_PASSWORD');
+    }
 
     // Start server
     const server = app.listen(PORT, '0.0.0.0', () => {

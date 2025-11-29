@@ -57,8 +57,28 @@ import {
 
 const router = express.Router();
 
-// Public route to fix super admin (no auth required for this specific case)
-router.post('/fix-super-admin', fixSuperAdmin);
+// SECURITY: Fix super admin route requires a secret setup key
+// This should only be used during initial deployment
+router.post('/fix-super-admin', (req, res, next) => {
+  const setupKey = req.headers['x-setup-key'] || req.body.setupKey;
+  const expectedKey = process.env.SUPER_ADMIN_SETUP_KEY;
+  
+  if (!expectedKey) {
+    return res.status(403).json({
+      success: false,
+      message: 'Setup key not configured. Set SUPER_ADMIN_SETUP_KEY environment variable.',
+    });
+  }
+  
+  if (setupKey !== expectedKey) {
+    return res.status(403).json({
+      success: false,
+      message: 'Invalid setup key',
+    });
+  }
+  
+  next();
+}, fixSuperAdmin);
 
 // Protected routes - double protection: verify token + check role + verify email
 router.use(verifyFirebaseToken);

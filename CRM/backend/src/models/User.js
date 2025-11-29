@@ -42,6 +42,13 @@ const userSchema = new mongoose.Schema(
       type: String,
       trim: true,
     },
+    phone: {
+      type: String,
+      trim: true,
+    },
+    avatar: {
+      type: String,
+    },
     globalRole: {
       type: String,
       enum: ['super_admin', 'user'],
@@ -51,6 +58,36 @@ const userSchema = new mongoose.Schema(
     isActive: {
       type: Boolean,
       default: true,
+    },
+    // Telegram integration
+    telegramChatId: {
+      type: String,
+      sparse: true,
+    },
+    telegramUsername: {
+      type: String,
+    },
+    telegramLinkedAt: {
+      type: Date,
+    },
+    // Notification preferences
+    notificationPreferences: {
+      email: {
+        type: Boolean,
+        default: true,
+      },
+      telegram: {
+        type: Boolean,
+        default: true,
+      },
+      push: {
+        type: Boolean,
+        default: true,
+      },
+    },
+    // Last activity tracking
+    lastLoginAt: {
+      type: Date,
     },
   },
   { timestamps: true }
