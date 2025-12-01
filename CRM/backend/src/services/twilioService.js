@@ -1,16 +1,17 @@
 import twilio from 'twilio';
 
-// Twilio configuration
-const accountSid = process.env.TWILIO_ACCOUNT_SID;
-const authToken = process.env.TWILIO_AUTH_TOKEN;
-const twilioPhoneNumber = process.env.TWILIO_PHONE_NUMBER;
-
 let client = null;
+let twilioPhoneNumber = null;
 
 /**
  * Initialize Twilio client
  */
 export const initTwilioClient = () => {
+  // Read env vars at init time (after dotenv loads)
+  const accountSid = process.env.TWILIO_ACCOUNT_SID;
+  const authToken = process.env.TWILIO_AUTH_TOKEN;
+  twilioPhoneNumber = process.env.TWILIO_PHONE_NUMBER;
+
   if (!accountSid || !authToken) {
     console.log('⚠️ Twilio credentials not configured - VoIP disabled');
     return false;
@@ -34,6 +35,13 @@ export const getTwilioClient = () => {
     initTwilioClient();
   }
   return client;
+};
+
+/**
+ * Get Twilio phone number
+ */
+export const getTwilioPhoneNumber = () => {
+  return twilioPhoneNumber || process.env.TWILIO_PHONE_NUMBER;
 };
 
 /**
@@ -126,11 +134,15 @@ export const getCallLogs = async (filters = {}) => {
  * @param {string} identity - User identity
  */
 export const generateVoiceToken = (identity) => {
-  if (!accountSid || !authToken) {
+  const accountSid = process.env.TWILIO_ACCOUNT_SID;
+  const apiKeySid = process.env.TWILIO_API_KEY_SID;
+  const apiKeySecret = process.env.TWILIO_API_KEY_SECRET;
+  const twimlAppSid = process.env.TWILIO_TWIML_APP_SID;
+
+  if (!accountSid || !apiKeySid || !apiKeySecret) {
     throw new Error('Twilio credentials not configured');
   }
 
-  const twimlAppSid = process.env.TWILIO_TWIML_APP_SID;
   if (!twimlAppSid) {
     throw new Error('Twilio TwiML App SID not configured');
   }
@@ -145,8 +157,8 @@ export const generateVoiceToken = (identity) => {
 
   const token = new AccessToken(
     accountSid,
-    process.env.TWILIO_API_KEY_SID,
-    process.env.TWILIO_API_KEY_SECRET,
+    apiKeySid,
+    apiKeySecret,
     { identity }
   );
 

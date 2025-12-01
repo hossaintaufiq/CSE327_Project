@@ -3,7 +3,6 @@
 import { useEffect, useState, useRef, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import apiClient, { chatApi } from "@/utils/api";
-import Sidebar from "@/components/Sidebar";
 import { Send, Plus, Users, MessageCircle, Search, MoreVertical, Phone, Video, User, X } from "lucide-react";
 
 function ChatPage() {

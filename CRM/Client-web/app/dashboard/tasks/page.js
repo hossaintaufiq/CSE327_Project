@@ -49,17 +49,9 @@ export default function TasksPage() {
     const userData = localStorage.getItem('user');
     
     if (!token || !userData) {
-      console.log("No authentication data found - redirecting to login");
       router.push("/login");
       return;
     }
-    
-    // Debug authentication state
-    console.log("Auth Debug - User:", user);
-    console.log("Auth Debug - Active Company ID:", activeCompanyId);
-    console.log("Auth Debug - Is Super Admin:", isSuperAdmin());
-    console.log("Auth Debug - localStorage idToken:", !!localStorage.getItem('idToken'));
-    console.log("Auth Debug - localStorage companyId:", localStorage.getItem('companyId'));
     
     if (isSuperAdmin()) {
       router.push("/super-admin");

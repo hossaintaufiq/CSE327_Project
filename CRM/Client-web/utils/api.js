@@ -46,10 +46,6 @@ apiClient.interceptors.request.use(async (config) => {
       }
     }
     
-    console.log("API Debug - Request URL:", config.url);
-    console.log("API Debug - Token exists:", !!token);
-    console.log("API Debug - Company ID:", companyId);
-    
     if (token) {
       config.headers.Authorization = `Bearer ${token}`;
     }
@@ -57,8 +53,6 @@ apiClient.interceptors.request.use(async (config) => {
     if (companyId) {
       config.headers['X-Company-Id'] = companyId;
     }
-    
-    console.log("API Debug - Final headers:", config.headers);
   }
   return config;
 });
