@@ -1,4 +1,5 @@
 import express from 'express';
+import crypto from 'crypto';
 import { verifyFirebaseToken } from '../middleware/auth.js';
 import { verifyCompanyAccess } from '../middleware/companyAccess.js';
 import { checkRole } from '../middleware/roleCheck.js';
@@ -10,24 +11,57 @@ const router = express.Router();
 
 // Webhook endpoint for Jira updates
 // Secured with webhook secret validation
-router.post('/webhook', async (req, res) => {
+// Accept raw body for signature verification
+router.post('/webhook', express.raw({ type: '*/*' }), async (req, res) => {
   try {
-    // Validate Jira webhook signature if configured
     const webhookSecret = process.env.JIRA_WEBHOOK_SECRET;
+
+    // If a secret is configured, validate HMAC-SHA256 signature
     if (webhookSecret) {
-      const signature = req.headers['x-atlassian-webhook-signature'];
-      // In production, you should verify the HMAC signature
-      // For now, we just check if the secret header exists when configured
-      if (!signature) {
+      const signatureHeader = (req.headers['x-atlassian-webhook-signature'] || req.headers['x-hub-signature'] || '').toString();
+      if (!signatureHeader) {
         console.warn('Jira webhook received without signature');
+        return res.status(403).json({ error: 'Missing webhook signature' });
+      }
+
+      // Normalize header: may be provided as 'sha256=...' or raw token
+      let incoming = signatureHeader.replace(/^sha256=|^sha256:/i, '').trim();
+
+      const bodyBuffer = Buffer.isBuffer(req.body) ? req.body : Buffer.from(String(req.body || ''));
+
+      const computedHex = crypto.createHmac('sha256', webhookSecret).update(bodyBuffer).digest('hex');
+      const computedBase64 = crypto.createHmac('sha256', webhookSecret).update(bodyBuffer).digest('base64');
+
+      const incomingBuf = Buffer.from(incoming);
+      const hexBuf = Buffer.from(computedHex);
+      const b64Buf = Buffer.from(computedBase64);
+
+      const valid = (
+        (incomingBuf.length === hexBuf.length && crypto.timingSafeEqual(incomingBuf, hexBuf)) ||
+        (incomingBuf.length === b64Buf.length && crypto.timingSafeEqual(incomingBuf, b64Buf))
+      );
+
+      if (!valid) {
+        console.warn('Invalid Jira webhook signature');
+        return res.status(403).json({ error: 'Invalid webhook signature' });
       }
     }
 
-    if (!req.body || !req.body.issue) {
+    // Parse payload from raw body and forward to handler
+    let payload;
+    try {
+      const raw = Buffer.isBuffer(req.body) ? req.body.toString('utf8') : String(req.body || '');
+      payload = raw ? JSON.parse(raw) : {};
+    } catch (e) {
+      console.error('Invalid JSON payload for Jira webhook', e.message);
+      return res.status(400).json({ error: 'Invalid JSON payload' });
+    }
+
+    if (!payload || !payload.issue) {
       return res.status(400).json({ error: 'Invalid webhook data' });
     }
-    
-    await handleJiraWebhook(req.body);
+
+    await handleJiraWebhook(payload);
     res.status(200).json({ message: 'Webhook processed successfully' });
   } catch (error) {
     console.error('Error processing Jira webhook:', error);

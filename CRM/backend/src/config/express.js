@@ -7,7 +7,7 @@ export const createExpressApp = () => {
 
   // Middleware
   app.use(cors({
-    origin: process.env.CLIENT_ORIGIN || 'http://localhost:3000',
+    origin: process.env.CLIENT_ORIGIN || 'http://localhost:3100',
     credentials: true
   }));
   app.use(express.json());

@@ -19,7 +19,7 @@ NEXT_PUBLIC_API_URL=http://localhost:5000/api
 npm run dev
 ```
 
-4. Open [http://localhost:3000](http://localhost:3000)
+4. Open [http://localhost:3100](http://localhost:3100) (this project defaults to port `3100` on this machine)
 
 ## Pages
 
