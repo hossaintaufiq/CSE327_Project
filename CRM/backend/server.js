@@ -26,6 +26,8 @@ import telegramRoutes from './src/routes/telegramRoutes.js';
 import employeeRoutes from './src/routes/employeeRoutes.js';
 import aiRoutes from './src/routes/aiRoutes.js';
 import mcpRoutes from './src/routes/mcpRoutes.js';
+import pipelineRoutes from './src/routes/pipelineRoutes.js';
+import voiceChatRoutes from './src/routes/voiceChatRoutes.js';
 
 // Import services
 import { initTwilioClient } from './src/services/twilioService.js';
@@ -73,6 +75,8 @@ app.use('/api/telegram', telegramRoutes);
 app.use('/api/employees', employeeRoutes);
 app.use('/api/ai', aiRoutes);
 app.use('/api/mcp', mcpRoutes);
+app.use('/api/pipeline', pipelineRoutes);
+app.use('/api/voice-chat', voiceChatRoutes);
 
 // 404 handler
 app.use((req, res) => {

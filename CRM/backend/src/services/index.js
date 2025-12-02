@@ -17,6 +17,8 @@ export * as jiraSyncService from './jiraSyncService.js';
 export * as geminiService from './geminiService.js';
 export * as liveChatService from './liveChatService.js';
 export * as mcpServer from './mcpServer.js';
+export * as pipelineService from './pipelineService.js';
+export * as voiceChatService from './voiceChatService.js';
 
 // Default export for convenience
 export default {
@@ -30,4 +32,6 @@ export default {
   geminiService: () => import('./geminiService.js'),
   liveChatService: () => import('./liveChatService.js'),
   mcpServer: () => import('./mcpServer.js'),
+  pipelineService: () => import('./pipelineService.js'),
+  voiceChatService: () => import('./voiceChatService.js'),
 };
