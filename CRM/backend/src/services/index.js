@@ -19,6 +19,7 @@ export * as liveChatService from './liveChatService.js';
 export * as mcpServer from './mcpServer.js';
 export * as pipelineService from './pipelineService.js';
 export * as voiceChatService from './voiceChatService.js';
+export * as voiceAIService from './voiceAIService.js';
 
 // Default export for convenience
 export default {
@@ -34,4 +35,5 @@ export default {
   mcpServer: () => import('./mcpServer.js'),
   pipelineService: () => import('./pipelineService.js'),
   voiceChatService: () => import('./voiceChatService.js'),
+  voiceAIService: () => import('./voiceAIService.js'),
 };

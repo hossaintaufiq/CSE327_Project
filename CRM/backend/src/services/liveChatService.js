@@ -50,6 +50,11 @@ export function initializeSocket(httpServer) {
           return;
         }
 
+        // Store user info on socket for voice AI
+        socket.userId = userId;
+        socket.companyId = companyId;
+        socket.userName = name;
+
         // Store user info
         onlineUsers.set(userId, {
           socketId: socket.id,
@@ -189,6 +194,99 @@ export function initializeSocket(httpServer) {
 
       } catch (error) {
         console.error('Error marking messages as read:', error);
+      }
+    });
+
+    // ===== Voice AI Socket Handlers =====
+    
+    // Start voice session
+    socket.on('voice:start', (data) => {
+      const { sessionId } = data;
+      socket.voiceSession = { 
+        sessionId: sessionId || `${socket.userId}-${Date.now()}`, 
+        startTime: Date.now() 
+      };
+      socket.emit('voice:ready', { 
+        sessionId: socket.voiceSession.sessionId,
+        message: 'Voice session started. I\'m listening...'
+      });
+      console.log(`Voice session started for user ${socket.userId}`);
+    });
+
+    // Process voice text input
+    socket.on('voice:text', async (data) => {
+      const { text, sessionId } = data;
+      
+      if (!text || !socket.userId) {
+        socket.emit('voice:error', { message: 'Invalid request - text and authentication required' });
+        return;
+      }
+
+      try {
+        // Dynamic import to avoid circular dependency
+        const voiceAIService = await import('./voiceAIService.js');
+        
+        const result = await voiceAIService.processVoiceInput({
+          text,
+          userId: socket.userId,
+          companyId: socket.companyId,
+          sessionId: sessionId || socket.voiceSession?.sessionId,
+        });
+
+        socket.emit('voice:response', {
+          ...result,
+          sessionId: sessionId || socket.voiceSession?.sessionId,
+          timestamp: Date.now(),
+        });
+
+        // If there was a successful action, notify others in company
+        if (result.hasAction && result.action) {
+          socket.to(`company:${socket.companyId}`).emit('voice:action-executed', {
+            userId: socket.userId,
+            userName: socket.userName,
+            action: result.action.tool,
+            timestamp: Date.now(),
+          });
+        }
+      } catch (error) {
+        console.error('Voice AI error:', error);
+        socket.emit('voice:error', { 
+          message: 'Failed to process voice input',
+          error: error.message,
+        });
+      }
+    });
+
+    // End voice session
+    socket.on('voice:end', async () => {
+      if (socket.voiceSession) {
+        const duration = Date.now() - socket.voiceSession.startTime;
+        
+        // Clear conversation if requested
+        try {
+          const voiceAIService = await import('./voiceAIService.js');
+          // Don't clear by default - let user explicitly clear
+        } catch (e) {}
+        
+        socket.emit('voice:ended', { 
+          duration,
+          sessionId: socket.voiceSession.sessionId,
+          message: 'Voice session ended'
+        });
+        console.log(`Voice session ended for user ${socket.userId}, duration: ${duration}ms`);
+        socket.voiceSession = null;
+      }
+    });
+
+    // Clear voice conversation history
+    socket.on('voice:clear', async () => {
+      try {
+        const voiceAIService = await import('./voiceAIService.js');
+        const sessionId = socket.voiceSession?.sessionId || `${socket.userId}-${socket.companyId}`;
+        voiceAIService.clearConversation(sessionId);
+        socket.emit('voice:cleared', { message: 'Conversation history cleared' });
+      } catch (error) {
+        socket.emit('voice:error', { message: 'Failed to clear history' });
       }
     });
 
