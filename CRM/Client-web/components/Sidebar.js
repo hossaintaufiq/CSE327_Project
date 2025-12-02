@@ -19,6 +19,12 @@ import {
   Building,
   Kanban,
   User,
+  MessagesSquare,
+  Phone,
+  Headphones,
+  Send,
+  List,
+  Package,
 } from "lucide-react";
 import useAuthStore from "@/store/authStore";
 
@@ -75,12 +81,13 @@ export default function Sidebar() {
         { icon: MessageSquare, label: "Chat", href: "/chat" }
       );
     }
-    // For Client - NO SALES for client, only chat and announcements
+    // For Client - Focus on orders, companies, and conversations
     else if (activeCompanyRole === "client") {
       companyMenuItems.push(
-        { icon: ShoppingCart, label: "My Orders", href: "/orders" },
-        { icon: MessageSquare, label: "Announcements", href: "/announcements" },
-        { icon: MessageSquare, label: "Chat", href: "/chat" }
+        { icon: Building, label: "Companies", href: "/companies" },
+        { icon: Package, label: "My Orders", href: "/orders" },
+        { icon: MessagesSquare, label: "Conversations", href: "/conversations" },
+        { icon: MessageSquare, label: "Announcements", href: "/announcements" }
       );
     }
 

@@ -10,13 +10,20 @@ import {
   deleteOrder,
   createJiraIssueForOrder,
   updateOrderStatus,
+  getClientOrders,
+  getClientOrderStats,
 } from '../controllers/orderController.js';
 
 const router = express.Router();
 
 router.use(verifyFirebaseToken);
 
-// All routes require company access
+// Client-specific routes (before company access middleware)
+// These routes show orders across all companies for a client
+router.get('/my-orders', getClientOrders);
+router.get('/my-orders/stats', getClientOrderStats);
+
+// All other routes require company access
 router.use(verifyCompanyAccess);
 
 // Get all orders

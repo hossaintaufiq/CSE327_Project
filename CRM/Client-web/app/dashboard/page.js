@@ -760,52 +760,100 @@ function ManagerDashboard({ user, stats, recentActivity, formatCurrency, formatT
 
 // Client Dashboard Component
 function ClientDashboard({ user, stats, recentOrders, recentActivity, formatCurrency, formatTimeAgo, getStatusColor }) {
+  const router = useRouter();
+  const [companies, setCompanies] = useState([]);
+  const [conversations, setConversations] = useState([]);
+  const [loadingExtra, setLoadingExtra] = useState(true);
+
+  useEffect(() => {
+    loadClientData();
+  }, []);
+
+  const loadClientData = async () => {
+    try {
+      // Load companies and recent conversations for client
+      const [companiesRes, conversationsRes] = await Promise.all([
+        apiClient.get("/conversations/client-companies").catch(() => ({ data: { data: [] } })),
+        apiClient.get("/conversations?limit=5").catch(() => ({ data: { data: [] } }))
+      ]);
+      
+      setCompanies(companiesRes.data?.data || []);
+      setConversations(conversationsRes.data?.data || []);
+    } catch (err) {
+      console.error("Error loading client data:", err);
+      // Mock data for demo
+      setCompanies([
+        { _id: "1", name: "TechCorp Solutions", orderCount: 5, conversationCount: 3 },
+        { _id: "2", name: "Global Supplies Inc", orderCount: 12, conversationCount: 7 },
+      ]);
+      setConversations([
+        { _id: "1", company: { name: "TechCorp" }, subject: "Product Inquiry", status: "ai_handling", lastActivity: new Date().toISOString() },
+        { _id: "2", company: { name: "Global Supplies" }, subject: "Order Status", status: "representative_assigned", lastActivity: new Date(Date.now() - 86400000).toISOString() },
+      ]);
+    } finally {
+      setLoadingExtra(false);
+    }
+  };
+
+  const getConversationStatusColor = (status) => {
+    switch (status) {
+      case "ai_handling": return "bg-blue-500/20 text-blue-400";
+      case "waiting_representative": return "bg-yellow-500/20 text-yellow-400";
+      case "representative_assigned": return "bg-green-500/20 text-green-400";
+      case "resolved": return "bg-gray-500/20 text-gray-400";
+      default: return "bg-gray-500/20 text-gray-400";
+    }
+  };
+
   return (
     <div className="min-h-screen bg-gray-900">
       <Sidebar />
       <main className="lg:ml-64 min-h-screen">
         <div className="p-4 sm:p-6 lg:p-8">
           <div className="mb-8">
-            <h1 className="text-3xl font-bold text-white mb-2">My Dashboard</h1>
-            <p className="text-gray-400">Welcome back, {user?.name || user?.email}</p>
+            <h1 className="text-3xl font-bold text-white mb-2">Welcome back!</h1>
+            <p className="text-gray-400">{user?.name || user?.email}</p>
           </div>
 
           {/* KPI Cards */}
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6 mb-8">
-            <div className="bg-gray-800 rounded-xl border border-gray-700 p-6">
+            <div className="bg-gray-800 rounded-xl border border-gray-700 p-6 hover:border-blue-500/50 transition-colors cursor-pointer" onClick={() => router.push('/companies')}>
               <div className="flex items-center justify-between mb-4">
                 <div className="p-3 bg-blue-500/20 rounded-lg">
-                  <ShoppingCart className="w-6 h-6 text-blue-400" />
+                  <Briefcase className="w-6 h-6 text-blue-400" />
                 </div>
+                <ArrowRight className="w-5 h-5 text-gray-500" />
+              </div>
+              <h3 className="text-sm font-medium text-gray-400 mb-1">Companies</h3>
+              <p className="text-3xl font-bold text-white">{companies.length || stats?.companies || 0}</p>
+            </div>
+
+            <div className="bg-gray-800 rounded-xl border border-gray-700 p-6 hover:border-green-500/50 transition-colors cursor-pointer" onClick={() => router.push('/orders')}>
+              <div className="flex items-center justify-between mb-4">
+                <div className="p-3 bg-green-500/20 rounded-lg">
+                  <ShoppingCart className="w-6 h-6 text-green-400" />
+                </div>
+                <ArrowRight className="w-5 h-5 text-gray-500" />
               </div>
               <h3 className="text-sm font-medium text-gray-400 mb-1">Total Orders</h3>
               <p className="text-3xl font-bold text-white">{stats?.totalOrders || 0}</p>
             </div>
 
+            <div className="bg-gray-800 rounded-xl border border-gray-700 p-6 hover:border-purple-500/50 transition-colors cursor-pointer" onClick={() => router.push('/conversations')}>
+              <div className="flex items-center justify-between mb-4">
+                <div className="p-3 bg-purple-500/20 rounded-lg">
+                  <MessageSquare className="w-6 h-6 text-purple-400" />
+                </div>
+                <ArrowRight className="w-5 h-5 text-gray-500" />
+              </div>
+              <h3 className="text-sm font-medium text-gray-400 mb-1">Conversations</h3>
+              <p className="text-3xl font-bold text-white">{conversations.length || stats?.conversations || 0}</p>
+            </div>
+
             <div className="bg-gray-800 rounded-xl border border-gray-700 p-6">
               <div className="flex items-center justify-between mb-4">
                 <div className="p-3 bg-yellow-500/20 rounded-lg">
-                  <Clock className="w-6 h-6 text-yellow-400" />
-                </div>
-              </div>
-              <h3 className="text-sm font-medium text-gray-400 mb-1">Pending Orders</h3>
-              <p className="text-3xl font-bold text-white">{stats?.pendingOrders || 0}</p>
-            </div>
-
-            <div className="bg-gray-800 rounded-xl border border-gray-700 p-6">
-              <div className="flex items-center justify-between mb-4">
-                <div className="p-3 bg-green-500/20 rounded-lg">
-                  <CheckSquare className="w-6 h-6 text-green-400" />
-                </div>
-              </div>
-              <h3 className="text-sm font-medium text-gray-400 mb-1">Completed</h3>
-              <p className="text-3xl font-bold text-white">{stats?.completedOrders || 0}</p>
-            </div>
-
-            <div className="bg-gray-800 rounded-xl border border-gray-700 p-6">
-              <div className="flex items-center justify-between mb-4">
-                <div className="p-3 bg-purple-500/20 rounded-lg">
-                  <DollarSign className="w-6 h-6 text-purple-400" />
+                  <DollarSign className="w-6 h-6 text-yellow-400" />
                 </div>
               </div>
               <h3 className="text-sm font-medium text-gray-400 mb-1">Total Spent</h3>
@@ -813,23 +861,125 @@ function ClientDashboard({ user, stats, recentOrders, recentActivity, formatCurr
             </div>
           </div>
 
-          {/* Recent Orders */}
+          {/* Quick Actions */}
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-8">
+            <button
+              onClick={() => router.push('/conversations/new')}
+              className="flex items-center gap-4 p-4 bg-gradient-to-r from-blue-600 to-blue-700 rounded-xl hover:from-blue-700 hover:to-blue-800 transition-all group"
+            >
+              <div className="p-3 bg-white/10 rounded-lg group-hover:bg-white/20">
+                <MessageSquare className="w-6 h-6 text-white" />
+              </div>
+              <div className="text-left">
+                <p className="text-white font-semibold">New Conversation</p>
+                <p className="text-blue-200 text-sm">Start chatting with a company</p>
+              </div>
+            </button>
+            
+            <button
+              onClick={() => router.push('/companies')}
+              className="flex items-center gap-4 p-4 bg-gradient-to-r from-purple-600 to-purple-700 rounded-xl hover:from-purple-700 hover:to-purple-800 transition-all group"
+            >
+              <div className="p-3 bg-white/10 rounded-lg group-hover:bg-white/20">
+                <Briefcase className="w-6 h-6 text-white" />
+              </div>
+              <div className="text-left">
+                <p className="text-white font-semibold">Browse Companies</p>
+                <p className="text-purple-200 text-sm">View your company list</p>
+              </div>
+            </button>
+            
+            <button
+              onClick={() => router.push('/orders')}
+              className="flex items-center gap-4 p-4 bg-gradient-to-r from-green-600 to-green-700 rounded-xl hover:from-green-700 hover:to-green-800 transition-all group"
+            >
+              <div className="p-3 bg-white/10 rounded-lg group-hover:bg-white/20">
+                <ShoppingCart className="w-6 h-6 text-white" />
+              </div>
+              <div className="text-left">
+                <p className="text-white font-semibold">View Orders</p>
+                <p className="text-green-200 text-sm">Track your orders</p>
+              </div>
+            </button>
+          </div>
+
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
+            {/* Recent Conversations */}
             <div className="bg-gray-800 rounded-xl border border-gray-700 p-6">
-              <h2 className="text-xl font-bold text-white mb-6">Recent Orders</h2>
+              <div className="flex items-center justify-between mb-6">
+                <h2 className="text-xl font-bold text-white">Recent Conversations</h2>
+                <button 
+                  onClick={() => router.push('/conversations')}
+                  className="text-blue-400 hover:text-blue-300 text-sm flex items-center gap-1"
+                >
+                  View all <ArrowRight className="w-4 h-4" />
+                </button>
+              </div>
+              {loadingExtra ? (
+                <div className="flex justify-center py-8">
+                  <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-500"></div>
+                </div>
+              ) : conversations.length === 0 ? (
+                <div className="text-center py-8">
+                  <MessageSquare className="w-12 h-12 text-gray-600 mx-auto mb-3" />
+                  <p className="text-gray-400">No conversations yet</p>
+                  <button 
+                    onClick={() => router.push('/conversations/new')}
+                    className="mt-3 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 text-sm"
+                  >
+                    Start a Conversation
+                  </button>
+                </div>
+              ) : (
+                <div className="space-y-3">
+                  {conversations.slice(0, 4).map((conv) => (
+                    <div 
+                      key={conv._id} 
+                      onClick={() => router.push(`/conversations?id=${conv._id}`)}
+                      className="bg-gray-700/50 rounded-lg p-4 hover:bg-gray-700 cursor-pointer transition-colors"
+                    >
+                      <div className="flex justify-between items-start">
+                        <div>
+                          <p className="text-white font-medium">{conv.subject || "Conversation"}</p>
+                          <p className="text-gray-400 text-sm mt-1">{conv.company?.name}</p>
+                        </div>
+                        <div className="text-right">
+                          <span className={`text-xs px-2 py-1 rounded-full ${getConversationStatusColor(conv.status)}`}>
+                            {conv.status?.replace(/_/g, " ")}
+                          </span>
+                          <p className="text-gray-500 text-xs mt-2">{formatTimeAgo(conv.lastActivity)}</p>
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+
+            {/* Recent Orders */}
+            <div className="bg-gray-800 rounded-xl border border-gray-700 p-6">
+              <div className="flex items-center justify-between mb-6">
+                <h2 className="text-xl font-bold text-white">Recent Orders</h2>
+                <button 
+                  onClick={() => router.push('/orders')}
+                  className="text-blue-400 hover:text-blue-300 text-sm flex items-center gap-1"
+                >
+                  View all <ArrowRight className="w-4 h-4" />
+                </button>
+              </div>
               {recentOrders.length === 0 ? (
                 <div className="text-center py-8">
+                  <ShoppingCart className="w-12 h-12 text-gray-600 mx-auto mb-3" />
                   <p className="text-gray-400">No orders yet</p>
                 </div>
               ) : (
                 <div className="space-y-3">
-                  {recentOrders.map((order) => (
-                    <div key={order.id} className="bg-gray-700/50 rounded-lg p-4">
+                  {recentOrders.slice(0, 4).map((order) => (
+                    <div key={order.id} className="bg-gray-700/50 rounded-lg p-4 hover:bg-gray-700 cursor-pointer transition-colors">
                       <div className="flex justify-between items-start">
                         <div>
                           <p className="text-white font-medium">Order #{order.orderNumber}</p>
-                          <p className="text-gray-400 text-sm mt-1">Assigned to: {order.assignedTo}</p>
-                          <p className="text-gray-500 text-xs mt-1">{formatTimeAgo(order.createdAt)}</p>
+                          <p className="text-gray-400 text-sm mt-1">{order.companyName || "Company"}</p>
                         </div>
                         <div className="text-right">
                           <p className="text-white font-bold">{formatCurrency(order.totalAmount)}</p>
@@ -843,26 +993,52 @@ function ClientDashboard({ user, stats, recentOrders, recentActivity, formatCurr
                 </div>
               )}
             </div>
+          </div>
 
-            {/* Recent Messages */}
-            <div className="bg-gray-800 rounded-xl border border-gray-700 p-6">
-              <h2 className="text-xl font-bold text-white mb-6">Recent Messages</h2>
-              {recentActivity.length === 0 ? (
-                <div className="text-center py-8">
-                  <p className="text-gray-400">No messages yet</p>
-                </div>
-              ) : (
-                <div className="space-y-3">
-                  {recentActivity.map((activity, idx) => (
-                    <div key={activity.id || idx} className="bg-gray-700/50 rounded-lg p-4">
-                      <p className="text-white font-medium text-sm">{activity.activityType}</p>
-                      <p className="text-gray-400 text-xs mt-1">{activity.content}</p>
-                      <p className="text-gray-500 text-xs mt-1">{formatTimeAgo(activity.date)}</p>
-                    </div>
-                  ))}
-                </div>
-              )}
+          {/* Companies Overview */}
+          <div className="bg-gray-800 rounded-xl border border-gray-700 p-6">
+            <div className="flex items-center justify-between mb-6">
+              <h2 className="text-xl font-bold text-white">Your Companies</h2>
+              <button 
+                onClick={() => router.push('/companies')}
+                className="text-blue-400 hover:text-blue-300 text-sm flex items-center gap-1"
+              >
+                View all <ArrowRight className="w-4 h-4" />
+              </button>
             </div>
+            {loadingExtra ? (
+              <div className="flex justify-center py-8">
+                <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-500"></div>
+              </div>
+            ) : companies.length === 0 ? (
+              <div className="text-center py-8">
+                <Briefcase className="w-12 h-12 text-gray-600 mx-auto mb-3" />
+                <p className="text-gray-400">No companies yet</p>
+                <p className="text-gray-500 text-sm mt-1">Start a conversation to add companies</p>
+              </div>
+            ) : (
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                {companies.slice(0, 6).map((company) => (
+                  <div 
+                    key={company._id} 
+                    onClick={() => router.push(`/companies/${company._id}`)}
+                    className="bg-gray-700/50 rounded-lg p-4 hover:bg-gray-700 cursor-pointer transition-colors flex items-center gap-4"
+                  >
+                    <div className="w-12 h-12 bg-gradient-to-br from-blue-500 to-purple-600 rounded-lg flex items-center justify-center text-white font-bold text-lg shrink-0">
+                      {company.name?.charAt(0) || "C"}
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <p className="text-white font-medium truncate">{company.name}</p>
+                      <div className="flex items-center gap-3 mt-1 text-sm text-gray-400">
+                        <span>{company.orderCount || 0} orders</span>
+                        <span>•</span>
+                        <span>{company.conversationCount || 0} chats</span>
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
           </div>
         </div>
       </main>

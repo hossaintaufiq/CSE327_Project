@@ -1,0 +1,261 @@
+/**
+ * Conversation Controller
+ * 
+ * Handles API endpoints for client-company conversations
+ */
+
+import * as conversationService from '../services/conversationService.js';
+import { successResponse, errorResponse, notFoundResponse } from '../utils/responseHelper.js';
+
+/**
+ * Get conversations for client user (their own conversations)
+ */
+export const getMyConversations = async (req, res, next) => {
+  try {
+    const { status, companyId, type, limit, offset } = req.query;
+    
+    const { conversations, total } = await conversationService.getClientConversations(
+      req.user._id,
+      { status, companyId, type, limit: parseInt(limit) || 50, offset: parseInt(offset) || 0 }
+    );
+    
+    return successResponse(res, { conversations, total });
+  } catch (error) {
+    next(error);
+  }
+};
+
+/**
+ * Get conversations for company (admin/manager/employee view)
+ */
+export const getCompanyConversations = async (req, res, next) => {
+  try {
+    const { status, assignedTo, type, limit, offset } = req.query;
+    
+    const { conversations, total } = await conversationService.getCompanyConversations(
+      req.companyId,
+      { status, assignedTo, type, limit: parseInt(limit) || 50, offset: parseInt(offset) || 0 }
+    );
+    
+    return successResponse(res, { conversations, total });
+  } catch (error) {
+    next(error);
+  }
+};
+
+/**
+ * Get a single conversation
+ */
+export const getConversation = async (req, res, next) => {
+  try {
+    const { conversationId } = req.params;
+    
+    const { conversation, isClient, isCompanyMember } = await conversationService.getConversationById(
+      conversationId,
+      req.user._id
+    );
+    
+    return successResponse(res, { conversation, isClient, isCompanyMember });
+  } catch (error) {
+    next(error);
+  }
+};
+
+/**
+ * Start a new conversation (client initiating)
+ */
+export const startConversation = async (req, res, next) => {
+  try {
+    const { companyId, type, productId, productName, initialMessage } = req.body;
+    
+    if (!companyId) {
+      return errorResponse(res, 'VALIDATION_ERROR', 'Company ID is required', 400);
+    }
+    
+    const conversation = await conversationService.startConversation({
+      clientUserId: req.user._id,
+      companyId,
+      type,
+      productId,
+      productName,
+      initialMessage,
+    });
+    
+    return successResponse(res, { conversation }, 201, 'Conversation started');
+  } catch (error) {
+    next(error);
+  }
+};
+
+/**
+ * Send a message in a conversation
+ */
+export const sendMessage = async (req, res, next) => {
+  try {
+    const { conversationId } = req.params;
+    const { content, messageType, metadata } = req.body;
+    
+    if (!content?.trim()) {
+      return errorResponse(res, 'VALIDATION_ERROR', 'Message content is required', 400);
+    }
+    
+    // Determine sender type based on user's role in the conversation
+    const { conversation: existingConv, isClient } = await conversationService.getConversationById(
+      conversationId,
+      req.user._id
+    );
+    
+    const senderType = isClient ? 'client' : 'representative';
+    
+    const { conversation, message } = await conversationService.sendMessage({
+      conversationId,
+      senderId: req.user._id,
+      senderType,
+      content: content.trim(),
+      messageType: messageType || 'text',
+      metadata: metadata || {},
+    });
+    
+    return successResponse(res, { conversation, message });
+  } catch (error) {
+    next(error);
+  }
+};
+
+/**
+ * Escalate conversation to human representative
+ */
+export const escalateConversation = async (req, res, next) => {
+  try {
+    const { conversationId } = req.params;
+    const { reason } = req.body;
+    
+    const conversation = await conversationService.escalateConversation(
+      conversationId,
+      reason || 'Client requested human assistance'
+    );
+    
+    return successResponse(res, { conversation }, 200, 'Conversation escalated');
+  } catch (error) {
+    next(error);
+  }
+};
+
+/**
+ * Assign representative to conversation (admin/manager only)
+ */
+export const assignRepresentative = async (req, res, next) => {
+  try {
+    const { conversationId } = req.params;
+    const { representativeId } = req.body;
+    
+    if (!representativeId) {
+      return errorResponse(res, 'VALIDATION_ERROR', 'Representative ID is required', 400);
+    }
+    
+    const conversation = await conversationService.assignRepresentative(
+      conversationId,
+      representativeId,
+      req.user._id
+    );
+    
+    return successResponse(res, { conversation }, 200, 'Representative assigned');
+  } catch (error) {
+    next(error);
+  }
+};
+
+/**
+ * Resolve a conversation
+ */
+export const resolveConversation = async (req, res, next) => {
+  try {
+    const { conversationId } = req.params;
+    const { notes } = req.body;
+    
+    // Determine resolution type based on who is resolving
+    const { isClient } = await conversationService.getConversationById(
+      conversationId,
+      req.user._id
+    );
+    
+    const resolutionType = isClient ? 'client_closed' : 'representative_resolved';
+    
+    const conversation = await conversationService.resolveConversation(
+      conversationId,
+      req.user._id,
+      resolutionType,
+      notes
+    );
+    
+    return successResponse(res, { conversation }, 200, 'Conversation resolved');
+  } catch (error) {
+    next(error);
+  }
+};
+
+/**
+ * Rate a resolved conversation (client only)
+ */
+export const rateConversation = async (req, res, next) => {
+  try {
+    const { conversationId } = req.params;
+    const { rating } = req.body;
+    
+    if (!rating || rating < 1 || rating > 5) {
+      return errorResponse(res, 'VALIDATION_ERROR', 'Rating must be between 1 and 5', 400);
+    }
+    
+    const conversation = await conversationService.addSatisfactionRating(
+      conversationId,
+      req.user._id,
+      rating
+    );
+    
+    return successResponse(res, { conversation }, 200, 'Rating submitted');
+  } catch (error) {
+    next(error);
+  }
+};
+
+/**
+ * Get companies the client is associated with
+ */
+export const getMyCompanies = async (req, res, next) => {
+  try {
+    const companies = await conversationService.getClientCompanies(req.user._id);
+    return successResponse(res, { companies });
+  } catch (error) {
+    next(error);
+  }
+};
+
+/**
+ * Get client's orders across all companies
+ */
+export const getMyOrders = async (req, res, next) => {
+  try {
+    const { companyId, status, limit, offset } = req.query;
+    
+    const { orders, total } = await conversationService.getClientOrders(
+      req.user._id,
+      { companyId, status, limit: parseInt(limit) || 50, offset: parseInt(offset) || 0 }
+    );
+    
+    return successResponse(res, { orders, total });
+  } catch (error) {
+    next(error);
+  }
+};
+
+/**
+ * Get conversation statistics for company dashboard
+ */
+export const getConversationStats = async (req, res, next) => {
+  try {
+    const stats = await conversationService.getConversationStats(req.companyId);
+    return successResponse(res, { stats });
+  } catch (error) {
+    next(error);
+  }
+};

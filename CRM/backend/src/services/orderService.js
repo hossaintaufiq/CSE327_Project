@@ -348,6 +348,70 @@ export async function getOrderStats(companyId) {
   };
 }
 
+/**
+ * Get all orders for a specific client (across all companies)
+ * Used for client portal to show all their orders
+ * @param {Object} params
+ * @param {string} params.userId - User ID of the client
+ * @param {string} [params.companyId] - Optional filter by company
+ * @param {string} [params.status] - Filter by status
+ * @returns {Promise<Array>} List of orders
+ */
+export async function getClientOrders({ userId, companyId, status }) {
+  const query = { userId };
+
+  if (companyId) {
+    query.companyId = companyId;
+  }
+
+  if (status && VALID_STATUSES.includes(status)) {
+    query.status = status;
+  }
+
+  const orders = await Order.find(query)
+    .populate('companyId', 'name logo industry')
+    .populate('assignedTo', 'name email')
+    .sort({ createdAt: -1 })
+    .lean();
+
+  return orders;
+}
+
+/**
+ * Get client order statistics across all companies
+ * @param {Object} params
+ * @param {string} params.userId - User ID of the client
+ * @returns {Promise<Object>} Order statistics
+ */
+export async function getClientOrderStats({ userId }) {
+  const orders = await Order.find({ userId }).lean();
+  
+  const stats = {
+    total: orders.length,
+    pending: orders.filter(o => o.status === 'pending').length,
+    processing: orders.filter(o => o.status === 'processing').length,
+    shipped: orders.filter(o => o.status === 'shipped').length,
+    delivered: orders.filter(o => o.status === 'delivered').length,
+    cancelled: orders.filter(o => o.status === 'cancelled').length,
+    totalSpent: orders.reduce((sum, o) => sum + (o.totalAmount || 0), 0),
+    byCompany: {},
+  };
+
+  // Group by company
+  for (const order of orders) {
+    const companyId = order.companyId?.toString();
+    if (companyId) {
+      if (!stats.byCompany[companyId]) {
+        stats.byCompany[companyId] = { count: 0, total: 0 };
+      }
+      stats.byCompany[companyId].count++;
+      stats.byCompany[companyId].total += order.totalAmount || 0;
+    }
+  }
+
+  return stats;
+}
+
 export default {
   getOrders,
   getOrderById,
@@ -356,5 +420,7 @@ export default {
   deleteOrder,
   moveOrderToPipelineStage,
   getOrderStats,
+  getClientOrders,
+  getClientOrderStats,
   ORDER_PIPELINE_STAGES,
 };

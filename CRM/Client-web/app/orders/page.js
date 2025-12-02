@@ -32,6 +32,8 @@ export default function OrdersPage() {
     notes: "",
   });
   const [error, setError] = useState("");
+  const [companies, setCompanies] = useState([]);
+  const [companyFilter, setCompanyFilter] = useState("all");
 
   useEffect(() => {
     if (typeof window === "undefined") return;
@@ -39,6 +41,13 @@ export default function OrdersPage() {
       router.push("/super-admin");
       return;
     }
+    
+    // For clients, don't require active company - they see all orders
+    if (activeCompanyRole === 'client') {
+      loadClientData();
+      return;
+    }
+    
     if (!activeCompanyId) {
       router.push("/company-selection");
       return;
@@ -52,7 +61,33 @@ export default function OrdersPage() {
     };
     
     loadData();
-  }, [activeCompanyId, router, isSuperAdmin]);
+  }, [activeCompanyId, activeCompanyRole, router, isSuperAdmin]);
+
+  // Load client-specific data (orders from all companies)
+  const loadClientData = async () => {
+    try {
+      setLoading(true);
+      setError("");
+      
+      // Get client orders and companies
+      const [ordersRes, companiesRes] = await Promise.all([
+        apiClient.get("/orders/my-orders"),
+        apiClient.get("/conversations/client-companies").catch(() => ({ data: { data: [] } }))
+      ]);
+      
+      if (ordersRes.data.success) {
+        setOrders(ordersRes.data.data.orders || []);
+      }
+      
+      setCompanies(companiesRes.data?.data || []);
+    } catch (error) {
+      console.error("Error loading client data:", error);
+      setError("Failed to load orders");
+      setOrders([]);
+    } finally {
+      setLoading(false);
+    }
+  };
 
   const loadOrders = async () => {
     try {
@@ -256,11 +291,17 @@ export default function OrdersPage() {
     const matchesSearch = 
       order.orderNumber?.toLowerCase().includes(searchTerm.toLowerCase()) ||
       order.clientId?.name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      order.clientId?.email?.toLowerCase().includes(searchTerm.toLowerCase());
+      order.clientId?.email?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      order.companyId?.name?.toLowerCase().includes(searchTerm.toLowerCase());
     
     const matchesStatus = statusFilter === "all" || order.status === statusFilter;
     
-    return matchesSearch && matchesStatus;
+    // For clients, also filter by company
+    const matchesCompany = companyFilter === "all" || 
+      (order.companyId?._id === companyFilter) || 
+      (order.companyId === companyFilter);
+    
+    return matchesSearch && matchesStatus && matchesCompany;
   });
 
   const getStatusColor = (status) => {
@@ -399,6 +440,23 @@ export default function OrdersPage() {
                 className="w-full pl-10 pr-4 py-2 bg-gray-800 text-white border border-gray-700 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
               />
             </div>
+            
+            {/* Company filter for clients */}
+            {isClient && companies.length > 0 && (
+              <select
+                value={companyFilter}
+                onChange={(e) => setCompanyFilter(e.target.value)}
+                className="px-4 py-2 bg-gray-800 text-white border border-gray-700 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+              >
+                <option value="all">All Companies</option>
+                {companies.map((company) => (
+                  <option key={company._id} value={company._id}>
+                    {company.name}
+                  </option>
+                ))}
+              </select>
+            )}
+            
             <select
               value={statusFilter}
               onChange={(e) => setStatusFilter(e.target.value)}
@@ -446,7 +504,17 @@ export default function OrdersPage() {
                           {order.status}
                         </span>
                       </div>
-                      {order.clientId && (
+                      {/* Show company name for clients */}
+                      {isClient && order.companyId && (
+                        <div className="flex items-center gap-2 text-blue-400 mb-1">
+                          <Package className="w-4 h-4" />
+                          <span className="text-sm font-medium">
+                            {order.companyId.name || "Company"}
+                          </span>
+                        </div>
+                      )}
+                      {/* Show client info for non-clients */}
+                      {!isClient && order.clientId && (
                         <div className="flex items-center gap-2 text-gray-300 mb-1">
                           <User className="w-4 h-4" />
                           <span className="text-sm">

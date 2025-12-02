@@ -146,3 +146,38 @@ export const updateOrderStatus = async (req, res, next) => {
     next(error);
   }
 };
+
+/**
+ * Get all orders for a client (across all companies)
+ * Used for client portal multi-company view
+ */
+export const getClientOrders = async (req, res, next) => {
+  try {
+    const { companyId, status } = req.query;
+    
+    const orders = await orderService.getClientOrders({
+      userId: req.user._id,
+      companyId,
+      status,
+    });
+    
+    return successResponse(res, { orders });
+  } catch (error) {
+    next(error);
+  }
+};
+
+/**
+ * Get client order statistics
+ */
+export const getClientOrderStats = async (req, res, next) => {
+  try {
+    const stats = await orderService.getClientOrderStats({
+      userId: req.user._id,
+    });
+    
+    return successResponse(res, { stats });
+  } catch (error) {
+    next(error);
+  }
+};
