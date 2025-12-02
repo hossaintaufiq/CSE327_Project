@@ -10,6 +10,7 @@
  * - Standardized request/response format
  */
 
+import mongoose from 'mongoose';
 import { Client } from '../models/Client.js';
 import { Order } from '../models/Order.js';
 import { Project } from '../models/Project.js';
@@ -18,6 +19,15 @@ import { Message } from '../models/Message.js';
 import { User } from '../models/User.js';
 import { ActivityLog } from '../models/ActivityLog.js';
 import * as geminiService from './geminiService.js';
+
+/**
+ * Validate MongoDB ObjectId
+ * @param {string} id - ID to validate
+ * @returns {boolean} Whether the ID is valid
+ */
+function isValidObjectId(id) {
+  return mongoose.Types.ObjectId.isValid(id);
+}
 
 /**
  * MCP Tool Definitions
@@ -417,13 +427,21 @@ export const TOOL_DEFINITIONS = {
  * @param {string} companyId - Company ID for data isolation
  * @returns {Promise<Object>} Tool execution result
  */
-export async function executeTool(toolName, params, companyId) {
+export async function executeTool(toolName, params = {}, companyId) {
   const tool = TOOL_DEFINITIONS[toolName];
   
   if (!tool) {
     return {
       success: false,
       error: { code: 'UNKNOWN_TOOL', message: `Tool '${toolName}' not found` },
+    };
+  }
+
+  // Validate companyId for data isolation
+  if (!companyId) {
+    return {
+      success: false,
+      error: { code: 'MISSING_COMPANY', message: 'Company ID is required for this operation' },
     };
   }
 
@@ -445,6 +463,9 @@ export async function executeTool(toolName, params, companyId) {
       }
 
       case 'getClient': {
+        if (!isValidObjectId(params.clientId)) {
+          return { success: false, error: { code: 'INVALID_ID', message: 'Invalid client ID format' } };
+        }
         const client = await Client.findOne({ _id: params.clientId, companyId, isActive: true }).lean();
         if (!client) return { success: false, error: { code: 'NOT_FOUND', message: 'Client not found' } };
         
@@ -471,6 +492,9 @@ export async function executeTool(toolName, params, companyId) {
       }
 
       case 'getOrder': {
+        if (!isValidObjectId(params.orderId)) {
+          return { success: false, error: { code: 'INVALID_ID', message: 'Invalid order ID format' } };
+        }
         const order = await Order.findOne({ _id: params.orderId, companyId })
           .populate('clientId', 'name email company')
           .lean();
@@ -509,6 +533,9 @@ export async function executeTool(toolName, params, companyId) {
       }
 
       case 'getProject': {
+        if (!isValidObjectId(params.projectId)) {
+          return { success: false, error: { code: 'INVALID_ID', message: 'Invalid project ID format' } };
+        }
         const project = await Project.findOne({ _id: params.projectId, companyId, isActive: true })
           .populate('assignedTo', 'name email')
           .lean();
@@ -593,6 +620,9 @@ export async function executeTool(toolName, params, companyId) {
 
       // Pipeline tools
       case 'movePipelineStage': {
+        if (!isValidObjectId(params.entityId)) {
+          return { success: false, error: { code: 'INVALID_ID', message: 'Invalid entity ID format' } };
+        }
         let entity;
         const updateData = { pipelineStage: params.newStage, updatedAt: new Date() };
         

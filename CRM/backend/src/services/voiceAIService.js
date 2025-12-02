@@ -104,9 +104,11 @@ export async function processVoiceInput({ text, userId, companyId, sessionId }) 
         const actionData = JSON.parse(actionMatch[1]);
         
         // Execute the action through MCP server
+        // Pass companyId as third argument for data isolation
         actionResult = await mcpServer.executeTool(
           actionData.tool,
-          { ...actionData.params, companyId, userId }
+          { ...actionData.params, userId },
+          companyId
         );
         
         executedAction = {
