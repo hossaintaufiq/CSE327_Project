@@ -275,3 +275,128 @@ export const mcpApi = {
   },
 };
 
+// Pipeline API functions
+export const pipelineApi = {
+  // Get all pipeline configurations
+  getAllConfigs: async () => {
+    const response = await apiClient.get('/pipeline/config');
+    return response.data;
+  },
+
+  // Get specific pipeline config
+  getConfig: async (pipelineType) => {
+    const response = await apiClient.get(`/pipeline/config/${pipelineType}`);
+    return response.data;
+  },
+
+  // Get dashboard summary (all pipelines)
+  getDashboardSummary: async () => {
+    const response = await apiClient.get('/pipeline/dashboard');
+    return response.data;
+  },
+
+  // Get summary for a pipeline type
+  getSummary: async (pipelineType) => {
+    const response = await apiClient.get(`/pipeline/${pipelineType}/summary`);
+    return response.data;
+  },
+
+  // Get entities in a specific stage
+  getEntitiesInStage: async (pipelineType, stage, limit) => {
+    const response = await apiClient.get(`/pipeline/${pipelineType}/stage/${stage}`, { params: { limit } });
+    return response.data;
+  },
+
+  // Validate a transition (preview)
+  validateTransition: async (pipelineType, currentStage, targetStage) => {
+    const response = await apiClient.post(`/pipeline/${pipelineType}/validate`, { currentStage, targetStage });
+    return response.data;
+  },
+
+  // Move entity to a stage
+  moveToStage: async (pipelineType, entityId, targetStage, notes) => {
+    const response = await apiClient.post(`/pipeline/${pipelineType}/${entityId}/move`, { targetStage, notes });
+    return response.data;
+  },
+
+  // Get pending approvals
+  getPendingApprovals: async () => {
+    const response = await apiClient.get('/pipeline/approvals/pending');
+    return response.data;
+  },
+
+  // Process an approval
+  processApproval: async (approvalId, approved, reason) => {
+    const response = await apiClient.post(`/pipeline/approvals/${approvalId}`, { approved, reason });
+    return response.data;
+  },
+};
+
+// Voice Chat API functions
+export const voiceChatApi = {
+  // Check if voice chat is enabled
+  getStatus: async () => {
+    const response = await apiClient.get('/voice-chat/status');
+    return response.data;
+  },
+
+  // Create a new call room
+  createRoom: async (options = {}) => {
+    const response = await apiClient.post('/voice-chat/rooms', options);
+    return response.data;
+  },
+
+  // Get active calls
+  getActiveCalls: async () => {
+    const response = await apiClient.get('/voice-chat/active');
+    return response.data;
+  },
+
+  // Get meeting token for a room
+  getMeetingToken: async (roomName, isOwner = false) => {
+    const response = await apiClient.get(`/voice-chat/rooms/${roomName}/token`, { params: { isOwner } });
+    return response.data;
+  },
+
+  // Get room participants
+  getRoomParticipants: async (roomName) => {
+    const response = await apiClient.get(`/voice-chat/rooms/${roomName}/participants`);
+    return response.data;
+  },
+
+  // Get room recordings
+  getRecordings: async (roomName) => {
+    const response = await apiClient.get(`/voice-chat/rooms/${roomName}/recordings`);
+    return response.data;
+  },
+
+  // End a call
+  endCall: async (roomName) => {
+    const response = await apiClient.delete(`/voice-chat/rooms/${roomName}`);
+    return response.data;
+  },
+
+  // Initiate a call to another user
+  initiateCall: async (recipientId, recipientName) => {
+    const response = await apiClient.post('/voice-chat/call', { recipientId, recipientName });
+    return response.data;
+  },
+
+  // Create a group call
+  createGroupCall: async (name, participants) => {
+    const response = await apiClient.post('/voice-chat/group-call', { name, participants });
+    return response.data;
+  },
+
+  // Answer an incoming call
+  answerCall: async (roomName) => {
+    const response = await apiClient.post(`/voice-chat/call/${roomName}/answer`);
+    return response.data;
+  },
+
+  // Decline an incoming call
+  declineCall: async (roomName, reason) => {
+    const response = await apiClient.post(`/voice-chat/call/${roomName}/decline`, { reason });
+    return response.data;
+  },
+};
