@@ -17,6 +17,7 @@ import {
   ShoppingCart,
   MessageSquare,
   Building,
+  Kanban,
 } from "lucide-react";
 import useAuthStore from "@/store/authStore";
 
@@ -43,6 +44,7 @@ export default function Sidebar() {
     // For Company Admin and Manager
     if (activeCompanyRole === "company_admin" || activeCompanyRole === "manager") {
       companyMenuItems.push(
+        { icon: Kanban, label: "Pipeline", href: "/pipeline" },
         { icon: UserCheck, label: "Leads", href: "/clients" },
         { icon: ShoppingCart, label: "Sales", href: "/orders" },
         { icon: Users, label: "Employees", href: "/dashboard/employees" },
