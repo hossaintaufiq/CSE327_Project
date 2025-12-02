@@ -41,8 +41,20 @@ const httpServer = createServer(app);
 const PORT = process.env.PORT || 5000;
 
 // Middleware
+const allowedOrigins = [
+  process.env.CLIENT_ORIGIN || 'http://localhost:3100',
+  'http://localhost:3000',
+  'http://localhost:3100',
+];
 app.use(cors({
-  origin: process.env.CLIENT_ORIGIN || 'http://localhost:3100',
+  origin: function(origin, callback) {
+    // Allow requests with no origin (like mobile apps or curl requests)
+    if (!origin) return callback(null, true);
+    if (allowedOrigins.includes(origin)) {
+      return callback(null, true);
+    }
+    return callback(null, true); // Allow all for development
+  },
   credentials: true
 }));
 app.use(express.json());

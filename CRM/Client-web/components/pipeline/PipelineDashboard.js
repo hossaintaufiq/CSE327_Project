@@ -118,7 +118,7 @@ export function PipelineDashboard({ onPipelineClick }) {
             >
               <div className="flex items-center justify-between mb-3">
                 <span className="text-2xl">{config.icon}</span>
-                <div className={`px-2 py-1 rounded-full bg-gradient-to-r ${config.color} text-white text-xs font-medium`}>
+                <div className={`px-2 py-1 rounded-full bg-linear-to-r ${config.color} text-white text-xs font-medium`}>
                   {data?.total || 0} total
                 </div>
               </div>

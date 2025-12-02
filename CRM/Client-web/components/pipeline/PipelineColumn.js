@@ -18,7 +18,7 @@ export function PipelineColumn({
 }) {
   return (
     <div
-      className={`flex-shrink-0 w-72 rounded-lg border-2 ${colorClass} ${
+      className={`shrink-0 w-72 rounded-lg border-2 ${colorClass} ${
         isDragTarget ? 'ring-2 ring-blue-400 ring-offset-2' : ''
       }`}
       onDragOver={onDragOver}
@@ -28,7 +28,7 @@ export function PipelineColumn({
       <div className="p-3 border-b border-gray-200 bg-white bg-opacity-50 rounded-t-lg">
         <div className="flex items-center justify-between">
           <h3 className="font-semibold text-gray-800">{stageName}</h3>
-          <span className="inline-flex items-center justify-center h-6 min-w-[1.5rem] px-2 rounded-full bg-white text-gray-600 text-sm font-medium shadow-sm">
+          <span className="inline-flex items-center justify-center h-6 min-w-6 px-2 rounded-full bg-white text-gray-600 text-sm font-medium shadow-sm">
             {entities.length}
           </span>
         </div>
