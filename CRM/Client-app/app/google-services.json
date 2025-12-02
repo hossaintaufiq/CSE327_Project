@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "894818601223",
+    "project_id": "crmprime-fcd64",
+    "storage_bucket": "crmprime-fcd64.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:894818601223:android:48b6df907ec8169d1a9da2",
+        "android_client_info": {
+          "package_name": "com.hossaintaufiq.crmprime"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyBNq_6kbbaBPQk96jG2DsfCOPXM8dy23aM"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

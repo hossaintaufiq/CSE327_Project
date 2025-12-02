@@ -5,13 +5,13 @@ plugins {
 }
 
 android {
-    namespace = "com.example.crmprime"
+    namespace = "com.hossaintaufiq.crmprime"
     compileSdk {
         version = release(36)
     }
 
     defaultConfig {
-        applicationId = "com.example.crmprime"
+        applicationId = "com.hossaintaufiq.crmprime"
         minSdk = 21
         targetSdk = 36
         versionCode = 1
@@ -70,6 +70,10 @@ dependencies {
     
     // Image Loading
     implementation(libs.coil.compose)
+
+    // Firebase Auth (uses BOM)
+    implementation(platform(libs.firebase.bom))
+    implementation(libs.firebase.auth.ktx)
     
     testImplementation(libs.junit)
     androidTestImplementation(libs.androidx.junit)

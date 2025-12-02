@@ -1,14 +1,32 @@
 package com.example.crmprime.ui.screen
 
-import androidx.compose.foundation.layout.*
-import androidx.compose.material3.*
-import androidx.compose.runtime.*
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.padding
+import androidx.compose.material3.Button
+import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.Text
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.example.crmprime.ui.viewmodel.AuthViewModel
+import com.example.crmprime.util.SharedPreferencesHelper
+import com.google.firebase.auth.FirebaseAuth
 
 @Composable
 fun LoginScreen(
@@ -17,14 +35,18 @@ fun LoginScreen(
 ) {
     var email by remember { mutableStateOf("") }
     var password by remember { mutableStateOf("") }
+    var firebaseError by remember { mutableStateOf<String?>(null) }
     val authState by viewModel.authState.collectAsState()
-    
+    val context = LocalContext.current
+    val prefs = remember { SharedPreferencesHelper(context) }
+    val firebaseAuth = remember { FirebaseAuth.getInstance() }
+
     LaunchedEffect(authState.isAuthenticated) {
         if (authState.isAuthenticated) {
             onLoginSuccess()
         }
     }
-    
+
     Column(
         modifier = Modifier
             .fillMaxSize()
@@ -37,14 +59,14 @@ fun LoginScreen(
             style = MaterialTheme.typography.headlineLarge,
             modifier = Modifier.padding(bottom = 8.dp)
         )
-        
+
         Text(
             text = "Sign in to continue",
             style = MaterialTheme.typography.bodyMedium,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
             modifier = Modifier.padding(bottom = 32.dp)
         )
-        
+
         OutlinedTextField(
             value = email,
             onValueChange = { email = it },
@@ -54,7 +76,7 @@ fun LoginScreen(
                 .padding(bottom = 16.dp),
             singleLine = true
         )
-        
+
         OutlinedTextField(
             value = password,
             onValueChange = { password = it },
@@ -65,20 +87,50 @@ fun LoginScreen(
                 .padding(bottom = 24.dp),
             singleLine = true
         )
-        
-        if (authState.error != null) {
+
+        val errorText = firebaseError ?: authState.error
+        if (errorText != null) {
             Text(
-                text = authState.error!!,
+                text = errorText,
                 color = MaterialTheme.colorScheme.error,
                 modifier = Modifier.padding(bottom = 16.dp)
             )
         }
-        
+
         Button(
             onClick = {
-                // For now, use mock token. In production, integrate Firebase Auth
-                // For demo purposes, we'll use a placeholder
-                viewModel.login("mock_token_$email")
+                firebaseError = null
+
+                // Sign in with Firebase Auth using email/password
+                firebaseAuth.signInWithEmailAndPassword(email.trim(), password)
+                    .addOnCompleteListener { task ->
+                        if (task.isSuccessful) {
+                            val user = firebaseAuth.currentUser
+                            if (user != null) {
+                                user.getIdToken(true)
+                                    .addOnCompleteListener { tokenTask ->
+                                        if (tokenTask.isSuccessful) {
+                                            val idToken = tokenTask.result?.token
+                                            if (idToken != null) {
+                                                // Persist token for future sessions
+                                                prefs.saveIdToken(idToken)
+                                                // Call backend /api/auth/login with Firebase ID token
+                                                viewModel.login(idToken)
+                                            } else {
+                                                firebaseError = "Failed to get ID token from Firebase."
+                                            }
+                                        } else {
+                                            firebaseError = tokenTask.exception?.message
+                                                ?: "Failed to get ID token from Firebase."
+                                        }
+                                    }
+                            } else {
+                                firebaseError = "Firebase user is null after sign-in."
+                            }
+                        } else {
+                            firebaseError = task.exception?.message ?: "Firebase authentication failed."
+                        }
+                    }
             },
             modifier = Modifier
                 .fillMaxWidth()
@@ -94,9 +146,9 @@ fun LoginScreen(
                 Text("Sign In")
             }
         }
-        
+
         Text(
-            text = "Note: Firebase Auth integration required for production",
+            text = "Uses Firebase Auth + backend API (same flow as the web client).",
             style = MaterialTheme.typography.bodySmall,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
             modifier = Modifier.padding(top = 16.dp)
