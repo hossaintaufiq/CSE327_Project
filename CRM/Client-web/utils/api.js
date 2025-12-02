@@ -400,3 +400,30 @@ export const voiceChatApi = {
     return response.data;
   },
 };
+
+// Voice AI API functions
+export const voiceAIApi = {
+  // Process voice input (text)
+  process: async (text, sessionId) => {
+    const response = await apiClient.post('/voice-ai/process', { text, sessionId });
+    return response.data;
+  },
+
+  // Get conversation history
+  getHistory: async (sessionId) => {
+    const response = await apiClient.get(`/voice-ai/history/${sessionId || ''}`);
+    return response.data;
+  },
+
+  // Clear conversation history
+  clearHistory: async (sessionId) => {
+    const response = await apiClient.delete(`/voice-ai/history/${sessionId || ''}`);
+    return response.data;
+  },
+
+  // Get quick commands
+  getCommands: async () => {
+    const response = await apiClient.get('/voice-ai/commands');
+    return response.data;
+  },
+};

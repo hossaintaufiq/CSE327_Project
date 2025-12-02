@@ -28,6 +28,7 @@ import aiRoutes from './src/routes/aiRoutes.js';
 import mcpRoutes from './src/routes/mcpRoutes.js';
 import pipelineRoutes from './src/routes/pipelineRoutes.js';
 import voiceChatRoutes from './src/routes/voiceChatRoutes.js';
+import voiceAIRoutes from './src/routes/voiceAIRoutes.js';
 
 // Import services
 import { initTwilioClient } from './src/services/twilioService.js';
@@ -77,6 +78,7 @@ app.use('/api/ai', aiRoutes);
 app.use('/api/mcp', mcpRoutes);
 app.use('/api/pipeline', pipelineRoutes);
 app.use('/api/voice-chat', voiceChatRoutes);
+app.use('/api/voice-ai', voiceAIRoutes);
 
 // 404 handler
 app.use((req, res) => {

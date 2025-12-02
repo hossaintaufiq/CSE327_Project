@@ -122,6 +122,30 @@ const setupBotHandlers = () => {
     await handleIncomingMessage(ctx);
   });
 
+  // Handle voice messages - process with AI
+  bot.on('message:voice', async (ctx) => {
+    await handleVoiceMessage(ctx);
+  });
+
+  // AI command - talk to the AI assistant
+  bot.command('ai', async (ctx) => {
+    const query = ctx.match?.trim();
+    if (!query) {
+      await ctx.reply(
+        `🤖 *AI Assistant*\n\n` +
+        `Send me a message after /ai to get help with your CRM.\n\n` +
+        `Examples:\n` +
+        `• /ai show my tasks\n` +
+        `• /ai what's the pipeline status?\n` +
+        `• /ai find clients from last week\n\n` +
+        `You can also send a voice message and I'll process it!`,
+        { parse_mode: 'Markdown' }
+      );
+      return;
+    }
+    await handleAIQuery(ctx, query);
+  });
+
   // Error handler
   bot.catch((err) => {
     console.error('Telegram bot error:', err);
@@ -448,15 +472,121 @@ const sendHelpMessage = async (ctx) => {
     `/start - Start the bot and link your account\n` +
     `/status - View your CRM status\n` +
     `/tasks - View your pending tasks\n` +
+    `/ai <query> - Ask the AI assistant\n` +
     `/unlink - Unlink your Telegram account\n` +
     `/help - Show this help message\n\n` +
-    `*Features:*\n` +
+    `*AI Features:*\n` +
+    `• Send a voice message to talk with AI\n` +
+    `• Use /ai followed by your question\n` +
+    `• Examples: "/ai show my tasks", "/ai pipeline status"\n\n` +
+    `*Other Features:*\n` +
     `• Receive real-time notifications\n` +
     `• Chat with leads and clients\n` +
     `• View task updates\n\n` +
     `For support, contact your CRM administrator.`,
     { parse_mode: 'Markdown' }
   );
+};
+
+/**
+ * Handle voice message - transcribe and process with AI
+ */
+const handleVoiceMessage = async (ctx) => {
+  const chatId = ctx.chat.id;
+  
+  try {
+    // Check if user is linked
+    const user = await User.findOne({ telegramChatId: chatId.toString() });
+    if (!user) {
+      await ctx.reply(
+        `Please link your account first using /start to use voice commands.`
+      );
+      return;
+    }
+
+    await ctx.reply(`🎤 Processing your voice message...`);
+
+    // Get file info
+    const file = await ctx.getFile();
+    const fileUrl = `https://api.telegram.org/file/bot${process.env.TELEGRAM_BOT_TOKEN}/${file.file_path}`;
+
+    // For now, inform user to use text (full STT would need external API)
+    // In production, you'd send the audio to a speech-to-text service like Google Cloud Speech-to-Text
+    await ctx.reply(
+      `🤖 *Voice Processing*\n\n` +
+      `I received your voice message! For the most accurate results, ` +
+      `please type your request using /ai command.\n\n` +
+      `Example: \`/ai show my tasks for today\`\n\n` +
+      `_Note: Full voice transcription requires additional setup. Contact your admin to enable it._`,
+      { parse_mode: 'Markdown' }
+    );
+
+    // Future implementation: 
+    // 1. Download the voice file
+    // 2. Send to Google Cloud Speech-to-Text or OpenAI Whisper
+    // 3. Get transcript
+    // 4. Process with voiceAIService
+    
+  } catch (error) {
+    console.error('Error handling voice message:', error);
+    await ctx.reply(`❌ Failed to process voice message. Please try using /ai command instead.`);
+  }
+};
+
+/**
+ * Handle AI query from Telegram
+ */
+const handleAIQuery = async (ctx, query) => {
+  const chatId = ctx.chat.id;
+  
+  try {
+    // Check if user is linked
+    const user = await User.findOne({ telegramChatId: chatId.toString() });
+    if (!user) {
+      await ctx.reply(
+        `Please link your account first using /start to use AI features.`
+      );
+      return;
+    }
+
+    // Show typing indicator
+    await ctx.replyWithChatAction('typing');
+
+    // Import voice AI service
+    const voiceAIService = await import('./voiceAIService.js');
+    
+    // Get user's company
+    const companyId = user.companies?.[0]?.companyId || user.companyId;
+    
+    if (!companyId) {
+      await ctx.reply(`❌ No company associated with your account.`);
+      return;
+    }
+
+    // Process the query
+    const result = await voiceAIService.processTelegramVoice({
+      text: query,
+      telegramUserId: ctx.from.id.toString(),
+      companyId: companyId.toString(),
+    });
+
+    // Format response
+    let responseText = `🤖 *AI Assistant*\n\n${result.text}`;
+    
+    if (result.hasAction && result.action) {
+      responseText += `\n\n✅ _Action executed: ${result.action.tool}_`;
+    }
+
+    if (result.error) {
+      responseText = `❌ *Error*\n\n${result.text}`;
+    }
+
+    await ctx.reply(responseText, { parse_mode: 'Markdown' });
+
+  } catch (error) {
+    console.error('Error handling AI query:', error);
+    await ctx.reply(`❌ Failed to process your request. Please try again.`);
+  }
 };
 
 /**
