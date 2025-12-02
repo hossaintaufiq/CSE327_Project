@@ -6,23 +6,23 @@
 
 import express from 'express';
 import * as voiceAIController from '../controllers/voiceAIController.js';
-import auth from '../middleware/auth.js';
+import { verifyFirebaseToken } from '../middleware/auth.js';
 
 const router = express.Router();
 
 // Process voice input (text)
-router.post('/process', auth, voiceAIController.processVoice);
+router.post('/process', verifyFirebaseToken, voiceAIController.processVoice);
 
 // Process audio file (future)
-router.post('/audio', auth, voiceAIController.processAudio);
+router.post('/audio', verifyFirebaseToken, voiceAIController.processAudio);
 
 // Get conversation history
-router.get('/history/:sessionId?', auth, voiceAIController.getHistory);
+router.get('/history/:sessionId?', verifyFirebaseToken, voiceAIController.getHistory);
 
 // Clear conversation history
-router.delete('/history/:sessionId?', auth, voiceAIController.clearHistory);
+router.delete('/history/:sessionId?', verifyFirebaseToken, voiceAIController.clearHistory);
 
 // Get quick commands
-router.get('/commands', auth, voiceAIController.getQuickCommands);
+router.get('/commands', verifyFirebaseToken, voiceAIController.getQuickCommands);
 
 export default router;

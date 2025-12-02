@@ -8,7 +8,7 @@
 import mongoose from 'mongoose';
 import { Project } from '../models/Project.js';
 import { Task } from '../models/Task.js';
-import ActivityLog from '../models/ActivityLog.js';
+import { ActivityLog } from '../models/ActivityLog.js';
 
 // Valid project statuses
 const VALID_STATUSES = ['planning', 'in_progress', 'on_hold', 'completed', 'cancelled'];

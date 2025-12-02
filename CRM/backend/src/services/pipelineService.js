@@ -19,7 +19,7 @@ import { Client } from '../models/Client.js';
 import { Order } from '../models/Order.js';
 import { Project } from '../models/Project.js';
 import { Task } from '../models/Task.js';
-import ActivityLog from '../models/ActivityLog.js';
+import { ActivityLog } from '../models/ActivityLog.js';
 import { emitToCompany } from './liveChatService.js';
 
 // Pipeline stage definitions

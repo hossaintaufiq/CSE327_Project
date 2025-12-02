@@ -8,7 +8,7 @@
 import mongoose from 'mongoose';
 import { Order } from '../models/Order.js';
 import { Client } from '../models/Client.js';
-import ActivityLog from '../models/ActivityLog.js';
+import { ActivityLog } from '../models/ActivityLog.js';
 
 // Valid order statuses
 const VALID_STATUSES = ['pending', 'processing', 'shipped', 'delivered', 'cancelled'];

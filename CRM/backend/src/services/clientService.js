@@ -12,7 +12,7 @@
  */
 
 import { Client } from '../models/Client.js';
-import ActivityLog from '../models/ActivityLog.js';
+import { ActivityLog } from '../models/ActivityLog.js';
 
 /**
  * Get all clients/leads for a company

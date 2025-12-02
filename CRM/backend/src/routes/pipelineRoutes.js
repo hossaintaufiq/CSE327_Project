@@ -6,43 +6,43 @@
 
 import express from 'express';
 import * as pipelineController from '../controllers/pipelineController.js';
-import auth from '../middleware/auth.js';
+import { verifyFirebaseToken } from '../middleware/auth.js';
 
 const router = express.Router();
 
 // ===== Pipeline Configuration =====
 
 // Get all pipeline configurations
-router.get('/config', auth, pipelineController.getAllPipelineConfigs);
+router.get('/config', verifyFirebaseToken, pipelineController.getAllPipelineConfigs);
 
 // Get specific pipeline configuration
-router.get('/config/:type', auth, pipelineController.getPipelineConfig);
+router.get('/config/:type', verifyFirebaseToken, pipelineController.getPipelineConfig);
 
 // ===== Dashboard =====
 
 // Get dashboard summary (all pipelines)
-router.get('/dashboard', auth, pipelineController.getDashboardSummary);
+router.get('/dashboard', verifyFirebaseToken, pipelineController.getDashboardSummary);
 
 // ===== Pipeline Operations =====
 
 // Get summary for a pipeline type
-router.get('/:type/summary', auth, pipelineController.getPipelineSummary);
+router.get('/:type/summary', verifyFirebaseToken, pipelineController.getPipelineSummary);
 
 // Get entities in a specific stage
-router.get('/:type/stage/:stage', auth, pipelineController.getEntitiesInStage);
+router.get('/:type/stage/:stage', verifyFirebaseToken, pipelineController.getEntitiesInStage);
 
 // Validate a transition (preview)
-router.post('/:type/validate', auth, pipelineController.validateTransition);
+router.post('/:type/validate', verifyFirebaseToken, pipelineController.validateTransition);
 
 // Move entity to a stage
-router.post('/:type/:entityId/move', auth, pipelineController.moveToStage);
+router.post('/:type/:entityId/move', verifyFirebaseToken, pipelineController.moveToStage);
 
 // ===== Approvals =====
 
 // Get pending approvals
-router.get('/approvals/pending', auth, pipelineController.getPendingApprovals);
+router.get('/approvals/pending', verifyFirebaseToken, pipelineController.getPendingApprovals);
 
 // Process an approval
-router.post('/approvals/:approvalId', auth, pipelineController.processApproval);
+router.post('/approvals/:approvalId', verifyFirebaseToken, pipelineController.processApproval);
 
 export default router;

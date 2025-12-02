@@ -97,9 +97,42 @@ export function asyncHandler(fn) {
   };
 }
 
+/**
+ * Shorthand error response function (legacy compatibility)
+ * @param {Object} res - Express response object
+ * @param {string} code - Error code
+ * @param {string} message - Error message
+ * @param {number} [status=500] - HTTP status code
+ */
+export function errorResponse(res, code, message, status = 500) {
+  return sendError(res, { code, message, status });
+}
+
+/**
+ * Shorthand success response function (legacy compatibility)
+ * @param {Object} res - Express response object
+ * @param {Object} data - Response data
+ * @param {number} [status=200] - HTTP status code
+ */
+export function successResponse(res, data, status = 200) {
+  return sendSuccess(res, data, { status });
+}
+
+/**
+ * Shorthand not found response function
+ * @param {Object} res - Express response object
+ * @param {string} [message='Resource not found'] - Error message
+ */
+export function notFoundResponse(res, message = 'Resource not found') {
+  return sendError(res, { code: 'NOT_FOUND', message, status: 404 });
+}
+
 export default {
   sendSuccess,
   sendError,
   createError,
   asyncHandler,
+  errorResponse,
+  successResponse,
+  notFoundResponse,
 };
