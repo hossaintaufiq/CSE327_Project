@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation";
 import useAuthStore from "@/store/authStore";
 import apiClient from "@/utils/api";
 import Sidebar from "@/components/Sidebar";
-import { Shield, Users, UserCheck, Briefcase, User, Edit, Trash2, Save, X, AlertCircle } from "lucide-react";
+import { Shield, Users, UserCheck, Briefcase, User, Edit, Trash2, Save, X, AlertCircle, Clock, Check } from "lucide-react";
 
 export default function RolesPage() {
   const router = useRouter();
@@ -13,7 +13,9 @@ export default function RolesPage() {
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(null);
   const [deleting, setDeleting] = useState(null);
+  const [handlingRequest, setHandlingRequest] = useState(null);
   const [members, setMembers] = useState([]);
+  const [pendingRequests, setPendingRequests] = useState([]);
   const [rolePermissions, setRolePermissions] = useState({});
   const [editingMember, setEditingMember] = useState(null);
   const [selectedRole, setSelectedRole] = useState("");
@@ -34,6 +36,7 @@ export default function RolesPage() {
       return;
     }
     loadRolesAndPermissions();
+    loadPendingRequests();
   }, [activeCompanyId, router, isSuperAdmin, activeCompanyRole]);
 
   const loadRolesAndPermissions = async () => {
@@ -52,6 +55,43 @@ export default function RolesPage() {
       setError(error.response?.data?.message || "Failed to load roles and permissions");
     } finally {
       setLoading(false);
+    }
+  };
+
+  const loadPendingRequests = async () => {
+    try {
+      const response = await apiClient.get("/company/join-requests");
+      if (response.data.success) {
+        setPendingRequests(response.data.data.pendingRequests || []);
+      }
+    } catch (error) {
+      console.error("Error loading pending requests:", error);
+    }
+  };
+
+  const handleJoinRequest = async (userId, action) => {
+    try {
+      setHandlingRequest(userId);
+      setError("");
+      
+      const response = await apiClient.post("/company/join-requests/handle", {
+        userId,
+        action, // 'approve' or 'reject'
+      });
+
+      if (response.data.success) {
+        await loadPendingRequests();
+        if (action === 'approve') {
+          await loadRolesAndPermissions(); // Refresh members list
+        }
+      } else {
+        setError(response.data.message || `Failed to ${action} request`);
+      }
+    } catch (error) {
+      console.error(`Error ${action}ing request:`, error);
+      setError(error.response?.data?.message || `Failed to ${action} request`);
+    } finally {
+      setHandlingRequest(null);
     }
   };
 
@@ -180,6 +220,56 @@ export default function RolesPage() {
           {error && (
             <div className="mb-6 p-4 bg-red-500/20 border border-red-500/50 rounded-lg">
               <p className="text-red-400">{error}</p>
+            </div>
+          )}
+
+          {/* Pending Join Requests */}
+          {pendingRequests.length > 0 && (
+            <div className="mb-8 bg-yellow-500/10 border border-yellow-500/30 rounded-xl p-6">
+              <div className="flex items-center gap-3 mb-4">
+                <Clock className="w-6 h-6 text-yellow-400" />
+                <h2 className="text-xl font-semibold text-white">Pending Join Requests</h2>
+                <span className="px-2 py-1 text-xs font-medium bg-yellow-500/20 text-yellow-400 rounded-full">
+                  {pendingRequests.length} pending
+                </span>
+              </div>
+              <div className="space-y-3">
+                {pendingRequests.map((request) => (
+                  <div key={request.userId} className="flex items-center justify-between bg-gray-800/50 rounded-lg p-4">
+                    <div>
+                      <p className="text-white font-medium">{request.name}</p>
+                      <p className="text-gray-400 text-sm">{request.email}</p>
+                      <p className="text-xs text-gray-500 mt-1">
+                        Requested role: <span className="text-yellow-400 capitalize">{request.requestedRole}</span>
+                      </p>
+                    </div>
+                    <div className="flex gap-2">
+                      <button
+                        onClick={() => handleJoinRequest(request.userId, 'approve')}
+                        disabled={handlingRequest === request.userId}
+                        className="flex items-center gap-1 px-3 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors disabled:opacity-50"
+                      >
+                        {handlingRequest === request.userId ? (
+                          <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
+                        ) : (
+                          <>
+                            <Check className="w-4 h-4" />
+                            Approve
+                          </>
+                        )}
+                      </button>
+                      <button
+                        onClick={() => handleJoinRequest(request.userId, 'reject')}
+                        disabled={handlingRequest === request.userId}
+                        className="flex items-center gap-1 px-3 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors disabled:opacity-50"
+                      >
+                        <X className="w-4 h-4" />
+                        Reject
+                      </button>
+                    </div>
+                  </div>
+                ))}
+              </div>
             </div>
           )}
 

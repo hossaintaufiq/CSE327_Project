@@ -298,7 +298,13 @@ export const getMe = async (req, res) => {
           id: user._id,
           email: user.email,
           name: user.name,
+          phone: user.phone,
+          jobTitle: user.jobTitle,
+          department: user.department,
+          bio: user.bio,
+          avatar: user.avatar,
           globalRole: user.globalRole,
+          createdAt: user.createdAt,
           companies: user.companies.map((c) => ({
             companyId: c.companyId?._id || c.companyId,
             companyName: c.companyId?.name,
@@ -312,5 +318,57 @@ export const getMe = async (req, res) => {
   } catch (error) {
     console.error('Get me error:', error.message);
     res.status(500).json({ message: 'Error fetching user data' });
+  }
+};
+
+/**
+ * Update user profile
+ */
+export const updateProfile = async (req, res) => {
+  try {
+    const user = req.user;
+    const { name, phone, jobTitle, department, bio, avatar } = req.body;
+
+    // Update allowed fields
+    if (name !== undefined) user.name = name;
+    if (phone !== undefined) user.phone = phone;
+    if (jobTitle !== undefined) user.jobTitle = jobTitle;
+    if (department !== undefined) user.department = department;
+    if (bio !== undefined) user.bio = bio;
+    if (avatar !== undefined) user.avatar = avatar;
+
+    await user.save();
+
+    // Populate companies for response
+    await user.populate('companies.companyId');
+
+    res.json({
+      success: true,
+      message: 'Profile updated successfully',
+      data: {
+        user: {
+          id: user._id,
+          email: user.email,
+          name: user.name,
+          phone: user.phone,
+          jobTitle: user.jobTitle,
+          department: user.department,
+          bio: user.bio,
+          avatar: user.avatar,
+          globalRole: user.globalRole,
+          createdAt: user.createdAt,
+          companies: user.companies.map((c) => ({
+            companyId: c.companyId?._id || c.companyId,
+            companyName: c.companyId?.name,
+            role: c.role,
+            joinedAt: c.joinedAt,
+            isActive: c.isActive,
+          })),
+        },
+      },
+    });
+  } catch (error) {
+    console.error('Update profile error:', error.message);
+    res.status(500).json({ message: 'Error updating profile: ' + error.message });
   }
 };

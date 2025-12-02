@@ -74,7 +74,8 @@ export default function DashboardPage() {
 
           // If has companies and stored companyId but no activeCompanyId in store, set it
           if (userCompanies.length > 0 && storedCompanyId) {
-            const company = userCompanies.find((c) => c.companyId === storedCompanyId && c.isActive);
+            // Find company by ID - it should exist if stored
+            const company = userCompanies.find((c) => c.companyId === storedCompanyId);
             if (company) {
               // Set active company if not already set or if different
               if (!activeCompanyId || activeCompanyId !== company.companyId) {
@@ -83,7 +84,8 @@ export default function DashboardPage() {
                 await new Promise(resolve => setTimeout(resolve, 100));
               }
             } else {
-              // Stored companyId doesn't match or is inactive, redirect to selection
+              // Stored companyId not found in user's companies, redirect to selection
+              localStorage.removeItem("companyId");
               router.push("/company-selection");
               return;
             }

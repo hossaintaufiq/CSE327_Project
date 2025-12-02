@@ -29,10 +29,15 @@ export default function SuperAdminSidebar() {
   const { user } = useAuthStore();
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [mounted, setMounted] = useState(false);
+  const [currentSearch, setCurrentSearch] = useState("");
 
   useEffect(() => {
     setMounted(true);
-  }, []);
+    // Update search on mount and when pathname changes
+    if (typeof window !== "undefined") {
+      setCurrentSearch(window.location.search);
+    }
+  }, [pathname]);
 
   const menuItems = [
     { icon: LayoutDashboard, label: "Dashboard", href: "/super-admin" },
@@ -49,14 +54,14 @@ export default function SuperAdminSidebar() {
   ];
 
   const isActive = (href) => {
-    if (typeof window === "undefined") return false;
+    if (!mounted || typeof window === "undefined") return false;
     
     if (href === "/super-admin") {
-      return pathname === "/super-admin" && !window.location.search.includes("tab");
+      return pathname === "/super-admin" && !currentSearch.includes("tab");
     }
     if (href.includes("tab=")) {
       const tab = href.split("tab=")[1];
-      return window.location.search.includes(`tab=${tab}`);
+      return currentSearch.includes(`tab=${tab}`);
     }
     return pathname?.startsWith(href);
   };

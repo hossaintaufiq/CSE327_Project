@@ -1,0 +1,339 @@
+"use client";
+
+import { useEffect, useState } from "react";
+import { useRouter } from "next/navigation";
+import useAuthStore from "@/store/authStore";
+import apiClient from "@/utils/api";
+import Sidebar from "@/components/Sidebar";
+import { User, Mail, Phone, Building, Calendar, Save, Camera, ArrowLeft, Shield, Briefcase } from "lucide-react";
+
+export default function ProfilePage() {
+  const router = useRouter();
+  const { user, activeCompanyId, activeCompanyRole, isSuperAdmin, setUser } = useAuthStore();
+  const [loading, setLoading] = useState(true);
+  const [saving, setSaving] = useState(false);
+  const [error, setError] = useState("");
+  const [success, setSuccess] = useState("");
+  const [formData, setFormData] = useState({
+    name: "",
+    email: "",
+    phone: "",
+    jobTitle: "",
+    department: "",
+    bio: "",
+    avatar: "",
+  });
+
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    
+    // Super admin goes to super-admin page
+    if (isSuperAdmin()) {
+      router.push("/super-admin");
+      return;
+    }
+    
+    loadProfile();
+  }, [router, isSuperAdmin]);
+
+  const loadProfile = async () => {
+    try {
+      setLoading(true);
+      setError("");
+      
+      const response = await apiClient.get("/auth/me");
+      if (response.data.success) {
+        const userData = response.data.data.user;
+        setFormData({
+          name: userData.name || "",
+          email: userData.email || "",
+          phone: userData.phone || "",
+          jobTitle: userData.jobTitle || "",
+          department: userData.department || "",
+          bio: userData.bio || "",
+          avatar: userData.avatar || "",
+        });
+      }
+    } catch (err) {
+      console.error("Error loading profile:", err);
+      setError(err.response?.data?.message || "Failed to load profile");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    
+    if (saving) return;
+    
+    try {
+      setSaving(true);
+      setError("");
+      setSuccess("");
+
+      const response = await apiClient.put("/auth/profile", {
+        name: formData.name,
+        phone: formData.phone,
+        jobTitle: formData.jobTitle,
+        department: formData.department,
+        bio: formData.bio,
+        avatar: formData.avatar,
+      });
+
+      if (response.data.success) {
+        setSuccess("Profile updated successfully!");
+        // Update user in store
+        const updatedUser = { ...user, ...formData };
+        setUser(updatedUser);
+        // Update localStorage
+        localStorage.setItem("user", JSON.stringify(updatedUser));
+        
+        setTimeout(() => setSuccess(""), 3000);
+      }
+    } catch (err) {
+      console.error("Error updating profile:", err);
+      setError(err.response?.data?.message || "Failed to update profile");
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const getRoleBadge = (role) => {
+    const badges = {
+      company_admin: { color: "bg-purple-500/20 text-purple-400 border-purple-500/30", label: "Company Admin", icon: Shield },
+      manager: { color: "bg-blue-500/20 text-blue-400 border-blue-500/30", label: "Manager", icon: Briefcase },
+      employee: { color: "bg-green-500/20 text-green-400 border-green-500/30", label: "Employee", icon: User },
+      client: { color: "bg-orange-500/20 text-orange-400 border-orange-500/30", label: "Client", icon: User },
+    };
+    return badges[role] || badges.employee;
+  };
+
+  const roleBadge = getRoleBadge(activeCompanyRole);
+  const RoleIcon = roleBadge.icon;
+
+  if (loading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-gray-900">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-500 mx-auto"></div>
+          <p className="mt-4 text-gray-400">Loading profile...</p>
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="min-h-screen bg-gray-900">
+      <Sidebar />
+      <main className="lg:ml-64 min-h-screen">
+        <div className="p-4 sm:p-6 lg:p-8">
+          {/* Header */}
+          <div className="flex items-center gap-4 mb-8">
+            <button
+              onClick={() => router.push('/dashboard')}
+              className="p-2 hover:bg-gray-800 rounded-lg transition-colors"
+            >
+              <ArrowLeft className="w-5 h-5 text-gray-400" />
+            </button>
+            <div>
+              <h1 className="text-3xl font-bold text-white">My Profile</h1>
+              <p className="text-gray-400">Manage your personal information</p>
+            </div>
+          </div>
+
+          {/* Error/Success Messages */}
+          {error && (
+            <div className="mb-6 p-4 bg-red-500/20 border border-red-500/50 rounded-lg">
+              <p className="text-red-400">{error}</p>
+            </div>
+          )}
+          {success && (
+            <div className="mb-6 p-4 bg-green-500/20 border border-green-500/50 rounded-lg">
+              <p className="text-green-400">{success}</p>
+            </div>
+          )}
+
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+            {/* Profile Card */}
+            <div className="lg:col-span-1">
+              <div className="bg-gray-800 rounded-xl border border-gray-700 p-6">
+                <div className="flex flex-col items-center text-center">
+                  {/* Avatar */}
+                  <div className="relative mb-4">
+                    <div className="w-32 h-32 rounded-full bg-gradient-to-br from-blue-500 to-purple-600 flex items-center justify-center">
+                      {formData.avatar ? (
+                        <img
+                          src={formData.avatar}
+                          alt={formData.name}
+                          className="w-full h-full rounded-full object-cover"
+                        />
+                      ) : (
+                        <span className="text-4xl font-bold text-white">
+                          {formData.name?.charAt(0)?.toUpperCase() || formData.email?.charAt(0)?.toUpperCase() || "U"}
+                        </span>
+                      )}
+                    </div>
+                    <button className="absolute bottom-0 right-0 p-2 bg-blue-600 rounded-full hover:bg-blue-700 transition-colors">
+                      <Camera className="w-4 h-4 text-white" />
+                    </button>
+                  </div>
+
+                  <h2 className="text-xl font-bold text-white mb-1">{formData.name || "User"}</h2>
+                  <p className="text-gray-400 mb-4">{formData.email}</p>
+
+                  {/* Role Badge */}
+                  <div className={`inline-flex items-center gap-2 px-3 py-1 rounded-full border ${roleBadge.color}`}>
+                    <RoleIcon className="w-4 h-4" />
+                    <span className="text-sm font-medium">{roleBadge.label}</span>
+                  </div>
+
+                  {/* Stats */}
+                  <div className="w-full mt-6 pt-6 border-t border-gray-700">
+                    <div className="grid grid-cols-2 gap-4 text-center">
+                      <div>
+                        <p className="text-2xl font-bold text-white">{user?.companies?.length || 1}</p>
+                        <p className="text-sm text-gray-400">Companies</p>
+                      </div>
+                      <div>
+                        <p className="text-2xl font-bold text-white">
+                          {user?.createdAt ? Math.floor((new Date() - new Date(user.createdAt)) / (1000 * 60 * 60 * 24)) : 0}
+                        </p>
+                        <p className="text-sm text-gray-400">Days Active</p>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* Edit Form */}
+            <div className="lg:col-span-2">
+              <div className="bg-gray-800 rounded-xl border border-gray-700 p-6">
+                <h3 className="text-xl font-bold text-white mb-6">Edit Profile</h3>
+                
+                <form onSubmit={handleSubmit} className="space-y-6">
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    {/* Name */}
+                    <div>
+                      <label className="block text-sm font-medium text-gray-300 mb-2">
+                        <User className="w-4 h-4 inline mr-2" />
+                        Full Name
+                      </label>
+                      <input
+                        type="text"
+                        value={formData.name}
+                        onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+                        className="w-full px-4 py-3 bg-gray-700 border border-gray-600 rounded-lg text-white placeholder-gray-400 focus:outline-none focus:border-blue-500"
+                        placeholder="Your full name"
+                      />
+                    </div>
+
+                    {/* Email (Read-only) */}
+                    <div>
+                      <label className="block text-sm font-medium text-gray-300 mb-2">
+                        <Mail className="w-4 h-4 inline mr-2" />
+                        Email Address
+                      </label>
+                      <input
+                        type="email"
+                        value={formData.email}
+                        disabled
+                        className="w-full px-4 py-3 bg-gray-600 border border-gray-600 rounded-lg text-gray-400 cursor-not-allowed"
+                      />
+                      <p className="text-xs text-gray-500 mt-1">Email cannot be changed</p>
+                    </div>
+
+                    {/* Phone */}
+                    <div>
+                      <label className="block text-sm font-medium text-gray-300 mb-2">
+                        <Phone className="w-4 h-4 inline mr-2" />
+                        Phone Number
+                      </label>
+                      <input
+                        type="tel"
+                        value={formData.phone}
+                        onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
+                        className="w-full px-4 py-3 bg-gray-700 border border-gray-600 rounded-lg text-white placeholder-gray-400 focus:outline-none focus:border-blue-500"
+                        placeholder="+1 (555) 000-0000"
+                      />
+                    </div>
+
+                    {/* Job Title */}
+                    <div>
+                      <label className="block text-sm font-medium text-gray-300 mb-2">
+                        <Briefcase className="w-4 h-4 inline mr-2" />
+                        Job Title
+                      </label>
+                      <input
+                        type="text"
+                        value={formData.jobTitle}
+                        onChange={(e) => setFormData({ ...formData, jobTitle: e.target.value })}
+                        className="w-full px-4 py-3 bg-gray-700 border border-gray-600 rounded-lg text-white placeholder-gray-400 focus:outline-none focus:border-blue-500"
+                        placeholder="e.g. Sales Manager"
+                      />
+                    </div>
+
+                    {/* Department */}
+                    <div>
+                      <label className="block text-sm font-medium text-gray-300 mb-2">
+                        <Building className="w-4 h-4 inline mr-2" />
+                        Department
+                      </label>
+                      <input
+                        type="text"
+                        value={formData.department}
+                        onChange={(e) => setFormData({ ...formData, department: e.target.value })}
+                        className="w-full px-4 py-3 bg-gray-700 border border-gray-600 rounded-lg text-white placeholder-gray-400 focus:outline-none focus:border-blue-500"
+                        placeholder="e.g. Sales, Marketing"
+                      />
+                    </div>
+
+                    {/* Avatar URL */}
+                    <div>
+                      <label className="block text-sm font-medium text-gray-300 mb-2">
+                        <Camera className="w-4 h-4 inline mr-2" />
+                        Avatar URL
+                      </label>
+                      <input
+                        type="url"
+                        value={formData.avatar}
+                        onChange={(e) => setFormData({ ...formData, avatar: e.target.value })}
+                        className="w-full px-4 py-3 bg-gray-700 border border-gray-600 rounded-lg text-white placeholder-gray-400 focus:outline-none focus:border-blue-500"
+                        placeholder="https://example.com/avatar.jpg"
+                      />
+                    </div>
+                  </div>
+
+                  {/* Bio */}
+                  <div>
+                    <label className="block text-sm font-medium text-gray-300 mb-2">Bio</label>
+                    <textarea
+                      value={formData.bio}
+                      onChange={(e) => setFormData({ ...formData, bio: e.target.value })}
+                      rows={4}
+                      className="w-full px-4 py-3 bg-gray-700 border border-gray-600 rounded-lg text-white placeholder-gray-400 focus:outline-none focus:border-blue-500 resize-none"
+                      placeholder="Tell us about yourself..."
+                    />
+                  </div>
+
+                  {/* Submit Button */}
+                  <div className="flex justify-end">
+                    <button
+                      type="submit"
+                      disabled={saving}
+                      className="flex items-center gap-2 px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                    >
+                      <Save className="w-5 h-5" />
+                      {saving ? "Saving..." : "Save Changes"}
+                    </button>
+                  </div>
+                </form>
+              </div>
+            </div>
+          </div>
+        </div>
+      </main>
+    </div>
+  );
+}

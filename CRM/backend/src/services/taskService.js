@@ -9,6 +9,7 @@ import mongoose from 'mongoose';
 import { Task } from '../models/Task.js';
 import { Project } from '../models/Project.js';
 import { ActivityLog } from '../models/ActivityLog.js';
+import { createNotification, sendStatusChangeNotification } from './notificationService.js';
 
 // Valid task statuses
 const VALID_STATUSES = ['todo', 'in_progress', 'review', 'done', 'cancelled'];
@@ -169,6 +170,30 @@ export async function createTask({ companyId, createdBy, data }) {
     meta: { title: task.title, status: task.status, projectId: task.projectId },
   });
 
+  // Send notification to assigned user if task is assigned to someone else
+  if (assignedTo && assignedTo !== createdBy.toString()) {
+    try {
+      await createNotification({
+        userId: assignedTo,
+        companyId,
+        type: 'task',
+        entityId: task._id,
+        title: 'New Task Assigned',
+        message: `You have been assigned a new task: "${task.title}"`,
+        priority: task.priority === 'urgent' || task.priority === 'high' ? 'high' : 'medium',
+        relatedEntity: task._id,
+        entityType: 'Task',
+        metadata: {
+          taskTitle: task.title,
+          projectName: task.projectId?.name || 'No Project',
+          dueDate: task.dueDate,
+        },
+      });
+    } catch (notifError) {
+      console.error('Error sending task assignment notification:', notifError);
+    }
+  }
+
   return task.toObject();
 }
 
@@ -241,6 +266,23 @@ export async function updateTask({ taskId, companyId, updatedBy, data }) {
       entityId: task._id,
       meta: { title: task.title, oldStatus, newStatus: task.status },
     });
+
+    // Send notification to assigned user about status change
+    if (task.assignedTo && task.assignedTo._id.toString() !== updatedBy.toString()) {
+      try {
+        await sendStatusChangeNotification(
+          companyId,
+          'task',
+          task._id,
+          task,
+          oldStatus,
+          task.status,
+          task.assignedTo._id
+        );
+      } catch (notifError) {
+        console.error('Error sending task status change notification:', notifError);
+      }
+    }
   }
 
   return task.toObject();
@@ -331,6 +373,30 @@ export async function assignTask({ taskId, companyId, assignedTo, assignedBy }) 
     entityId: taskId,
     meta: { title: task.title, assignedTo },
   });
+
+  // Send notification to newly assigned user
+  if (assignedTo && assignedTo !== assignedBy.toString()) {
+    try {
+      await createNotification({
+        userId: assignedTo,
+        companyId,
+        type: 'task',
+        entityId: taskId,
+        title: 'Task Assigned to You',
+        message: `You have been assigned the task: "${task.title}"`,
+        priority: task.priority === 'urgent' || task.priority === 'high' ? 'high' : 'medium',
+        relatedEntity: taskId,
+        entityType: 'Task',
+        metadata: {
+          taskTitle: task.title,
+          projectName: task.projectId?.name || 'No Project',
+          dueDate: task.dueDate,
+        },
+      });
+    } catch (notifError) {
+      console.error('Error sending task assignment notification:', notifError);
+    }
+  }
 
   return task;
 }

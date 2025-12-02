@@ -7,6 +7,8 @@ import {
   joinCompany,
   listMyCompanies,
   getCompanyMembers,
+  getPendingJoinRequests,
+  handleJoinRequest,
 } from '../controllers/companyController.js';
 import { getEmployeeProfile, searchEmployees, getEmployees } from '../controllers/employeeController.js';
 import { getCompanyProfile, updateCompanyProfile } from '../controllers/companyProfileController.js';
@@ -36,6 +38,10 @@ router.put('/settings', verifyCompanyAccess, checkRole(['company_admin']), updat
 router.get('/announcements', verifyCompanyAccess, getCompanyAnnouncements); // Get company announcements
 router.post('/announcements', verifyCompanyAccess, checkRole(['company_admin']), createCompanyAnnouncement); // Create company announcement
 router.get('/:companyId/members', verifyCompanyAccess, checkRole(['company_admin', 'manager']), getCompanyMembers);
+
+// Join request management (company admin only)
+router.get('/join-requests', verifyCompanyAccess, checkRole(['company_admin']), getPendingJoinRequests); // Get pending join requests
+router.post('/join-requests/handle', verifyCompanyAccess, checkRole(['company_admin']), handleJoinRequest); // Approve/reject join request
 
 export default router;
 

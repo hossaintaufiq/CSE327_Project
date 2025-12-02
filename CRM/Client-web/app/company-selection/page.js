@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import Link from "next/link";
 import apiClient from "@/utils/api";
 import useAuthStore from "@/store/authStore";
+import { Building2, Plus, Users, ArrowLeft } from "lucide-react";
 
 export default function CompanySelectionPage() {
   const router = useRouter();
@@ -129,12 +130,21 @@ export default function CompanySelectionPage() {
       });
 
       if (response.data.success) {
-        // Refresh user data
+        // Check if approval is needed (for manager/employee)
+        if (response.data.data.status === 'pending') {
+          setError(''); // Clear any previous errors
+          alert('Your join request has been submitted and is pending admin approval.');
+          setJoinFormData({ companyName: "", role: "employee" });
+          setShowJoinForm(false);
+          return;
+        }
+        
+        // Refresh user data (for clients who are auto-approved)
         const userResponse = await apiClient.get("/auth/me");
         if (userResponse.data.success) {
           setUser(userResponse.data.data.user);
           const joinedCompany = userResponse.data.data.user.companies.find(
-            (c) => c.companyName === joinFormData.companyName
+            (c) => c.companyName === joinFormData.companyName && c.status === 'approved'
           );
           if (joinedCompany) {
             setActiveCompany(joinedCompany.companyId, joinedCompany.role);
@@ -167,10 +177,10 @@ export default function CompanySelectionPage() {
 
   if (loading && !companies) {
     return (
-      <div className="min-h-screen flex items-center justify-center">
+      <div className="min-h-screen flex items-center justify-center bg-gray-900">
         <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto"></div>
-          <p className="mt-4 text-gray-600">Loading...</p>
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-500 mx-auto"></div>
+          <p className="mt-4 text-gray-400">Loading...</p>
         </div>
       </div>
     );
@@ -185,10 +195,10 @@ export default function CompanySelectionPage() {
   
   if (isSuperAdmin()) {
     return (
-      <div className="min-h-screen flex items-center justify-center">
+      <div className="min-h-screen flex items-center justify-center bg-gray-900">
         <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto"></div>
-          <p className="mt-4 text-gray-600">Redirecting to Super Admin...</p>
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-purple-500 mx-auto"></div>
+          <p className="mt-4 text-gray-400">Redirecting to Super Admin...</p>
         </div>
       </div>
     );
@@ -220,10 +230,10 @@ export default function CompanySelectionPage() {
     if (selectedCompany) {
       // Company already selected, show loading while redirecting
       return (
-        <div className="min-h-screen flex items-center justify-center">
+        <div className="min-h-screen flex items-center justify-center bg-gray-900">
           <div className="text-center">
-            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto"></div>
-            <p className="mt-4 text-gray-600">Redirecting to dashboard...</p>
+            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-500 mx-auto"></div>
+            <p className="mt-4 text-gray-400">Redirecting to dashboard...</p>
           </div>
         </div>
       );
@@ -233,12 +243,12 @@ export default function CompanySelectionPage() {
   // If user has companies, show selection
   if (companies && companies.length > 0) {
     return (
-      <div className="min-h-screen bg-gray-50 py-12 px-4">
+      <div className="min-h-screen bg-gray-900 py-12 px-4">
         <div className="max-w-4xl mx-auto">
-          <h1 className="text-3xl font-bold text-center mb-8">Select Company</h1>
+          <h1 className="text-3xl font-bold text-center mb-8 text-white">Select Company</h1>
 
           {error && (
-            <div className="bg-red-100 text-red-700 p-4 rounded-md mb-6">
+            <div className="bg-red-500/20 border border-red-500/50 text-red-400 p-4 rounded-lg mb-6">
               {error}
             </div>
           )}
@@ -248,11 +258,18 @@ export default function CompanySelectionPage() {
               <div
                 key={company.companyId}
                 onClick={() => handleSelectCompany(company)}
-                className="bg-white p-6 rounded-lg shadow-md hover:shadow-lg cursor-pointer transition-shadow border-2 border-transparent hover:border-blue-500"
+                className="bg-gray-800 p-6 rounded-xl border border-gray-700 hover:border-blue-500 cursor-pointer transition-all hover:shadow-lg hover:shadow-blue-500/10"
               >
-                <h3 className="text-xl font-semibold mb-2">{company.companyName}</h3>
-                <p className="text-gray-600 mb-4">Role: {company.role.replace("_", " ")}</p>
-                <button className="w-full bg-blue-600 text-white py-2 px-4 rounded-md hover:bg-blue-700">
+                <div className="flex items-center gap-3 mb-4">
+                  <div className="w-12 h-12 rounded-lg bg-blue-500/20 flex items-center justify-center">
+                    <Building2 className="w-6 h-6 text-blue-400" />
+                  </div>
+                  <div>
+                    <h3 className="text-xl font-semibold text-white">{company.companyName}</h3>
+                    <p className="text-gray-400 text-sm">Role: {company.role.replace("_", " ")}</p>
+                  </div>
+                </div>
+                <button className="w-full bg-blue-600 text-white py-2 px-4 rounded-lg hover:bg-blue-700 transition-colors">
                   Select Company
                 </button>
               </div>
@@ -266,8 +283,9 @@ export default function CompanySelectionPage() {
                 setShowJoinForm(false);
                 setCreateFormData({ companyName: "", domain: "" }); // Reset create form
               }}
-              className="px-6 py-3 bg-green-600 text-white rounded-md hover:bg-green-700"
+              className="flex items-center gap-2 px-6 py-3 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors"
             >
+              <Plus className="w-5 h-5" />
               Create New Company
             </button>
             <button
@@ -276,8 +294,9 @@ export default function CompanySelectionPage() {
                 setShowCreateForm(false);
                 setJoinFormData({ companyName: "", role: "employee" }); // Reset join form
               }}
-              className="px-6 py-3 bg-blue-600 text-white rounded-md hover:bg-blue-700"
+              className="flex items-center gap-2 px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
             >
+              <Users className="w-5 h-5" />
               Join Existing Company
             </button>
           </div>
@@ -285,36 +304,38 @@ export default function CompanySelectionPage() {
 
         {/* Create Company Form Modal */}
         {showCreateForm && !showJoinForm && (
-          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-            <div className="bg-white p-8 rounded-lg max-w-md w-full mx-4">
-              <h2 className="text-2xl font-bold mb-4">Create New Company</h2>
+          <div className="fixed inset-0 bg-black bg-opacity-70 flex items-center justify-center z-50">
+            <div className="bg-gray-800 p-8 rounded-xl border border-gray-700 max-w-md w-full mx-4 shadow-2xl">
+              <h2 className="text-2xl font-bold mb-4 text-white">Create New Company</h2>
               <form onSubmit={handleCreateCompany}>
                 <div className="mb-4">
-                  <label className="block text-sm font-medium mb-1">Company Name *</label>
+                  <label className="block text-sm font-medium mb-2 text-gray-300">Company Name *</label>
                   <input
                     type="text"
                     required
                     disabled={creatingCompany || joiningCompany}
                     value={createFormData.companyName}
                     onChange={(e) => setCreateFormData({ ...createFormData, companyName: e.target.value })}
-                    className="w-full px-3 py-2 border rounded-md disabled:bg-gray-100 disabled:cursor-not-allowed"
+                    className="w-full px-4 py-2 bg-gray-700 border border-gray-600 rounded-lg text-white placeholder-gray-400 focus:outline-none focus:border-blue-500 disabled:opacity-50 disabled:cursor-not-allowed"
+                    placeholder="My Company"
                   />
                 </div>
                 <div className="mb-4">
-                  <label className="block text-sm font-medium mb-1">Domain (optional)</label>
+                  <label className="block text-sm font-medium mb-2 text-gray-300">Domain (optional)</label>
                   <input
                     type="text"
                     disabled={creatingCompany || joiningCompany}
                     value={createFormData.domain}
                     onChange={(e) => setCreateFormData({ ...createFormData, domain: e.target.value })}
-                    className="w-full px-3 py-2 border rounded-md disabled:bg-gray-100 disabled:cursor-not-allowed"
+                    className="w-full px-4 py-2 bg-gray-700 border border-gray-600 rounded-lg text-white placeholder-gray-400 focus:outline-none focus:border-blue-500 disabled:opacity-50 disabled:cursor-not-allowed"
+                    placeholder="mycompany.com"
                   />
                 </div>
                 <div className="flex gap-4">
                   <button
                     type="submit"
                     disabled={creatingCompany || joiningCompany}
-                    className="flex-1 bg-green-600 text-white py-2 px-4 rounded-md hover:bg-green-700 disabled:opacity-50 disabled:cursor-not-allowed"
+                    className="flex-1 bg-green-600 text-white py-2 px-4 rounded-lg hover:bg-green-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
                   >
                     {creatingCompany ? "Creating..." : "Create"}
                   </button>
@@ -325,7 +346,7 @@ export default function CompanySelectionPage() {
                       setShowCreateForm(false);
                       setCreateFormData({ companyName: "", domain: "" });
                     }}
-                    className="flex-1 bg-gray-300 text-gray-700 py-2 px-4 rounded-md hover:bg-gray-400 disabled:opacity-50 disabled:cursor-not-allowed"
+                    className="flex-1 bg-gray-600 text-white py-2 px-4 rounded-lg hover:bg-gray-500 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
                   >
                     Cancel
                   </button>
@@ -337,29 +358,30 @@ export default function CompanySelectionPage() {
 
         {/* Join Company Form Modal */}
         {showJoinForm && !showCreateForm && (
-          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-            <div className="bg-white p-8 rounded-lg max-w-md w-full mx-4">
-              <h2 className="text-2xl font-bold mb-4">Join Existing Company</h2>
+          <div className="fixed inset-0 bg-black bg-opacity-70 flex items-center justify-center z-50">
+            <div className="bg-gray-800 p-8 rounded-xl border border-gray-700 max-w-md w-full mx-4 shadow-2xl">
+              <h2 className="text-2xl font-bold mb-4 text-white">Join Existing Company</h2>
               <form onSubmit={handleJoinCompany}>
                 <div className="mb-4">
-                  <label className="block text-sm font-medium mb-1">Company Name *</label>
+                  <label className="block text-sm font-medium mb-2 text-gray-300">Company Name *</label>
                   <input
                     type="text"
                     required
                     disabled={creatingCompany || joiningCompany}
                     value={joinFormData.companyName}
                     onChange={(e) => setJoinFormData({ ...joinFormData, companyName: e.target.value })}
-                    className="w-full px-3 py-2 border rounded-md disabled:bg-gray-100 disabled:cursor-not-allowed"
+                    className="w-full px-4 py-2 bg-gray-700 border border-gray-600 rounded-lg text-white placeholder-gray-400 focus:outline-none focus:border-blue-500 disabled:opacity-50 disabled:cursor-not-allowed"
+                    placeholder="Existing Company Name"
                   />
                 </div>
                 <div className="mb-4">
-                  <label className="block text-sm font-medium mb-1">Your Position *</label>
+                  <label className="block text-sm font-medium mb-2 text-gray-300">Your Position *</label>
                   <select
                     required
                     disabled={creatingCompany || joiningCompany}
                     value={joinFormData.role}
                     onChange={(e) => setJoinFormData({ ...joinFormData, role: e.target.value })}
-                    className="w-full px-3 py-2 border rounded-md disabled:bg-gray-100 disabled:cursor-not-allowed"
+                    className="w-full px-4 py-2 bg-gray-700 border border-gray-600 rounded-lg text-white focus:outline-none focus:border-blue-500 disabled:opacity-50 disabled:cursor-not-allowed"
                   >
                     <option value="manager">Manager</option>
                     <option value="employee">Employee</option>
@@ -370,7 +392,7 @@ export default function CompanySelectionPage() {
                   <button
                     type="submit"
                     disabled={creatingCompany || joiningCompany}
-                    className="flex-1 bg-blue-600 text-white py-2 px-4 rounded-md hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed"
+                    className="flex-1 bg-blue-600 text-white py-2 px-4 rounded-lg hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
                   >
                     {joiningCompany ? "Joining..." : "Join"}
                   </button>
@@ -381,7 +403,7 @@ export default function CompanySelectionPage() {
                       setShowJoinForm(false);
                       setJoinFormData({ companyName: "", role: "employee" });
                     }}
-                    className="flex-1 bg-gray-300 text-gray-700 py-2 px-4 rounded-md hover:bg-gray-400 disabled:opacity-50 disabled:cursor-not-allowed"
+                    className="flex-1 bg-gray-600 text-white py-2 px-4 rounded-lg hover:bg-gray-500 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
                   >
                     Cancel
                   </button>
@@ -396,55 +418,60 @@ export default function CompanySelectionPage() {
 
   // New user - show create/join options
   return (
-    <div className="min-h-screen bg-gray-50 py-12 px-4">
-      <div className="max-w-2xl mx-auto">
-        <h1 className="text-3xl font-bold text-center mb-8">Welcome! Set Up Your Company</h1>
-        <p className="text-center text-gray-600 mb-8">
+    <div className="min-h-screen bg-gray-900 py-12 px-4">
+      <div className="max-w-3xl mx-auto">
+        <h1 className="text-3xl font-bold text-center mb-4 text-white">Welcome! Set Up Your Company</h1>
+        <p className="text-center text-gray-400 mb-8">
           You can either create a new company or join an existing one.
         </p>
 
         {error && (
-          <div className="bg-red-100 text-red-700 p-4 rounded-md mb-6">
+          <div className="bg-red-500/20 border border-red-500/50 text-red-400 p-4 rounded-lg mb-6">
             {error}
           </div>
         )}
 
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
           {/* Create Company Card */}
-          <div className="bg-white p-8 rounded-lg shadow-md">
-            <h2 className="text-2xl font-semibold mb-4">Create New Company</h2>
-            <p className="text-gray-600 mb-6">
+          <div className="bg-gray-800 p-8 rounded-xl border border-gray-700">
+            <div className="flex items-center gap-3 mb-4">
+              <div className="w-12 h-12 rounded-lg bg-green-500/20 flex items-center justify-center">
+                <Plus className="w-6 h-6 text-green-400" />
+              </div>
+              <h2 className="text-2xl font-semibold text-white">Create New Company</h2>
+            </div>
+            <p className="text-gray-400 mb-6">
               Start your own company and become the Company Admin. You'll have full control over
               your company's data and members.
             </p>
             <form onSubmit={handleCreateCompany}>
               <div className="mb-4">
-                <label className="block text-sm font-medium mb-1">Company Name *</label>
+                <label className="block text-sm font-medium mb-2 text-gray-300">Company Name *</label>
                 <input
                   type="text"
                   required
                   disabled={creatingCompany || joiningCompany}
                   value={createFormData.companyName}
                   onChange={(e) => setCreateFormData({ ...createFormData, companyName: e.target.value })}
-                  className="w-full px-3 py-2 border rounded-md disabled:bg-gray-100 disabled:cursor-not-allowed"
+                  className="w-full px-4 py-2 bg-gray-700 border border-gray-600 rounded-lg text-white placeholder-gray-400 focus:outline-none focus:border-green-500 disabled:opacity-50 disabled:cursor-not-allowed"
                   placeholder="My Company"
                 />
               </div>
               <div className="mb-4">
-                <label className="block text-sm font-medium mb-1">Domain (optional)</label>
+                <label className="block text-sm font-medium mb-2 text-gray-300">Domain (optional)</label>
                 <input
                   type="text"
                   disabled={creatingCompany || joiningCompany}
                   value={createFormData.domain}
                   onChange={(e) => setCreateFormData({ ...createFormData, domain: e.target.value })}
-                  className="w-full px-3 py-2 border rounded-md disabled:bg-gray-100 disabled:cursor-not-allowed"
+                  className="w-full px-4 py-2 bg-gray-700 border border-gray-600 rounded-lg text-white placeholder-gray-400 focus:outline-none focus:border-green-500 disabled:opacity-50 disabled:cursor-not-allowed"
                   placeholder="mycompany.com"
                 />
               </div>
               <button
                 type="submit"
                 disabled={creatingCompany || joiningCompany}
-                className="w-full bg-green-600 text-white py-2 px-4 rounded-md hover:bg-green-700 disabled:opacity-50 disabled:cursor-not-allowed"
+                className="w-full bg-green-600 text-white py-3 px-4 rounded-lg hover:bg-green-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors font-medium"
               >
                 {creatingCompany ? "Creating..." : "Create Company"}
               </button>
@@ -452,33 +479,38 @@ export default function CompanySelectionPage() {
           </div>
 
           {/* Join Company Card */}
-          <div className="bg-white p-8 rounded-lg shadow-md">
-            <h2 className="text-2xl font-semibold mb-4">Join Existing Company</h2>
-            <p className="text-gray-600 mb-6">
+          <div className="bg-gray-800 p-8 rounded-xl border border-gray-700">
+            <div className="flex items-center gap-3 mb-4">
+              <div className="w-12 h-12 rounded-lg bg-blue-500/20 flex items-center justify-center">
+                <Users className="w-6 h-6 text-blue-400" />
+              </div>
+              <h2 className="text-2xl font-semibold text-white">Join Existing Company</h2>
+            </div>
+            <p className="text-gray-400 mb-6">
               Join an existing company by entering the company name and your position. The company
               admin will be notified.
             </p>
             <form onSubmit={handleJoinCompany}>
               <div className="mb-4">
-                <label className="block text-sm font-medium mb-1">Company Name *</label>
+                <label className="block text-sm font-medium mb-2 text-gray-300">Company Name *</label>
                 <input
                   type="text"
                   required
                   disabled={creatingCompany || joiningCompany}
                   value={joinFormData.companyName}
                   onChange={(e) => setJoinFormData({ ...joinFormData, companyName: e.target.value })}
-                  className="w-full px-3 py-2 border rounded-md disabled:bg-gray-100 disabled:cursor-not-allowed"
+                  className="w-full px-4 py-2 bg-gray-700 border border-gray-600 rounded-lg text-white placeholder-gray-400 focus:outline-none focus:border-blue-500 disabled:opacity-50 disabled:cursor-not-allowed"
                   placeholder="Existing Company Name"
                 />
               </div>
               <div className="mb-4">
-                <label className="block text-sm font-medium mb-1">Your Position *</label>
+                <label className="block text-sm font-medium mb-2 text-gray-300">Your Position *</label>
                 <select
                   required
                   disabled={creatingCompany || joiningCompany}
                   value={joinFormData.role}
                   onChange={(e) => setJoinFormData({ ...joinFormData, role: e.target.value })}
-                  className="w-full px-3 py-2 border rounded-md disabled:bg-gray-100 disabled:cursor-not-allowed"
+                  className="w-full px-4 py-2 bg-gray-700 border border-gray-600 rounded-lg text-white focus:outline-none focus:border-blue-500 disabled:opacity-50 disabled:cursor-not-allowed"
                 >
                   <option value="manager">Manager</option>
                   <option value="employee">Employee</option>
@@ -488,7 +520,7 @@ export default function CompanySelectionPage() {
               <button
                 type="submit"
                 disabled={creatingCompany || joiningCompany}
-                className="w-full bg-blue-600 text-white py-2 px-4 rounded-md hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed"
+                className="w-full bg-blue-600 text-white py-3 px-4 rounded-lg hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors font-medium"
               >
                 {joiningCompany ? "Joining..." : "Join Company"}
               </button>

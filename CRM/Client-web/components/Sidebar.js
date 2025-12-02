@@ -18,6 +18,7 @@ import {
   MessageSquare,
   Building,
   Kanban,
+  User,
 } from "lucide-react";
 import useAuthStore from "@/store/authStore";
 
@@ -35,6 +36,7 @@ export default function Sidebar() {
   // Base menu items for dashboard
   const baseMenuItems = [
     { icon: LayoutDashboard, label: "Dashboard", href: "/dashboard" },
+    { icon: User, label: "My Profile", href: "/dashboard/profile" },
   ];
 
   // Company-specific menu items based on role
@@ -73,10 +75,10 @@ export default function Sidebar() {
         { icon: MessageSquare, label: "Chat", href: "/chat" }
       );
     }
-    // For Client
+    // For Client - NO SALES for client, only chat and announcements
     else if (activeCompanyRole === "client") {
       companyMenuItems.push(
-        { icon: ShoppingCart, label: "My Sales", href: "/orders" },
+        { icon: ShoppingCart, label: "My Orders", href: "/orders" },
         { icon: MessageSquare, label: "Announcements", href: "/announcements" },
         { icon: MessageSquare, label: "Chat", href: "/chat" }
       );
@@ -138,7 +140,12 @@ export default function Sidebar() {
         <div className="flex flex-col h-full">
           {/* Logo/Brand */}
           <div className="p-6 border-b border-gray-700">
-            <h2 className="text-xl font-bold text-white">Admin Panel</h2>
+            <h2 className="text-xl font-bold text-white">
+              {activeCompanyRole === 'client' ? 'Client Portal' : 
+               activeCompanyRole === 'employee' ? 'Employee Portal' :
+               activeCompanyRole === 'manager' ? 'Manager Portal' :
+               activeCompanyRole === 'company_admin' ? 'Admin Panel' : 'Dashboard'}
+            </h2>
             <p className="text-sm text-gray-400 mt-1">Navigation</p>
           </div>
 

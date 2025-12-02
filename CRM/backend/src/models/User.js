@@ -21,6 +21,11 @@ const companyMembershipSchema = new mongoose.Schema(
       type: Boolean,
       default: true,
     },
+    status: {
+      type: String,
+      enum: ['pending', 'approved', 'rejected'],
+      default: 'approved',
+    },
   },
   { _id: false }
 );
@@ -45,6 +50,19 @@ const userSchema = new mongoose.Schema(
     phone: {
       type: String,
       trim: true,
+    },
+    jobTitle: {
+      type: String,
+      trim: true,
+    },
+    department: {
+      type: String,
+      trim: true,
+    },
+    bio: {
+      type: String,
+      trim: true,
+      maxlength: 500,
     },
     avatar: {
       type: String,

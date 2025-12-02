@@ -3,7 +3,7 @@
 import { useEffect, useState, useRef, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import apiClient, { chatApi } from "@/utils/api";
-import { Send, Plus, Users, MessageCircle, Search, MoreVertical, Phone, Video, User, X } from "lucide-react";
+import { Send, Plus, Users, MessageCircle, Search, MoreVertical, Phone, Video, User, X, ArrowLeft } from "lucide-react";
 
 function ChatPage() {
   const router = useRouter();
@@ -333,7 +333,16 @@ function ChatPage() {
           {/* Header */}
           <div className="p-4 border-b border-gray-700">
             <div className="flex items-center justify-between mb-4">
-              <h1 className="text-xl font-bold">Chat</h1>
+              <div className="flex items-center gap-3">
+                <button
+                  onClick={() => router.push('/dashboard')}
+                  className="p-2 hover:bg-gray-700 rounded-lg transition-colors"
+                  title="Back to Dashboard"
+                >
+                  <ArrowLeft className="w-5 h-5 text-gray-400" />
+                </button>
+                <h1 className="text-xl font-bold">Chat</h1>
+              </div>
               <button
                 onClick={() => setShowNewChat(!showNewChat)}
                 className="p-2 bg-blue-600 hover:bg-blue-700 rounded-lg transition-colors"

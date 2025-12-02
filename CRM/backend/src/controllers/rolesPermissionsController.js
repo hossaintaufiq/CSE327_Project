@@ -138,42 +138,39 @@ export const updateUserRole = async (req, res) => {
       return res.status(400).json({ message: 'You cannot change your own role' });
     }
 
-    // If demoting a company admin, ensure at least one admin remains
-    if (role !== 'company_admin') {
-      const currentMembership = user.companies.find(
-        (c) => c.companyId?.toString() === companyId.toString() && c.isActive
-      );
-      
-      if (currentMembership?.role === 'company_admin') {
-        // Count current company admins
-        const adminCount = await User.countDocuments({
-          'companies': {
-            $elemMatch: {
-              companyId: companyId,
-              role: 'company_admin',
-              isActive: true
-            }
-          }
-        });
-        
-        if (adminCount <= 1) {
-          return res.status(400).json({ message: 'Cannot demote the last company admin. At least one admin must remain.' });
-        }
-      }
-    }
-
+    // Find the user first
     const user = await User.findById(userId);
     if (!user) {
       return res.status(404).json({ message: 'User not found' });
     }
 
-    // Find and update the membership
+    // Find the current membership
     const membershipIndex = user.companies.findIndex(
       (c) => c.companyId?.toString() === companyId.toString() && c.isActive
     );
 
     if (membershipIndex === -1) {
       return res.status(404).json({ message: 'User is not a member of this company' });
+    }
+
+    const currentMembership = user.companies[membershipIndex];
+
+    // If demoting a company admin, ensure at least one admin remains
+    if (role !== 'company_admin' && currentMembership.role === 'company_admin') {
+      // Count current company admins
+      const adminCount = await User.countDocuments({
+        'companies': {
+          $elemMatch: {
+            companyId: companyId,
+            role: 'company_admin',
+            isActive: true
+          }
+        }
+      });
+      
+      if (adminCount <= 1) {
+        return res.status(400).json({ message: 'Cannot demote the last company admin. At least one admin must remain.' });
+      }
     }
 
     user.companies[membershipIndex].role = role;
@@ -221,14 +218,16 @@ export const removeUserFromCompany = async (req, res) => {
       return res.status(404).json({ message: 'User not found' });
     }
 
-    // Find the membership
-    const membership = user.companies.find(
+    // Find the membership index
+    const membershipIndex = user.companies.findIndex(
       (c) => c.companyId?.toString() === companyId.toString() && c.isActive
     );
 
-    if (!membership) {
+    if (membershipIndex === -1) {
       return res.status(404).json({ message: 'User is not a member of this company' });
     }
+
+    const membership = user.companies[membershipIndex];
 
     // If removing a company admin, ensure at least one admin remains
     if (membership.role === 'company_admin') {

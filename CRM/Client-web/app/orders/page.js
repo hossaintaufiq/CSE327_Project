@@ -305,11 +305,16 @@ export default function OrdersPage() {
       <div className="min-h-screen flex items-center justify-center bg-gray-900">
         <div className="text-center">
           <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-500 mx-auto"></div>
-          <p className="mt-4 text-gray-400">Loading sales...</p>
+          <p className="mt-4 text-gray-400">{activeCompanyRole === 'client' ? 'Loading orders...' : 'Loading sales...'}</p>
         </div>
       </div>
     );
   }
+
+  // Check if user is a client (they can only view their orders, not manage sales)
+  const isClient = activeCompanyRole === 'client';
+  const pageTitle = isClient ? 'My Orders' : 'Sales';
+  const pageDescription = isClient ? 'View your order history and status' : 'Manage your company sales and orders';
 
   return (
     <div className="min-h-screen bg-gray-900">
@@ -318,10 +323,10 @@ export default function OrdersPage() {
         <div className="p-4 sm:p-6 lg:p-8">
           <div className="mb-8 flex justify-between items-center">
             <div>
-              <h1 className="text-3xl font-bold text-white mb-2">Sales</h1>
-              <p className="text-gray-400">Manage your company sales and orders</p>
+              <h1 className="text-3xl font-bold text-white mb-2">{pageTitle}</h1>
+              <p className="text-gray-400">{pageDescription}</p>
             </div>
-            {(activeCompanyRole === "company_admin" || activeCompanyRole === "manager" || activeCompanyRole === "employee") && (
+            {!isClient && (activeCompanyRole === "company_admin" || activeCompanyRole === "manager" || activeCompanyRole === "employee") && (
               <button
                 onClick={() => {
                   setEditingOrder(null);
@@ -336,15 +341,15 @@ export default function OrdersPage() {
             )}
           </div>
 
-          {/* Statistics Cards */}
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6 mb-8">
+          {/* Statistics Cards - Client sees limited stats */}
+          <div className={`grid grid-cols-1 sm:grid-cols-2 ${isClient ? 'lg:grid-cols-3' : 'lg:grid-cols-4'} gap-4 sm:gap-6 mb-8`}>
             <div className="bg-gray-800 rounded-xl border border-gray-700 p-6">
               <div className="flex items-center justify-between mb-4">
                 <div className="p-3 bg-blue-500/20 rounded-lg">
                   <ShoppingCart className="w-6 h-6 text-blue-400" />
                 </div>
               </div>
-              <h3 className="text-sm font-medium text-gray-400 mb-1">Total Orders</h3>
+              <h3 className="text-sm font-medium text-gray-400 mb-1">{isClient ? 'My Orders' : 'Total Orders'}</h3>
               <p className="text-3xl font-bold text-white">{stats.total}</p>
             </div>
 
@@ -368,15 +373,18 @@ export default function OrdersPage() {
               <p className="text-3xl font-bold text-white">{stats.delivered}</p>
             </div>
 
-            <div className="bg-gray-800 rounded-xl border border-gray-700 p-6">
-              <div className="flex items-center justify-between mb-4">
-                <div className="p-3 bg-purple-500/20 rounded-lg">
-                  <DollarSign className="w-6 h-6 text-purple-400" />
+            {/* Hide revenue from clients */}
+            {!isClient && (
+              <div className="bg-gray-800 rounded-xl border border-gray-700 p-6">
+                <div className="flex items-center justify-between mb-4">
+                  <div className="p-3 bg-purple-500/20 rounded-lg">
+                    <DollarSign className="w-6 h-6 text-purple-400" />
+                  </div>
                 </div>
+                <h3 className="text-sm font-medium text-gray-400 mb-1">Total Revenue</h3>
+                <p className="text-3xl font-bold text-white">${stats.totalRevenue.toFixed(2)}</p>
               </div>
-              <h3 className="text-sm font-medium text-gray-400 mb-1">Total Revenue</h3>
-              <p className="text-3xl font-bold text-white">${stats.totalRevenue.toFixed(2)}</p>
-            </div>
+            )}
           </div>
 
           {/* Search and Filter */}
@@ -385,7 +393,7 @@ export default function OrdersPage() {
               <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-5 h-5" />
               <input
                 type="text"
-                placeholder="Search by order number, client name, or email..."
+                placeholder={isClient ? "Search your orders..." : "Search by order number, client name, or email..."}
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
                 className="w-full pl-10 pr-4 py-2 bg-gray-800 text-white border border-gray-700 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
