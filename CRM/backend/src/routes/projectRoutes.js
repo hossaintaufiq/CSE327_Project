@@ -8,7 +8,10 @@ import {
   createProject,
   updateProject,
   deleteProject,
-  createJiraIssueForProject,
+  moveProjectToStage,
+  addProjectMember,
+  removeProjectMember,
+  getProjectStats,
 } from '../controllers/projectController.js';
 
 const router = express.Router();
@@ -21,6 +24,9 @@ router.use(verifyCompanyAccess);
 // Get all projects
 router.get('/', getProjects);
 
+// Get project statistics
+router.get('/stats', getProjectStats);
+
 // Get project by ID
 router.get('/:projectId', getProjectById);
 
@@ -30,11 +36,16 @@ router.post('/', checkRole(['company_admin', 'manager', 'employee']), createProj
 // Update project (company_admin, manager)
 router.put('/:projectId', checkRole(['company_admin', 'manager']), updateProject);
 
+// Move project to pipeline stage
+router.patch('/:projectId/stage', checkRole(['company_admin', 'manager']), moveProjectToStage);
+
+// Add member to project
+router.post('/:projectId/members', checkRole(['company_admin', 'manager']), addProjectMember);
+
+// Remove member from project
+router.delete('/:projectId/members', checkRole(['company_admin', 'manager']), removeProjectMember);
+
 // Delete project (company_admin only)
 router.delete('/:projectId', checkRole(['company_admin']), deleteProject);
 
-// Create Jira issue for project
-router.post('/:projectId/jira-issue', checkRole(['company_admin', 'manager', 'employee']), createJiraIssueForProject);
-
 export default router;
-

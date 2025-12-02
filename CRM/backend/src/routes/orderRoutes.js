@@ -9,6 +9,7 @@ import {
   updateOrder,
   deleteOrder,
   createJiraIssueForOrder,
+  updateOrderStatus,
 } from '../controllers/orderController.js';
 
 const router = express.Router();
@@ -30,6 +31,9 @@ router.post('/', checkRole(['company_admin', 'manager', 'employee']), createOrde
 // Update order (company_admin, manager)
 router.put('/:orderId', checkRole(['company_admin', 'manager']), updateOrder);
 
+// Update order status (pipeline stage)
+router.patch('/:orderId/status', checkRole(['company_admin', 'manager']), updateOrderStatus);
+
 // Delete order (company_admin only)
 router.delete('/:orderId', checkRole(['company_admin']), deleteOrder);
 
@@ -37,4 +41,3 @@ router.delete('/:orderId', checkRole(['company_admin']), deleteOrder);
 router.post('/:orderId/jira-issue', checkRole(['company_admin', 'manager', 'employee']), createJiraIssueForOrder);
 
 export default router;
-

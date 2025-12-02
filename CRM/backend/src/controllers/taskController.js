@@ -1,314 +1,185 @@
-import mongoose from 'mongoose';
-import { Task } from '../models/Task.js';
-import { Project } from '../models/Project.js';
-import { User } from '../models/User.js';
-import { createIssue } from '../jiraClient.js';
-import { createNotificationForStatusChange } from '../services/notificationService.js';
+import * as taskService from '../services/taskService.js';
+import { successResponse, errorResponse, notFoundResponse } from '../utils/responseHelper.js';
 
 /**
  * Get all tasks for a company
+ * Controller is now thin - delegates to taskService
  */
-export const getTasks = async (req, res) => {
+export const getTasks = async (req, res, next) => {
   try {
-    const companyId = req.companyId;
-    const user = req.user;
-    const userRole = req.companyRole;
-    const { projectId, status, assignedTo } = req.query;
-
-    let query = { companyId, isActive: true };
-
-    // Filter by project if provided
-    if (projectId) {
-      query.projectId = projectId;
-    }
-
-    // Filter by status if provided
-    if (status) {
-      query.status = status;
-    }
-
-    // Filter by assignedTo if provided
-    if (assignedTo) {
-      query.assignedTo = assignedTo;
-    }
-
-    // Employees can only see tasks assigned to them
-    if (userRole === 'employee') {
-      query.assignedTo = user._id;
-    }
-
-    const tasks = await Task.find(query)
-      .populate('projectId', 'name')
-      .populate('assignedTo', 'name email')
-      .sort({ createdAt: -1 })
-      .lean();
-
-    res.json({
-      success: true,
-      data: { tasks },
+    const tasks = await taskService.getTasks({
+      companyId: req.companyId,
+      userId: req.user._id,
+      role: req.companyRole,
+      projectId: req.query.projectId,
+      status: req.query.status,
+      assignedTo: req.query.assignedTo,
     });
+    return successResponse(res, { tasks });
   } catch (error) {
-    console.error('Error fetching tasks:', error);
-    res.status(500).json({ message: 'Error fetching tasks', error: error.message });
+    next(error);
+  }
+};
+
+/**
+ * Get tasks in Kanban view
+ */
+export const getTasksKanban = async (req, res, next) => {
+  try {
+    const kanban = await taskService.getTasksKanban({
+      companyId: req.companyId,
+      projectId: req.query.projectId,
+    });
+    return successResponse(res, { kanban });
+  } catch (error) {
+    next(error);
   }
 };
 
 /**
  * Get task by ID
  */
-export const getTaskById = async (req, res) => {
+export const getTaskById = async (req, res, next) => {
   try {
-    const { taskId } = req.params;
-    const companyId = req.companyId;
-    const user = req.user;
-    const userRole = req.companyRole;
-
-    const task = await Task.findOne({ _id: taskId, companyId, isActive: true })
-      .populate('projectId', 'name')
-      .populate('assignedTo', 'name email')
-      .lean();
+    const task = await taskService.getTaskById({
+      taskId: req.params.taskId,
+      companyId: req.companyId,
+    });
 
     if (!task) {
-      return res.status(404).json({ message: 'Task not found' });
+      return notFoundResponse(res, 'Task not found');
     }
 
     // Employees can only see tasks assigned to them
-    if (userRole === 'employee' && task.assignedTo?._id?.toString() !== user._id.toString()) {
-      return res.status(403).json({ message: 'Access denied' });
+    if (req.companyRole === 'employee' && task.assignedTo?._id?.toString() !== req.user._id.toString()) {
+      return errorResponse(res, 'ACCESS_DENIED', 'Access denied', 403);
     }
 
-    res.json({
-      success: true,
-      data: { task },
-    });
+    return successResponse(res, { task });
   } catch (error) {
-    console.error('Error fetching task:', error);
-    res.status(500).json({ message: 'Error fetching task', error: error.message });
+    next(error);
   }
 };
 
 /**
  * Create a new task
  */
-export const createTask = async (req, res) => {
+export const createTask = async (req, res, next) => {
   try {
-    const companyId = req.companyId;
-    const { projectId, title, description, status, priority, assignedTo, dueDate, tags, estimatedHours, notes } = req.body;
-
-    if (!title) {
-      return res.status(400).json({ message: 'Task title is required' });
-    }
-
-    // Validate projectId if provided
-    if (projectId) {
-      const project = await Project.findOne({ _id: projectId, companyId, isActive: true });
-      if (!project) {
-        return res.status(404).json({ message: 'Project not found' });
-      }
-    }
-
-    const task = await Task.create({
-      companyId,
-      projectId: projectId || null,
-      title,
-      description: description || '',
-      status: status || 'todo',
-      priority: priority || 'medium',
-      assignedTo: assignedTo || null,
-      dueDate: dueDate || null,
-      tags: tags || [],
-      estimatedHours: estimatedHours || 0,
-      actualHours: 0,
-      notes: notes || '',
+    const task = await taskService.createTask({
+      companyId: req.companyId,
+      createdBy: req.user._id,
+      data: req.body,
     });
 
-    await task.populate('projectId', 'name');
-    await task.populate('assignedTo', 'name email');
-
-    res.status(201).json({
-      success: true,
-      message: 'Task created successfully',
-      data: { task },
-    });
+    return successResponse(res, { task }, 201, 'Task created successfully');
   } catch (error) {
-    console.error('Error creating task:', error);
-    res.status(500).json({ message: 'Error creating task', error: error.message });
+    next(error);
   }
 };
 
 /**
  * Update a task
  */
-export const updateTask = async (req, res) => {
+export const updateTask = async (req, res, next) => {
   try {
-    const { taskId } = req.params;
-    const companyId = req.companyId;
-    const user = req.user;
-    const userRole = req.companyRole;
-    const updateData = req.body;
-
-    const task = await Task.findOne({ _id: taskId, companyId });
-    if (!task) {
-      return res.status(404).json({ message: 'Task not found' });
-    }
-
-    // Employees can only update tasks assigned to them
-    if (userRole === 'employee' && task.assignedTo?.toString() !== user._id.toString()) {
-      return res.status(403).json({ message: 'Access denied. You can only update tasks assigned to you.' });
-    }
-
-    // Update fields
-    if (updateData.title !== undefined) task.title = updateData.title;
-    if (updateData.description !== undefined) task.description = updateData.description;
-    if (updateData.status !== undefined) task.status = updateData.status;
-    if (updateData.priority !== undefined) task.priority = updateData.priority;
-    if (updateData.assignedTo !== undefined) task.assignedTo = updateData.assignedTo || null;
-    if (updateData.dueDate !== undefined) task.dueDate = updateData.dueDate || null;
-    if (updateData.tags !== undefined) task.tags = updateData.tags || [];
-    if (updateData.estimatedHours !== undefined) task.estimatedHours = updateData.estimatedHours || 0;
-    if (updateData.actualHours !== undefined) task.actualHours = updateData.actualHours || 0;
-    if (updateData.notes !== undefined) task.notes = updateData.notes || '';
-
-    // Update projectId if provided
-    if (updateData.projectId !== undefined) {
-      if (updateData.projectId) {
-        const project = await Project.findOne({ _id: updateData.projectId, companyId, isActive: true });
-        if (!project) {
-          return res.status(404).json({ message: 'Project not found' });
-        }
-        task.projectId = updateData.projectId;
-      } else {
-        task.projectId = null;
-      }
-    }
-
-    await task.save();
-    await task.populate('projectId', 'name');
-    await task.populate('assignedTo', 'name email');
-
-    // Sync with Jira if status changed or other important fields updated
-    try {
-      const oldStatus = task.status; // Store old status before potential change
-      const statusChanged = updateData.status !== undefined && updateData.status !== task.status;
-      const importantFieldsChanged = updateData.title !== undefined || updateData.description !== undefined ||
-                                   updateData.priority !== undefined || updateData.dueDate !== undefined;
-
-      if (statusChanged) {
-        await syncStatusToJira('task', task, task.status);
-        // Create notification for manual status change
-        await createNotificationForStatusChange('task', task, task.status);
-      }
-
-      if (importantFieldsChanged) {
-        await updateJiraIssue('task', task);
-      }
-    } catch (syncError) {
-      console.error('Error syncing task to Jira:', syncError);
-      // Don't fail the update if sync fails, just log it
-    }
-
-    res.json({
-      success: true,
-      message: 'Task updated successfully',
-      data: { task },
+    // Employees can only update tasks assigned to them (check done in service)
+    const task = await taskService.updateTask({
+      taskId: req.params.taskId,
+      companyId: req.companyId,
+      updatedBy: req.user._id,
+      data: req.body,
     });
+
+    return successResponse(res, { task }, 200, 'Task updated successfully');
   } catch (error) {
-    console.error('Error updating task:', error);
-    res.status(500).json({ message: 'Error updating task', error: error.message });
+    next(error);
   }
 };
 
 /**
  * Delete a task
  */
-export const deleteTask = async (req, res) => {
+export const deleteTask = async (req, res, next) => {
   try {
-    const { taskId } = req.params;
-    const companyId = req.companyId;
-    const userRole = req.companyRole;
-
     // Only company admin and manager can delete tasks
-    if (userRole !== 'company_admin' && userRole !== 'manager') {
-      return res.status(403).json({ message: 'Access denied. Only admins and managers can delete tasks.' });
+    if (req.companyRole !== 'company_admin' && req.companyRole !== 'manager') {
+      return errorResponse(res, 'ACCESS_DENIED', 'Access denied. Only admins and managers can delete tasks.', 403);
     }
 
-    const task = await Task.findOne({ _id: taskId, companyId });
-    if (!task) {
-      return res.status(404).json({ message: 'Task not found' });
-    }
-
-    // Soft delete - set isActive to false
-    task.isActive = false;
-    await task.save();
-
-    // Clean up Jira references for the deleted task
-    try {
-      await cleanupJiraReferencesOnEntityDeletion('task', taskId);
-    } catch (cleanupError) {
-      console.error('Error cleaning up Jira references:', cleanupError);
-      // Don't fail the deletion if cleanup fails
-    }
-
-    res.json({
-      success: true,
-      message: 'Task deleted successfully',
+    await taskService.deleteTask({
+      taskId: req.params.taskId,
+      companyId: req.companyId,
+      deletedBy: req.user._id,
     });
+
+    return successResponse(res, null, 200, 'Task deleted successfully');
   } catch (error) {
-    console.error('Error deleting task:', error);
-    res.status(500).json({ message: 'Error deleting task', error: error.message });
+    next(error);
   }
 };
 
 /**
- * Create a Jira issue linked to a task
+ * Move task to pipeline stage (Kanban drag-drop)
  */
-export const createJiraIssueForTask = async (req, res) => {
+export const moveTaskToStage = async (req, res, next) => {
   try {
-    console.log('Creating Jira issue for task:', req.params, req.body);
-    const { taskId } = req.params;
-    const companyId = req.companyId;
-    const { summary, description, issuetype = 'Task' } = req.body;
+    const { targetStage } = req.body;
 
-    // Find the task
-    const task = await Task.findOne({ _id: taskId, companyId, isActive: true });
-    if (!task) {
-      return res.status(404).json({ message: 'Task not found' });
-    }
-
-    // Create Jira issue
-    const jiraIssueData = {
-      summary: summary || `Task: ${task.title}`,
-      description: description || task.description || `Task details: ${task.title}`,
-      issuetype,
-    };
-
-    const jiraIssue = await createIssue(jiraIssueData);
-
-    // Link Jira issue to task
-    const jiraIssueLink = {
-      issueKey: jiraIssue.key,
-      issueUrl: `${process.env.JIRA_BASE_URL}/browse/${jiraIssue.key}`,
-      createdAt: new Date(),
-    };
-
-    task.jiraIssues.push(jiraIssueLink);
-    await task.save();
-
-    res.json({
-      success: true,
-      message: 'Jira issue created and linked to task',
-      data: {
-        jiraIssue,
-        task: {
-          id: task._id,
-          title: task.title,
-          jiraIssues: task.jiraIssues,
-        },
-      },
+    const task = await taskService.moveTaskToPipelineStage({
+      taskId: req.params.taskId,
+      companyId: req.companyId,
+      updatedBy: req.user._id,
+      targetStage,
     });
+
+    return successResponse(res, { task }, 200, 'Task moved to new stage');
   } catch (error) {
-    console.error('Error creating Jira issue for task:', error);
-    res.status(500).json({ message: 'Error creating Jira issue', error: error.message });
+    next(error);
   }
 };
 
+/**
+ * Assign task to user
+ */
+export const assignTask = async (req, res, next) => {
+  try {
+    const { assignedTo } = req.body;
+
+    const task = await taskService.assignTask({
+      taskId: req.params.taskId,
+      companyId: req.companyId,
+      assignedTo,
+      assignedBy: req.user._id,
+    });
+
+    return successResponse(res, { task }, 200, 'Task assigned successfully');
+  } catch (error) {
+    next(error);
+  }
+};
+
+/**
+ * Get task statistics
+ */
+export const getTaskStats = async (req, res, next) => {
+  try {
+    const stats = await taskService.getTaskStats(req.companyId, req.query.projectId);
+    return successResponse(res, { stats });
+  } catch (error) {
+    next(error);
+  }
+};
+
+/**
+ * Get tasks due soon
+ */
+export const getTasksDueSoon = async (req, res, next) => {
+  try {
+    const daysAhead = parseInt(req.query.days, 10) || 7;
+    const tasks = await taskService.getTasksDueSoon(req.companyId, daysAhead);
+    return successResponse(res, { tasks });
+  } catch (error) {
+    next(error);
+  }
+};
