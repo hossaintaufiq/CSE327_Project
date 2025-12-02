@@ -3,6 +3,7 @@ import { Client } from '../models/Client.js';
 import { User } from '../models/User.js';
 import { createIssue } from '../jiraClient.js';
 import { createNotificationForStatusChange } from '../services/notificationService.js';
+import * as clientService from '../services/clientService.js';
 
 export const getClients = async (req, res) => {
   try {
@@ -256,6 +257,44 @@ export const createJiraIssueForClient = async (req, res) => {
   } catch (error) {
     console.error('Error creating Jira issue for client:', error);
     res.status(500).json({ message: 'Error creating Jira issue', error: error.message });
+  }
+};
+
+/**
+ * Convert a lead to a customer
+ * POST /api/clients/:id/convert
+ * 
+ * This is a thin controller that delegates to clientService (MVC pattern)
+ */
+export const convertLeadToClient = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const companyId = req.companyId;
+    const userId = req.user._id;
+    const additionalData = req.body; // Optional: email, phone, address, notes
+
+    const client = await clientService.convertLeadToClient({
+      leadId: id,
+      companyId,
+      convertedBy: userId,
+      additionalData,
+    });
+
+    res.json({
+      success: true,
+      message: 'Lead successfully converted to customer',
+      data: { client },
+    });
+  } catch (error) {
+    console.error('Error converting lead to client:', error);
+    const status = error.status || 500;
+    res.status(status).json({ 
+      success: false,
+      error: {
+        code: error.code || 'SERVER_ERROR',
+        message: error.message || 'Error converting lead to customer',
+      }
+    });
   }
 };
 

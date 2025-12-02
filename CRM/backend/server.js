@@ -69,15 +69,39 @@ app.use('/api/employees', employeeRoutes);
 
 // 404 handler
 app.use((req, res) => {
-  res.status(404).json({ message: 'Route not found' });
+  res.status(404).json({ 
+    success: false, 
+    error: { code: 'NOT_FOUND', message: 'Route not found' } 
+  });
 });
 
-// Error handler
+// Central error handler with standard response format
 app.use((err, req, res, next) => {
-  console.error('Error:', err.message);
-  res.status(err.status || 500).json({ 
-    message: err.message || 'Internal Server Error' 
-  });
+  // Log error (avoid logging sensitive data)
+  const logMessage = err.message || 'Unknown error';
+  const sanitizedMessage = logMessage.replace(/(password|token|secret|key)=[^&\s]*/gi, '$1=***');
+  console.error(`[${new Date().toISOString()}] Error:`, sanitizedMessage);
+  
+  // Determine status code
+  const status = err.status || err.statusCode || 500;
+  
+  // Build standard error response
+  const errorResponse = {
+    success: false,
+    error: {
+      code: err.code || (status === 400 ? 'BAD_REQUEST' : status === 401 ? 'UNAUTHORIZED' : status === 403 ? 'FORBIDDEN' : status === 404 ? 'NOT_FOUND' : 'SERVER_ERROR'),
+      message: process.env.NODE_ENV === 'production' && status === 500 
+        ? 'Internal Server Error' 
+        : err.message || 'Internal Server Error'
+    }
+  };
+  
+  // Include validation errors if present
+  if (err.errors) {
+    errorResponse.error.details = err.errors;
+  }
+  
+  res.status(status).json(errorResponse);
 });
 
 // Initialize and start server
