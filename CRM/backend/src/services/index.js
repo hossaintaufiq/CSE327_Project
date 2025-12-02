@@ -14,6 +14,9 @@ export * as taskService from './taskService.js';
 export * as emailService from './emailService.js';
 export * as notificationService from './notificationService.js';
 export * as jiraSyncService from './jiraSyncService.js';
+export * as geminiService from './geminiService.js';
+export * as liveChatService from './liveChatService.js';
+export * as mcpServer from './mcpServer.js';
 
 // Default export for convenience
 export default {
@@ -24,4 +27,7 @@ export default {
   emailService: () => import('./emailService.js'),
   notificationService: () => import('./notificationService.js'),
   jiraSyncService: () => import('./jiraSyncService.js'),
+  geminiService: () => import('./geminiService.js'),
+  liveChatService: () => import('./liveChatService.js'),
+  mcpServer: () => import('./mcpServer.js'),
 };

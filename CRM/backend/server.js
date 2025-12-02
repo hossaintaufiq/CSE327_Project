@@ -2,6 +2,7 @@ import dotenv from 'dotenv';
 dotenv.config();
 
 import express from 'express';
+import { createServer } from 'http';
 import cors from 'cors';
 import mongoose from 'mongoose';
 import { initFirebaseAdmin } from './src/config/firebaseAdmin.js';
@@ -23,13 +24,17 @@ import jiraRoutes from './src/routes/jiraRoutes.js';
 import voipRoutes from './src/routes/voipRoutes.js';
 import telegramRoutes from './src/routes/telegramRoutes.js';
 import employeeRoutes from './src/routes/employeeRoutes.js';
+import aiRoutes from './src/routes/aiRoutes.js';
+import mcpRoutes from './src/routes/mcpRoutes.js';
 
 // Import services
 import { initTwilioClient } from './src/services/twilioService.js';
 import { initTelegramBot } from './src/services/telegramService.js';
 import { testEmailConfig } from './src/services/emailService.js';
+import { initializeSocket } from './src/services/liveChatService.js';
 
 const app = express();
+const httpServer = createServer(app);
 const PORT = process.env.PORT || 5000;
 
 // Middleware
@@ -66,6 +71,8 @@ app.use('/api/jira', jiraRoutes);
 app.use('/api/voip', voipRoutes);
 app.use('/api/telegram', telegramRoutes);
 app.use('/api/employees', employeeRoutes);
+app.use('/api/ai', aiRoutes);
+app.use('/api/mcp', mcpRoutes);
 
 // 404 handler
 app.use((req, res) => {
@@ -124,8 +131,19 @@ const startServer = async () => {
       console.log('⚠️ Email service may not work - check GMAIL_USER and GMAIL_APP_PASSWORD');
     }
 
+    // Initialize Socket.io for live chat
+    initializeSocket(httpServer);
+    console.log('✅ Socket.io initialized for live chat');
+
+    // Check Gemini AI configuration
+    if (process.env.GEMINI_API_KEY) {
+      console.log('✅ Gemini AI configured');
+    } else {
+      console.log('⚠️ GEMINI_API_KEY not set - AI features disabled');
+    }
+
     // Start server
-    const server = app.listen(PORT, '0.0.0.0', () => {
+    const server = httpServer.listen(PORT, '0.0.0.0', () => {
       console.log(`🚀 Server running on http://localhost:${PORT}`);
       console.log('Press Ctrl+C to stop');
     });

@@ -191,3 +191,87 @@ export const chatApi = {
   },
 };
 
+// AI API functions
+export const aiApi = {
+  // Check AI service health
+  checkHealth: async () => {
+    const response = await apiClient.get('/ai/health');
+    return response.data;
+  },
+
+  // Generate text
+  generateText: async (prompt) => {
+    const response = await apiClient.post('/ai/generate', { prompt });
+    return response.data;
+  },
+
+  // Summarize content
+  summarize: async (content, maxLength) => {
+    const response = await apiClient.post('/ai/summarize', { content, maxLength });
+    return response.data;
+  },
+
+  // Get task suggestions for a project
+  suggestTasks: async (projectId) => {
+    const response = await apiClient.post(`/ai/projects/${projectId}/suggest-tasks`);
+    return response.data;
+  },
+
+  // Generate email draft for a client
+  generateEmailDraft: async (clientId, { purpose, context, tone }) => {
+    const response = await apiClient.post(`/ai/clients/${clientId}/email-draft`, { purpose, context, tone });
+    return response.data;
+  },
+
+  // Analyze client
+  analyzeClient: async (clientId) => {
+    const response = await apiClient.get(`/ai/clients/${clientId}/analyze`);
+    return response.data;
+  },
+
+  // Smart search
+  smartSearch: async (query, entityType) => {
+    const response = await apiClient.post('/ai/smart-search', { query, entityType });
+    return response.data;
+  },
+
+  // Generate project description
+  generateProjectDescription: async (title, briefDescription) => {
+    const response = await apiClient.post('/ai/generate-description', { title, briefDescription });
+    return response.data;
+  },
+
+  // Suggest responses for chat
+  suggestResponses: async (message, clientName, conversationContext) => {
+    const response = await apiClient.post('/ai/suggest-responses', { message, clientName, conversationContext });
+    return response.data;
+  },
+};
+
+// MCP API functions
+export const mcpApi = {
+  // List available tools
+  listTools: async () => {
+    const response = await apiClient.get('/mcp/tools');
+    return response.data;
+  },
+
+  // Execute a tool
+  executeTool: async (tool, params) => {
+    const response = await apiClient.post('/mcp/execute', { tool, params });
+    return response.data;
+  },
+
+  // Get context
+  getContext: async (type) => {
+    const response = await apiClient.get(`/mcp/context/${type}`);
+    return response.data;
+  },
+
+  // Batch execute tools
+  batchExecute: async (operations) => {
+    const response = await apiClient.post('/mcp/batch', { operations });
+    return response.data;
+  },
+};
+
