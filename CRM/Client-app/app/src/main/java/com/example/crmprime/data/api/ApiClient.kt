@@ -1,6 +1,5 @@
 package com.example.crmprime.data.api
 
-import com.example.crmprime.BuildConfig
 import okhttp3.Interceptor
 import okhttp3.OkHttpClient
 import okhttp3.logging.HttpLoggingInterceptor
@@ -40,11 +39,8 @@ object ApiClient {
     }
     
     private val loggingInterceptor = HttpLoggingInterceptor().apply {
-        level = if (BuildConfig.DEBUG) {
-            HttpLoggingInterceptor.Level.BODY
-        } else {
-            HttpLoggingInterceptor.Level.NONE
-        }
+        // Enable logging in debug builds
+        level = HttpLoggingInterceptor.Level.BODY
     }
     
     private val okHttpClient = OkHttpClient.Builder()

@@ -66,6 +66,16 @@ The app connects to the same backend API as the web client:
 
 ## Role-Based Dashboards
 
+### Super Admin Dashboard
+- Total Companies (with inactive count)
+- Total Users (with active count)
+- Total Revenue (with monthly breakdown)
+- Active Subscriptions
+- Revenue Trend Chart (last 6 months)
+- Top Companies List
+- Daily Signups (last 7 days)
+- Recent Activity Feed
+
 ### Company Admin Dashboard
 - Monthly Revenue
 - New Leads (30 days)

@@ -4,9 +4,6 @@ import com.example.crmprime.data.model.*
 import retrofit2.Response
 import retrofit2.http.*
 
-// Import SuperAdminStats
-import com.example.crmprime.data.model.SuperAdminStats
-
 interface ApiService {
     @POST("/api/auth/login")
     suspend fun login(@Body request: LoginRequest): Response<ApiResponse<LoginResponse>>

@@ -78,7 +78,11 @@ fun CRMApp(
     LaunchedEffect(authState.user) {
         authState.user?.let { user ->
             currentUser = user
-            if (user.companies.isNotEmpty() && savedCompanyId != null) {
+            
+            // Super admin goes directly to dashboard
+            if (user.globalRole == "super_admin") {
+                startDestination = Screen.Dashboard.route
+            } else if (user.companies.isNotEmpty() && savedCompanyId != null) {
                 val company = user.companies.find { it.companyId == savedCompanyId && it.isActive }
                 if (company != null) {
                     currentCompanyRole = company.role

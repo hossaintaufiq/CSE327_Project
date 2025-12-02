@@ -5,31 +5,42 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.example.crmprime.data.model.User
 import com.example.crmprime.ui.screen.dashboard.*
 import com.example.crmprime.ui.viewmodel.DashboardViewModel
+import com.example.crmprime.ui.viewmodel.SuperAdminViewModel
 
+
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun DashboardScreen(
     user: User,
     companyRole: String?,
     onLogout: () -> Unit,
-    viewModel: DashboardViewModel = viewModel()
+    viewModel: DashboardViewModel = viewModel(),
+    superAdminViewModel: SuperAdminViewModel = viewModel()
 ) {
     val dashboardState by viewModel.dashboardState.collectAsState()
+    val superAdminState by superAdminViewModel.superAdminState.collectAsState()
+    
+    val isSuperAdmin = user.globalRole == "super_admin"
+    val role = if (isSuperAdmin) "super_admin" else (dashboardState.stats?.role ?: companyRole ?: "employee")
+    val userName = user.name ?: user.email
     
     LaunchedEffect(Unit) {
-        viewModel.loadDashboardStats()
+        if (isSuperAdmin) {
+            superAdminViewModel.loadSuperAdminStats()
+        } else {
+            viewModel.loadDashboardStats()
+        }
     }
-    
-    val role = dashboardState.stats?.role ?: companyRole ?: "employee"
-    val userName = user.name ?: user.email
     
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text("Dashboard") },
+                title = { Text(if (isSuperAdmin) "Super Admin Dashboard" else "Dashboard") },
                 actions = {
                     TextButton(onClick = onLogout) {
                         Text("Logout")
@@ -44,6 +55,39 @@ fun DashboardScreen(
                 .padding(paddingValues)
         ) {
             when {
+                isSuperAdmin -> {
+                    when {
+                        superAdminState.isLoading -> {
+                            CircularProgressIndicator(
+                                modifier = Modifier.align(Alignment.Center)
+                            )
+                        }
+                        superAdminState.error != null -> {
+                            Column(
+                                modifier = Modifier
+                                    .fillMaxSize()
+                                    .padding(16.dp),
+                                horizontalAlignment = Alignment.CenterHorizontally,
+                                verticalArrangement = Arrangement.Center
+                            ) {
+                                Text(
+                                    text = superAdminState.error!!,
+                                    color = MaterialTheme.colorScheme.error
+                                )
+                                Spacer(modifier = Modifier.height(16.dp))
+                                Button(onClick = { superAdminViewModel.refresh() }) {
+                                    Text("Retry")
+                                }
+                            }
+                        }
+                        else -> {
+                            SuperAdminDashboardScreen(
+                                stats = superAdminState.stats,
+                                userName = userName
+                            )
+                        }
+                    }
+                }
                 dashboardState.isLoading -> {
                     CircularProgressIndicator(
                         modifier = Modifier.align(Alignment.Center)
@@ -105,4 +149,3 @@ fun DashboardScreen(
         }
     }
 }
-

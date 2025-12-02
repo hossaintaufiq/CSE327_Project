@@ -53,16 +53,30 @@ fun NavGraph(
         
         composable(Screen.Dashboard.route) {
             if (user != null) {
-                DashboardScreen(
-                    user = user,
-                    companyRole = companyRole,
-                    onLogout = {
-                        onLogout()
-                        navController.navigate(Screen.Login.route) {
-                            popUpTo(0) { inclusive = true }
+                // Check if super admin - skip company selection
+                if (user.globalRole == "super_admin") {
+                    DashboardScreen(
+                        user = user,
+                        companyRole = null, // Super admin doesn't need company role
+                        onLogout = {
+                            onLogout()
+                            navController.navigate(Screen.Login.route) {
+                                popUpTo(0) { inclusive = true }
+                            }
                         }
-                    }
-                )
+                    )
+                } else {
+                    DashboardScreen(
+                        user = user,
+                        companyRole = companyRole,
+                        onLogout = {
+                            onLogout()
+                            navController.navigate(Screen.Login.route) {
+                                popUpTo(0) { inclusive = true }
+                            }
+                        }
+                    )
+                }
             }
         }
     }
