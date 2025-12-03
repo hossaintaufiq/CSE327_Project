@@ -58,8 +58,9 @@ export default function Sidebar() {
         { icon: Users, label: "Employees", href: "/dashboard/employees" },
         { icon: FolderKanban, label: "Projects", href: "/dashboard/projects" },
         { icon: CheckSquare, label: "Tasks", href: "/dashboard/tasks" },
+        { icon: MessagesSquare, label: "Customer Chats", href: "/dashboard/conversations" },
         { icon: MessageSquare, label: "Announcements", href: "/announcements" },
-        { icon: MessageSquare, label: "Chat", href: "/chat" },
+        { icon: MessageSquare, label: "Team Chat", href: "/chat" },
         { icon: Building2, label: "Company Profile", href: "/dashboard/company-profile" }
       );
     }
@@ -77,8 +78,9 @@ export default function Sidebar() {
         { icon: UserCheck, label: "My Leads", href: "/clients" },
         { icon: ShoppingCart, label: "My Sales", href: "/orders" },
         { icon: CheckSquare, label: "Tasks", href: "/dashboard/tasks" },
+        { icon: MessagesSquare, label: "My Conversations", href: "/dashboard/conversations" },
         { icon: MessageSquare, label: "Announcements", href: "/announcements" },
-        { icon: MessageSquare, label: "Chat", href: "/chat" }
+        { icon: MessageSquare, label: "Team Chat", href: "/chat" }
       );
     }
     // For Client - Focus on orders, companies, and conversations
