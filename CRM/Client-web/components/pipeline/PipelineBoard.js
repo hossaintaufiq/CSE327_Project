@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect, useCallback } from 'react';
+import useAuthStore from "@/store/authStore";
 import { pipelineApi } from '@/utils/api';
 import PipelineColumn from './PipelineColumn';
 import PipelineCard from './PipelineCard';
@@ -18,6 +19,7 @@ export function PipelineBoard({
   onError,
   className = '',
 }) {
+  const { activeCompanyId } = useAuthStore();
   const [config, setConfig] = useState(null);
   const [stageData, setStageData] = useState({});
   const [loading, setLoading] = useState(true);
@@ -30,6 +32,7 @@ export function PipelineBoard({
 
   // Load pipeline config and data
   const loadPipelineData = useCallback(async () => {
+    if (!activeCompanyId) return;
     try {
       setLoading(true);
       setError(null);
@@ -87,11 +90,12 @@ export function PipelineBoard({
     } finally {
       setLoading(false);
     }
-  }, [pipelineType]);
+  }, [pipelineType, activeCompanyId, onError]);
 
   useEffect(() => {
+    if (!activeCompanyId) return;
     loadPipelineData();
-  }, [loadPipelineData]);
+  }, [loadPipelineData, activeCompanyId]);
 
   // Handle drag start
   const handleDragStart = (entity, fromStage) => {
@@ -135,13 +139,8 @@ export function PipelineBoard({
           setError(null);
           setPendingApprovals(prev => [...prev, result.data.approval]);
         } else {
-          // Update local state
-          setStageData(prev => {
-            const newData = { ...prev };
-            newData[fromStage] = prev[fromStage].filter(e => e._id !== entity._id);
-            newData[targetStage] = [...(prev[targetStage] || []), { ...entity, [config.statusField]: targetStage }];
-            return newData;
-          });
+          // Reload data from server to ensure we have the latest state
+          await loadPipelineData();
         }
       } else {
         setError(result.error?.message || 'Failed to move entity');

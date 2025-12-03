@@ -182,14 +182,14 @@ export default function PipelinePage() {
           {/* Content */}
           {selectedPipeline ? (
             <PipelineBoard
-              key={`${selectedPipeline}-${refreshKey}`}
+              key={`board-${selectedPipeline}-${activeCompanyId}-${refreshKey}`}
               pipelineType={selectedPipeline}
               onEntityClick={handleEntityClick}
               onError={(errorMsg) => setError(errorMsg)}
             />
           ) : (
             <PipelineDashboard
-              key={refreshKey}
+              key={`dashboard-${activeCompanyId}-${refreshKey}`}
               onPipelineClick={setSelectedPipeline}
               onError={(errorMsg) => setError(errorMsg)}
             />

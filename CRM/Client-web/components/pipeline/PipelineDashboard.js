@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
+import useAuthStore from "@/store/authStore";
 import { pipelineApi } from '@/utils/api';
 
 /**
@@ -9,47 +10,51 @@ import { pipelineApi } from '@/utils/api';
  * Shows overview of all pipelines with counts per stage.
  */
 export function PipelineDashboard({ onPipelineClick, onError }) {
+  const { activeCompanyId } = useAuthStore();
   const [summary, setSummary] = useState(null);
   const [pendingApprovals, setPendingApprovals] = useState(0);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
 
-  useEffect(() => {
-    async function loadDashboard() {
-      try {
-        setLoading(true);
-        const result = await pipelineApi.getDashboardSummary();
-        
-        if (result.success) {
-          setSummary(result.data.summaries);
-          setPendingApprovals(result.data.pendingApprovals);
-          setError(null);
-        } else {
-          const errorMsg = result.message || result.error?.message || "Failed to load pipeline dashboard";
-          setError(errorMsg);
-          if (onError) onError(errorMsg);
-        }
-      } catch (err) {
-        let errorMessage = "Failed to load pipeline dashboard. Please try again.";
-        if (err.response) {
-          const errorData = err.response.data;
-          errorMessage = errorData?.message || 
-                        errorData?.error?.message || 
-                        `Server error: ${err.response.status}`;
-        } else if (err.message) {
-          errorMessage = err.message.includes("Network") 
-            ? "Network error. Please check your connection."
-            : err.message;
-        }
-        setError(errorMessage);
-        if (onError) onError(errorMessage);
-      } finally {
-        setLoading(false);
+  const loadDashboard = async () => {
+    try {
+      setLoading(true);
+      setError(null);
+      const result = await pipelineApi.getDashboardSummary();
+      
+      if (result.success) {
+        setSummary(result.data.summaries);
+        setPendingApprovals(result.data.pendingApprovals || 0);
+        setError(null);
+      } else {
+        const errorMsg = result.message || result.error?.message || "Failed to load pipeline dashboard";
+        setError(errorMsg);
+        if (onError) onError(errorMsg);
       }
+    } catch (err) {
+      let errorMessage = "Failed to load pipeline dashboard. Please try again.";
+      if (err.response) {
+        const errorData = err.response.data;
+        errorMessage = errorData?.message || 
+                      errorData?.error?.message || 
+                      `Server error: ${err.response.status}`;
+      } else if (err.message) {
+        errorMessage = err.message.includes("Network") 
+          ? "Network error. Please check your connection."
+          : err.message;
+      }
+      setError(errorMessage);
+      if (onError) onError(errorMessage);
+    } finally {
+      setLoading(false);
     }
+  };
 
+  useEffect(() => {
+    if (!activeCompanyId) return;
     loadDashboard();
-  }, []);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [activeCompanyId]);
 
   const pipelineConfig = {
     lead: {
