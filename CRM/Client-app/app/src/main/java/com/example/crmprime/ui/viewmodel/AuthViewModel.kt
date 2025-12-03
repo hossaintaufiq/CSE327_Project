@@ -18,60 +18,81 @@ data class AuthState(
 
 class AuthViewModel : ViewModel() {
     private val repository = AuthRepository()
-    
+
     private val _authState = MutableStateFlow(AuthState())
     val authState: StateFlow<AuthState> = _authState.asStateFlow()
-    
+
     fun login(idToken: String) {
         viewModelScope.launch {
             _authState.value = _authState.value.copy(isLoading = true, error = null)
-            val result = repository.login(idToken)
-            if (result.isSuccess) {
-                val loginResponse = result.getOrNull()!!
-                _authState.value = AuthState(
-                    isLoading = false,
-                    user = loginResponse.user,
-                    isAuthenticated = true
-                )
-            } else {
-                val error = result.exceptionOrNull()
+            try {
+                val result = repository.login(idToken)
+                if (result.isSuccess) {
+                    val loginResponse = result.getOrNull()
+                    if (loginResponse != null) {
+                        _authState.value = AuthState(
+                            isLoading = false,
+                            user = loginResponse.user,
+                            isAuthenticated = true
+                        )
+                    } else {
+                        _authState.value = _authState.value.copy(
+                            isLoading = false,
+                            error = "Login failed: Empty response from server",
+                            isAuthenticated = false
+                        )
+                    }
+                } else {
+                    throw result.exceptionOrNull() ?: Exception("Login failed: Unknown reason")
+                }
+            } catch (e: Exception) {
                 _authState.value = _authState.value.copy(
                     isLoading = false,
-                    error = error?.message ?: "Login failed",
+                    error = e.message ?: "An unexpected error occurred during login",
                     isAuthenticated = false
                 )
             }
         }
     }
-    
+
     fun loadUser() {
         viewModelScope.launch {
             _authState.value = _authState.value.copy(isLoading = true, error = null)
-            val result = repository.getMe()
-            if (result.isSuccess) {
-                val user = result.getOrNull()!!
-                _authState.value = AuthState(
-                    isLoading = false,
-                    user = user,
-                    isAuthenticated = true
-                )
-            } else {
-                val error = result.exceptionOrNull()
+            try {
+                val result = repository.getMe()
+                if (result.isSuccess) {
+                    val user = result.getOrNull()
+                    if (user != null) {
+                        _authState.value = AuthState(
+                            isLoading = false,
+                            user = user,
+                            isAuthenticated = true
+                        )
+                    } else {
+                        _authState.value = _authState.value.copy(
+                            isLoading = false,
+                            error = "Failed to load user: Empty response from server",
+                            isAuthenticated = false
+                        )
+                    }
+                } else {
+                    throw result.exceptionOrNull() ?: Exception("Failed to load user: Unknown reason")
+                }
+            } catch (e: Exception) {
                 _authState.value = _authState.value.copy(
                     isLoading = false,
-                    error = error?.message ?: "Failed to load user",
+                    error = e.message ?: "An unexpected error occurred while loading user",
                     isAuthenticated = false
                 )
             }
         }
     }
-    
+
     fun logout() {
-        _authState.value = AuthState()
+        _authState.value = AuthState(isAuthenticated = false)
     }
-    
+
     fun clearError() {
         _authState.value = _authState.value.copy(error = null)
     }
 }
-

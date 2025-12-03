@@ -47,12 +47,6 @@ fun DashboardScreen(
     val isSuperAdmin = user.globalRole == "super_admin"
     val userName = user.name ?: user.email
 
-    // Determine the current state based on user role
-    val isLoading = if (isSuperAdmin) superAdminState.isLoading else dashboardState.isLoading
-    val error = if (isSuperAdmin) superAdminState.error else dashboardState.error
-    val stats = if (isSuperAdmin) superAdminState.stats else dashboardState.stats
-
-    // Load data when the screen is first displayed
     LaunchedEffect(key1 = user.id) {
         if (isSuperAdmin) {
             superAdminViewModel.loadSuperAdminStats()
@@ -79,54 +73,60 @@ fun DashboardScreen(
                 .padding(paddingValues),
             contentAlignment = Alignment.Center
         ) {
-            when {
-                isLoading -> {
-                    // Show a loading indicator while data is being fetched
+            if (isSuperAdmin) {
+                // Super Admin View
+                if (superAdminState.isLoading) {
                     CircularProgressIndicator()
+                } else if (superAdminState.error != null) {
+                    ErrorState(
+                        error = superAdminState.error!!,
+                        onRetry = { superAdminViewModel.refresh() }
+                    )
+                } else {
+                    SuperAdminDashboardScreen(
+                        stats = superAdminState.stats,
+                        userName = userName
+                    )
                 }
-                error != null -> {
-                    // Show an error message if something went wrong
-                    Column(
-                        horizontalAlignment = Alignment.CenterHorizontally,
-                        verticalArrangement = Arrangement.Center,
-                        modifier = Modifier.padding(16.dp)
-                    ) {
-                        Text(
-                            text = error,
-                            color = MaterialTheme.colorScheme.error
-                        )
-                        Spacer(modifier = Modifier.height(16.dp))
-                        Button(onClick = {
-                            // Allow the user to retry
-                            if (isSuperAdmin) superAdminViewModel.refresh() else viewModel.refresh()
-                        }) {
-                            Text("Retry")
-                        }
-                    }
-                }
-                stats != null -> {
-                    // Display the dashboard content when data is available
-                    if (isSuperAdmin) {
-                        SuperAdminDashboardScreen(
-                            stats = stats,
-                            userName = userName
-                        )
-                    } else {
-                        val role = stats.role ?: companyRole ?: "employee"
-                        when (role) {
-                            "employee" -> EmployeeDashboardScreen(stats = stats, userName = userName)
-                            "manager" -> ManagerDashboardScreen(stats = stats, userName = userName)
-                            "client" -> ClientDashboardScreen(stats = stats, userName = userName)
-                            "company_admin" -> AdminDashboardScreen(stats = stats, userName = userName)
-                            else -> AdminDashboardScreen(stats = stats, userName = userName)
-                        }
-                    }
-                }
-                else -> {
-                    // Fallback to a loader if stats are still null after the initial load
+            } else {
+                // Regular User View
+                if (dashboardState.isLoading) {
                     CircularProgressIndicator()
+                } else if (dashboardState.error != null) {
+                    ErrorState(
+                        error = dashboardState.error!!,
+                        onRetry = { viewModel.refresh() }
+                    )
+                } else {
+                    val stats = dashboardState.stats
+                    val role = if (stats.role.isNotEmpty()) stats.role else companyRole ?: "employee"
+                    when (role) {
+                        "employee" -> EmployeeDashboardScreen(stats = stats, userName = userName)
+                        "manager" -> ManagerDashboardScreen(stats = stats, userName = userName)
+                        "client" -> ClientDashboardScreen(stats = stats, userName = userName)
+                        "company_admin" -> AdminDashboardScreen(stats = stats, userName = userName)
+                        else -> AdminDashboardScreen(stats = stats, userName = userName)
+                    }
                 }
             }
+        }
+    }
+}
+
+@Composable
+private fun ErrorState(error: String, onRetry: () -> Unit) {
+    Column(
+        horizontalAlignment = Alignment.CenterHorizontally,
+        verticalArrangement = Arrangement.Center,
+        modifier = Modifier.padding(16.dp)
+    ) {
+        Text(
+            text = error,
+            color = MaterialTheme.colorScheme.error
+        )
+        Spacer(modifier = Modifier.height(16.dp))
+        Button(onClick = onRetry) {
+            Text("Retry")
         }
     }
 }

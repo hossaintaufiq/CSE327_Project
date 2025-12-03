@@ -4,9 +4,9 @@ import com.google.gson.annotations.SerializedName
 
 data class DashboardStats(
     @SerializedName("role")
-    val role: String? = null,
+    val role: String = "",
     @SerializedName("stats")
-    val stats: Stats? = null,
+    val stats: Stats = Stats(),
     @SerializedName("revenueTrend")
     val revenueTrend: List<RevenueData> = emptyList(),
     @SerializedName("recentActivity")
@@ -75,22 +75,22 @@ data class Stats(
 
 data class RevenueData(
     @SerializedName("month")
-    val month: String,
+    val month: String = "",
     @SerializedName("revenue")
-    val revenue: Double
+    val revenue: Double = 0.0
 )
 
 data class ActivityItem(
     @SerializedName("id")
-    val id: String? = null,
+    val id: String = "",
     @SerializedName("type")
-    val type: String,
+    val type: String = "",
     @SerializedName("activityType")
-    val activityType: String,
+    val activityType: String = "",
     @SerializedName("employeeName")
     val employeeName: String? = null,
     @SerializedName("date")
-    val date: String,
+    val date: String = "",
     @SerializedName("leadName")
     val leadName: String? = null,
     @SerializedName("orderNumber")
@@ -109,29 +109,28 @@ data class ActivityItem(
 
 data class Deal(
     @SerializedName("id")
-    val id: String,
+    val id: String = "",
     @SerializedName("clientName")
-    val clientName: String,
+    val clientName: String = "",
     @SerializedName("orderNumber")
-    val orderNumber: String,
+    val orderNumber: String = "",
     @SerializedName("amount")
-    val amount: Double,
+    val amount: Double = 0.0,
     @SerializedName("status")
-    val status: String
+    val status: String = ""
 )
 
 data class Order(
     @SerializedName("id")
-    val id: String,
+    val id: String = "",
     @SerializedName("orderNumber")
-    val orderNumber: String,
+    val orderNumber: String = "",
     @SerializedName("totalAmount")
-    val totalAmount: Double,
+    val totalAmount: Double = 0.0,
     @SerializedName("status")
-    val status: String,
+    val status: String = "",
     @SerializedName("assignedTo")
     val assignedTo: String? = null,
     @SerializedName("createdAt")
-    val createdAt: String
+    val createdAt: String = ""
 )
-

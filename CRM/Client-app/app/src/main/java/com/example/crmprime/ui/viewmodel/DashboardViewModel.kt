@@ -10,39 +10,42 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
 
 data class DashboardState(
-    val isLoading: Boolean = false,
-    val stats: DashboardStats? = null,
+    val isLoading: Boolean = true,
+    val stats: DashboardStats = DashboardStats(),
     val error: String? = null
 )
 
 class DashboardViewModel : ViewModel() {
     private val repository = DashboardRepository()
-    
+
     private val _dashboardState = MutableStateFlow(DashboardState())
     val dashboardState: StateFlow<DashboardState> = _dashboardState.asStateFlow()
-    
+
     fun loadDashboardStats() {
         viewModelScope.launch {
-            _dashboardState.value = _dashboardState.value.copy(isLoading = true, error = null)
-            val result = repository.getDashboardStats()
-            if (result.isSuccess) {
-                val stats = result.getOrNull()!!
+            _dashboardState.value = DashboardState(isLoading = true)
+            try {
+                val result = repository.getDashboardStats()
+                if (result.isSuccess) {
+                    val stats = result.getOrNull() ?: DashboardStats()
+                    _dashboardState.value = DashboardState(isLoading = false, stats = stats)
+                } else {
+                    val error = result.exceptionOrNull()
+                    _dashboardState.value = DashboardState(
+                        isLoading = false,
+                        error = error?.message ?: "Failed to load dashboard"
+                    )
+                }
+            } catch (e: Exception) {
                 _dashboardState.value = DashboardState(
                     isLoading = false,
-                    stats = stats
-                )
-            } else {
-                val error = result.exceptionOrNull()
-                _dashboardState.value = _dashboardState.value.copy(
-                    isLoading = false,
-                    error = error?.message ?: "Failed to load dashboard"
+                    error = e.message ?: "An unexpected error occurred"
                 )
             }
         }
     }
-    
+
     fun refresh() {
         loadDashboardStats()
     }
 }
-

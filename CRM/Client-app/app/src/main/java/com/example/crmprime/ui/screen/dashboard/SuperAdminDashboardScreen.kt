@@ -20,7 +20,7 @@ fun SuperAdminDashboardScreen(
     userName: String
 ) {
     val statsData = stats?.stats
-    
+
     LazyColumn(
         modifier = Modifier.fillMaxSize(),
         contentPadding = PaddingValues(16.dp),
@@ -46,7 +46,7 @@ fun SuperAdminDashboardScreen(
                 )
             }
         }
-        
+
         // Top KPI Cards
         item {
             Row(
@@ -67,7 +67,7 @@ fun SuperAdminDashboardScreen(
                 )
             }
         }
-        
+
         item {
             Row(
                 modifier = Modifier.fillMaxWidth(),
@@ -87,9 +87,10 @@ fun SuperAdminDashboardScreen(
                 )
             }
         }
-        
+
         // Revenue Trend Section
-        if (stats?.revenueTrend?.isNotEmpty() == true) {
+        val revenueTrend = stats?.revenueTrend
+        if (!revenueTrend.isNullOrEmpty()) {
             item {
                 Card(modifier = Modifier.fillMaxWidth()) {
                     Column(
@@ -103,7 +104,7 @@ fun SuperAdminDashboardScreen(
                             fontWeight = FontWeight.Bold,
                             modifier = Modifier.padding(bottom = 12.dp)
                         )
-                        
+
                         // Simple bar chart representation
                         Row(
                             modifier = Modifier
@@ -112,8 +113,8 @@ fun SuperAdminDashboardScreen(
                             horizontalArrangement = Arrangement.SpaceEvenly,
                             verticalAlignment = Alignment.Bottom
                         ) {
-                            val maxRevenue = stats.revenueTrend.maxOfOrNull { it.revenue } ?: 1.0
-                            stats.revenueTrend.forEach { data ->
+                            val maxRevenue = revenueTrend.maxOfOrNull { it.revenue } ?: 1.0
+                            revenueTrend.forEach { data ->
                                 Column(
                                     horizontalAlignment = Alignment.CenterHorizontally,
                                     modifier = Modifier.weight(1f)
@@ -150,9 +151,10 @@ fun SuperAdminDashboardScreen(
                 }
             }
         }
-        
+
         // Top Companies Section
-        if (stats?.topCompanies?.isNotEmpty() == true) {
+        val topCompanies = stats?.topCompanies
+        if (!topCompanies.isNullOrEmpty()) {
             item {
                 Text(
                     text = "Top Companies",
@@ -160,14 +162,15 @@ fun SuperAdminDashboardScreen(
                     fontWeight = FontWeight.Bold
                 )
             }
-            
-            items(stats.topCompanies) { company ->
+
+            items(topCompanies) { company ->
                 TopCompanyCard(company = company)
             }
         }
-        
+
         // Daily Signups Section
-        if (stats?.dailySignups?.isNotEmpty() == true) {
+        val dailySignups = stats?.dailySignups
+        if (!dailySignups.isNullOrEmpty()) {
             item {
                 Text(
                     text = "Daily Signups",
@@ -176,7 +179,7 @@ fun SuperAdminDashboardScreen(
                     modifier = Modifier.padding(top = 8.dp)
                 )
             }
-            
+
             item {
                 Card(modifier = Modifier.fillMaxWidth()) {
                     Column(
@@ -184,7 +187,7 @@ fun SuperAdminDashboardScreen(
                             .fillMaxWidth()
                             .padding(16.dp)
                     ) {
-                        val last7Signups = stats.dailySignups.takeLast(7)
+                        val last7Signups = dailySignups.takeLast(7)
                         last7Signups.forEachIndexed { index, signup ->
                             Row(
                                 modifier = Modifier
@@ -212,7 +215,7 @@ fun SuperAdminDashboardScreen(
                 }
             }
         }
-        
+
         // Recent Activity Section
         item {
             Text(
@@ -222,7 +225,7 @@ fun SuperAdminDashboardScreen(
                 modifier = Modifier.padding(top = 8.dp)
             )
         }
-        
+
         if (stats?.recentActivity?.isEmpty() == true) {
             item {
                 Card(modifier = Modifier.fillMaxWidth()) {
@@ -295,5 +298,3 @@ fun TopCompanyCard(company: com.example.crmprime.data.model.TopCompany) {
         }
     }
 }
-
-

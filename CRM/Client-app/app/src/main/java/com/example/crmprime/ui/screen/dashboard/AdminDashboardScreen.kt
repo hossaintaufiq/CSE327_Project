@@ -21,7 +21,7 @@ fun AdminDashboardScreen(
     companyName: String? = null
 ) {
     val statsData = stats?.stats
-    
+
     LazyColumn(
         modifier = Modifier.fillMaxSize(),
         contentPadding = PaddingValues(16.dp),
@@ -41,7 +41,7 @@ fun AdminDashboardScreen(
                 )
             }
         }
-        
+
         item {
             Row(
                 modifier = Modifier.fillMaxWidth(),
@@ -59,7 +59,7 @@ fun AdminDashboardScreen(
                 )
             }
         }
-        
+
         item {
             Row(
                 modifier = Modifier.fillMaxWidth(),
@@ -77,7 +77,7 @@ fun AdminDashboardScreen(
                 )
             }
         }
-        
+
         item {
             Card(modifier = Modifier.fillMaxWidth()) {
                 Column(
@@ -91,7 +91,7 @@ fun AdminDashboardScreen(
                         fontWeight = FontWeight.Bold,
                         modifier = Modifier.padding(bottom = 12.dp)
                     )
-                    
+
                     Row(
                         modifier = Modifier.fillMaxWidth(),
                         horizontalArrangement = Arrangement.SpaceBetween
@@ -108,7 +108,7 @@ fun AdminDashboardScreen(
                                 fontWeight = FontWeight.Bold
                             )
                         }
-                        
+
                         Column {
                             Text(
                                 text = "Avg Deal Size",
@@ -121,7 +121,7 @@ fun AdminDashboardScreen(
                                 fontWeight = FontWeight.Bold
                             )
                         }
-                        
+
                         Column {
                             Text(
                                 text = "Conversion Rate",
@@ -138,7 +138,7 @@ fun AdminDashboardScreen(
                 }
             }
         }
-        
+
         item {
             Text(
                 text = "Recent Activity",
@@ -146,7 +146,7 @@ fun AdminDashboardScreen(
                 fontWeight = FontWeight.Bold
             )
         }
-        
+
         if (stats?.recentActivity?.isEmpty() == true) {
             item {
                 Card(modifier = Modifier.fillMaxWidth()) {
@@ -168,7 +168,7 @@ fun AdminDashboardScreen(
                 ActivityCard(activity = activity)
             }
         }
-        
+
         item {
             Text(
                 text = "Top Deals",
@@ -177,8 +177,9 @@ fun AdminDashboardScreen(
                 modifier = Modifier.padding(top = 8.dp)
             )
         }
-        
-        if (stats?.topDeals?.isEmpty() == true) {
+
+        val topDeals = stats?.topDeals
+        if (topDeals.isNullOrEmpty()) {
             item {
                 Card(modifier = Modifier.fillMaxWidth()) {
                     Box(
@@ -195,7 +196,7 @@ fun AdminDashboardScreen(
                 }
             }
         } else {
-            items(stats?.topDeals ?: emptyList()) { deal ->
+            items(topDeals) { deal ->
                 DealCard(deal = deal)
             }
         }
@@ -245,4 +246,3 @@ fun DealCard(deal: com.example.crmprime.data.model.Deal) {
         }
     }
 }
-

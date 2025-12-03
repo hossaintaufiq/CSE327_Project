@@ -3,13 +3,12 @@
 import { useEffect } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
-import { Check, Zap, Shield, BarChart3, Users, Settings } from "lucide-react";
+import { Users, BarChart3, Shield, Zap, Settings, TrendingUp } from "lucide-react";
 
 export default function LandingPage() {
   const router = useRouter();
 
   useEffect(() => {
-    // Check if user is logged in - if yes, redirect to dashboard
     if (typeof window !== "undefined") {
       const user = localStorage.getItem("user");
       if (user) {
@@ -20,34 +19,34 @@ export default function LandingPage() {
 
   const features = [
     {
-      icon: <Users className="w-8 h-8" />,
+      icon: <Users className="w-6 h-6" />,
       title: "Team Collaboration",
-      description: "Work seamlessly with your team. Assign tasks, share updates, and collaborate in real-time."
+      description: "Work seamlessly with your team in real-time. Assign tasks and share updates effortlessly."
     },
     {
-      icon: <BarChart3 className="w-8 h-8" />,
+      icon: <BarChart3 className="w-6 h-6" />,
       title: "Advanced Analytics",
-      description: "Get insights into your business with powerful analytics and customizable dashboards."
+      description: "Get powerful insights with customizable dashboards and detailed business metrics."
     },
     {
-      icon: <Shield className="w-8 h-8" />,
+      icon: <Shield className="w-6 h-6" />,
       title: "Secure & Reliable",
-      description: "Enterprise-grade security with 99.9% uptime guarantee. Your data is safe with us."
+      description: "Enterprise-grade security with 99.9% uptime. Your data is always protected."
     },
     {
-      icon: <Zap className="w-8 h-8" />,
+      icon: <Zap className="w-6 h-6" />,
       title: "Lightning Fast",
-      description: "Built for speed. Experience instant load times and smooth performance."
+      description: "Built for performance with instant load times and smooth user experience."
     },
     {
-      icon: <Settings className="w-8 h-8" />,
-      title: "Customizable",
-      description: "Tailor the platform to your needs with extensive customization options."
+      icon: <Settings className="w-6 h-6" />,
+      title: "Fully Customizable",
+      description: "Tailor every aspect to your needs with extensive customization options."
     },
     {
-      icon: <Check className="w-8 h-8" />,
+      icon: <TrendingUp className="w-6 h-6" />,
       title: "Easy Integration",
-      description: "Integrate with your favorite tools. Connect with APIs and third-party services."
+      description: "Connect with your favorite tools through our robust API and integrations."
     }
   ];
 
@@ -55,26 +54,30 @@ export default function LandingPage() {
     <div className="min-h-screen bg-black text-white">
       {/* Hero Section */}
       <section className="relative overflow-hidden">
-        <div className="absolute inset-0 bg-linear-to-br from-blue-900/20 via-black to-purple-900/20"></div>
-        <div className="relative max-w-7xl mx-auto px-8 py-24 md:py-32">
+        <div className="absolute inset-0 bg-gradient-to-br from-blue-950/30 via-black to-purple-950/20"></div>
+        <div className="relative max-w-7xl mx-auto px-6 sm:px-8 py-32 md:py-40">
           <div className="text-center max-w-4xl mx-auto">
-            <h1 className="text-5xl md:text-7xl font-bold mb-6 bg-linear-to-r from-blue-400 via-purple-400 to-blue-400 bg-clip-text text-transparent">
-              Powerful CRM for Modern Businesses
+            <h1 className="text-5xl md:text-6xl lg:text-7xl font-bold mb-6 leading-tight">
+              <span className="bg-gradient-to-r from-blue-400 via-blue-300 to-blue-400 bg-clip-text text-transparent">
+                Powerful CRM
+              </span>
+              <br />
+              <span className="text-white">for Modern Businesses</span>
             </h1>
-            <p className="text-xl md:text-2xl text-gray-300 mb-8 leading-relaxed">
+            <p className="text-lg md:text-xl text-gray-400 mb-10 leading-relaxed max-w-2xl mx-auto">
               Manage your customers, projects, and teams all in one place. 
-              Streamline your workflow and boost productivity.
+              Streamline workflows and boost productivity.
             </p>
-            <div className="flex flex-col sm:flex-row gap-4 justify-center">
+            <div className="flex flex-col sm:flex-row gap-4 justify-center items-center">
               <Link
                 href="/signup"
-                className="px-8 py-4 bg-blue-600 text-white rounded-lg font-semibold text-lg hover:bg-blue-700 transition-all transform hover:scale-105 shadow-lg shadow-blue-500/50"
+                className="px-8 py-3.5 bg-blue-600 text-white rounded-lg font-medium text-base hover:bg-blue-700 transition-colors shadow-lg shadow-blue-600/30"
               >
                 Get Started Free
               </Link>
               <Link
                 href="/pricing"
-                className="px-8 py-4 bg-gray-800 text-white rounded-lg font-semibold text-lg border border-gray-700 hover:bg-gray-700 transition-all"
+                className="px-8 py-3.5 bg-transparent text-white rounded-lg font-medium text-base border border-gray-700 hover:border-gray-600 hover:bg-gray-900/50 transition-colors"
               >
                 View Pricing
               </Link>
@@ -84,26 +87,28 @@ export default function LandingPage() {
       </section>
 
       {/* Features Section */}
-      <section className="py-24 bg-gray-900">
-        <div className="max-w-7xl mx-auto px-8">
-          <div className="text-center mb-16">
-            <h2 className="text-4xl md:text-5xl font-bold mb-4">
-              Everything You Need to Succeed
+      <section className="py-28 bg-gradient-to-b from-black to-gray-950">
+        <div className="max-w-7xl mx-auto px-6 sm:px-8">
+          <div className="text-center mb-20">
+            <h2 className="text-3xl md:text-4xl font-bold mb-4 text-white">
+              Everything You Need
             </h2>
-            <p className="text-xl text-gray-400 max-w-2xl mx-auto">
-              Powerful features designed to help you manage your business more effectively
+            <p className="text-lg text-gray-400 max-w-xl mx-auto">
+              Powerful features designed to help you manage your business effectively
             </p>
           </div>
           
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
             {features.map((feature, index) => (
               <div
                 key={index}
-                className="bg-gray-800 p-6 rounded-lg border border-gray-700 hover:border-blue-500 transition-all hover:shadow-lg hover:shadow-blue-500/20"
+                className="group bg-gray-900/50 backdrop-blur-sm p-8 rounded-xl border border-gray-800 hover:border-blue-500/50 transition-all duration-300"
               >
-                <div className="text-blue-400 mb-4">{feature.icon}</div>
-                <h3 className="text-xl font-semibold mb-2 text-white">{feature.title}</h3>
-                <p className="text-gray-400">{feature.description}</p>
+                <div className="text-blue-500 mb-5 group-hover:scale-110 transition-transform duration-300">
+                  {feature.icon}
+                </div>
+                <h3 className="text-xl font-semibold mb-3 text-white">{feature.title}</h3>
+                <p className="text-gray-400 leading-relaxed">{feature.description}</p>
               </div>
             ))}
           </div>
@@ -111,17 +116,17 @@ export default function LandingPage() {
       </section>
 
       {/* CTA Section */}
-      <section className="py-24 bg-linear-to-r from-blue-900/30 to-purple-900/30">
-        <div className="max-w-4xl mx-auto px-8 text-center">
-          <h2 className="text-4xl md:text-5xl font-bold mb-6">
+      <section className="py-24 bg-gradient-to-b from-gray-950 to-black">
+        <div className="max-w-3xl mx-auto px-6 sm:px-8 text-center">
+          <h2 className="text-3xl md:text-4xl font-bold mb-4 text-white">
             Ready to Transform Your Business?
           </h2>
-          <p className="text-xl text-gray-300 mb-8">
-            Join thousands of companies using CRM Prime to manage their operations.
+          <p className="text-lg text-gray-400 mb-10 max-w-xl mx-auto">
+            Join thousands of companies using CRM Prime to streamline their operations and drive growth.
           </p>
           <Link
             href="/signup"
-            className="inline-block px-8 py-4 bg-blue-600 text-white rounded-lg font-semibold text-lg hover:bg-blue-700 transition-all transform hover:scale-105 shadow-lg shadow-blue-500/50"
+            className="inline-block px-8 py-3.5 bg-blue-600 text-white rounded-lg font-medium text-base hover:bg-blue-700 transition-colors shadow-lg shadow-blue-600/30"
           >
             Start Free Trial
           </Link>
