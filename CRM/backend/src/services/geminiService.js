@@ -13,8 +13,8 @@ import { GoogleGenerativeAI } from '@google/generative-ai';
 // Initialize Gemini AI
 const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY || '');
 
-// Model configuration
-const MODEL_NAME = 'gemini-1.5-flash';
+// Model configuration - using the latest available model
+const MODEL_NAME = process.env.GEMINI_MODEL || 'gemini-2.5-flash';
 
 /**
  * Get configured Gemini model
