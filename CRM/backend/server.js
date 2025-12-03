@@ -5,7 +5,12 @@ import express from 'express';
 import { createServer } from 'http';
 import cors from 'cors';
 import mongoose from 'mongoose';
+import path from 'path';
+import { fileURLToPath } from 'url';
 import { initFirebaseAdmin } from './src/config/firebaseAdmin.js';
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
 
 // Import routes
 import authRoutes from './src/routes/authRoutes.js';
@@ -61,12 +66,22 @@ app.use(cors({
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
+// Serve static files from public folder
+app.use('/public', express.static(path.join(__dirname, 'public')));
+
 // Health check endpoint
 app.get('/api/health', (req, res) => {
   res.json({ 
     status: 'ok', 
     message: 'CRM Backend API is running',
-    timestamp: new Date().toISOString()
+    timestamp: new Date().toISOString(),
+    database: mongoose.connection.readyState === 1 ? 'connected' : 'disconnected',
+    services: {
+      mongodb: mongoose.connection.readyState === 1,
+      gemini: !!process.env.GEMINI_API_KEY,
+      telegram: !!process.env.TELEGRAM_BOT_TOKEN,
+      twilio: !!process.env.TWILIO_ACCOUNT_SID
+    }
   });
 });
 

@@ -1,0 +1,427 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>MCP Server Test Page</title>
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, sans-serif;
+      background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
+      min-height: 100vh;
+      padding: 20px;
+      color: #fff;
+    }
+    .container {
+      max-width: 1200px;
+      margin: 0 auto;
+    }
+    h1 {
+      text-align: center;
+      margin-bottom: 30px;
+      font-size: 2.5rem;
+      background: linear-gradient(90deg, #00d9ff, #00ff88);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+    }
+    .status-bar {
+      display: flex;
+      justify-content: center;
+      gap: 20px;
+      margin-bottom: 30px;
+      flex-wrap: wrap;
+    }
+    .status-item {
+      background: rgba(255,255,255,0.1);
+      padding: 15px 25px;
+      border-radius: 10px;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+    .status-dot {
+      width: 12px;
+      height: 12px;
+      border-radius: 50%;
+      background: #666;
+    }
+    .status-dot.online { background: #00ff88; }
+    .status-dot.offline { background: #ff4444; }
+    .status-dot.checking { background: #ffaa00; animation: pulse 1s infinite; }
+    @keyframes pulse {
+      0%, 100% { opacity: 1; }
+      50% { opacity: 0.5; }
+    }
+    .grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(350px, 1fr));
+      gap: 20px;
+    }
+    .card {
+      background: rgba(255,255,255,0.05);
+      border: 1px solid rgba(255,255,255,0.1);
+      border-radius: 15px;
+      padding: 25px;
+    }
+    .card h2 {
+      font-size: 1.3rem;
+      margin-bottom: 20px;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+    .card h2 span {
+      font-size: 1.5rem;
+    }
+    .test-list {
+      list-style: none;
+    }
+    .test-item {
+      padding: 12px;
+      margin-bottom: 8px;
+      background: rgba(0,0,0,0.2);
+      border-radius: 8px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+    .test-status {
+      font-size: 1.2rem;
+    }
+    .btn {
+      background: linear-gradient(90deg, #00d9ff, #00ff88);
+      border: none;
+      padding: 12px 24px;
+      border-radius: 8px;
+      color: #000;
+      font-weight: bold;
+      cursor: pointer;
+      transition: transform 0.2s, box-shadow 0.2s;
+    }
+    .btn:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 5px 20px rgba(0,217,255,0.3);
+    }
+    .btn:disabled {
+      opacity: 0.5;
+      cursor: not-allowed;
+    }
+    .output {
+      background: #000;
+      border-radius: 8px;
+      padding: 15px;
+      font-family: 'Monaco', 'Consolas', monospace;
+      font-size: 0.85rem;
+      max-height: 200px;
+      overflow-y: auto;
+      margin-top: 15px;
+      white-space: pre-wrap;
+      word-break: break-all;
+    }
+    .output.success { border-left: 3px solid #00ff88; }
+    .output.error { border-left: 3px solid #ff4444; }
+    .summary {
+      text-align: center;
+      margin-top: 30px;
+      padding: 20px;
+      background: rgba(255,255,255,0.05);
+      border-radius: 15px;
+    }
+    .summary h3 {
+      font-size: 1.5rem;
+      margin-bottom: 10px;
+    }
+    .summary-stats {
+      display: flex;
+      justify-content: center;
+      gap: 40px;
+      font-size: 1.2rem;
+    }
+    .passed { color: #00ff88; }
+    .failed { color: #ff4444; }
+    .input-group {
+      margin-bottom: 15px;
+    }
+    .input-group label {
+      display: block;
+      margin-bottom: 5px;
+      color: #aaa;
+    }
+    .input-group input, .input-group select {
+      width: 100%;
+      padding: 10px;
+      border-radius: 6px;
+      border: 1px solid rgba(255,255,255,0.2);
+      background: rgba(0,0,0,0.3);
+      color: #fff;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1>🔌 MCP Server Test Dashboard</h1>
+    
+    <div class="status-bar">
+      <div class="status-item">
+        <div class="status-dot" id="backendStatus"></div>
+        <span>Backend Server</span>
+      </div>
+      <div class="status-item">
+        <div class="status-dot" id="dbStatus"></div>
+        <span>MongoDB</span>
+      </div>
+      <div class="status-item">
+        <div class="status-dot" id="geminiStatus"></div>
+        <span>Gemini AI</span>
+      </div>
+    </div>
+
+    <div class="grid">
+      <!-- Server Health -->
+      <div class="card">
+        <h2><span>🏥</span> Server Health</h2>
+        <button class="btn" onclick="testHealth()">Check Health</button>
+        <div class="output" id="healthOutput">Click button to test...</div>
+      </div>
+
+      <!-- API Test -->
+      <div class="card">
+        <h2><span>🔗</span> API Endpoints</h2>
+        <div class="input-group">
+          <label>Endpoint</label>
+          <select id="apiEndpoint">
+            <option value="/api/health">/api/health</option>
+            <option value="/api/auth/me">/api/auth/me (requires auth)</option>
+            <option value="/api/conversations/my-conversations">/api/conversations/my-conversations</option>
+            <option value="/api/conversations/browse-companies">/api/conversations/browse-companies</option>
+          </select>
+        </div>
+        <button class="btn" onclick="testEndpoint()">Test Endpoint</button>
+        <div class="output" id="apiOutput">Select endpoint and test...</div>
+      </div>
+
+      <!-- Gemini AI Test -->
+      <div class="card">
+        <h2><span>🤖</span> Gemini AI Test</h2>
+        <div class="input-group">
+          <label>Test Prompt</label>
+          <input type="text" id="aiPrompt" value="Say hello in one sentence" placeholder="Enter a test prompt">
+        </div>
+        <button class="btn" onclick="testGemini()">Test AI</button>
+        <div class="output" id="geminiOutput">Enter prompt and test...</div>
+      </div>
+
+      <!-- Conversation Test -->
+      <div class="card">
+        <h2><span>💬</span> Conversation Test</h2>
+        <div class="input-group">
+          <label>Company ID</label>
+          <input type="text" id="companyId" placeholder="Enter company ID">
+        </div>
+        <div class="input-group">
+          <label>Message</label>
+          <input type="text" id="testMessage" value="Hello, I need help with my order" placeholder="Test message">
+        </div>
+        <button class="btn" onclick="testConversation()">Start Conversation</button>
+        <div class="output" id="convOutput">Enter details and test...</div>
+      </div>
+
+      <!-- WebSocket Test -->
+      <div class="card">
+        <h2><span>🔄</span> WebSocket Test</h2>
+        <button class="btn" onclick="testWebSocket()">Test Socket.io</button>
+        <div class="output" id="wsOutput">Click to test WebSocket connection...</div>
+      </div>
+
+      <!-- Database Test -->
+      <div class="card">
+        <h2><span>🗄️</span> Database Test</h2>
+        <button class="btn" onclick="testDatabase()">Test MongoDB</button>
+        <div class="output" id="dbOutput">Click to test database connection...</div>
+      </div>
+    </div>
+
+    <div class="summary">
+      <h3>Test Summary</h3>
+      <div class="summary-stats">
+        <span class="passed">✅ Passed: <span id="passedCount">0</span></span>
+        <span class="failed">❌ Failed: <span id="failedCount">0</span></span>
+      </div>
+    </div>
+  </div>
+
+  <script src="https://cdn.socket.io/4.7.2/socket.io.min.js"></script>
+  <script>
+    const API_BASE = 'http://localhost:5000';
+    let passed = 0, failed = 0;
+
+    function updateStats(success) {
+      if (success) passed++;
+      else failed++;
+      document.getElementById('passedCount').textContent = passed;
+      document.getElementById('failedCount').textContent = failed;
+    }
+
+    function setOutput(id, text, success) {
+      const el = document.getElementById(id);
+      el.textContent = text;
+      el.className = 'output ' + (success ? 'success' : 'error');
+    }
+
+    function setStatus(id, status) {
+      const el = document.getElementById(id);
+      el.className = 'status-dot ' + status;
+    }
+
+    async function testHealth() {
+      setOutput('healthOutput', 'Testing...');
+      try {
+        const res = await fetch(`${API_BASE}/api/health`);
+        const data = await res.json();
+        setOutput('healthOutput', JSON.stringify(data, null, 2), res.ok);
+        setStatus('backendStatus', res.ok ? 'online' : 'offline');
+        updateStats(res.ok);
+      } catch (e) {
+        setOutput('healthOutput', 'Error: ' + e.message, false);
+        setStatus('backendStatus', 'offline');
+        updateStats(false);
+      }
+    }
+
+    async function testEndpoint() {
+      const endpoint = document.getElementById('apiEndpoint').value;
+      setOutput('apiOutput', 'Testing ' + endpoint + '...');
+      try {
+        const token = localStorage.getItem('token') || '';
+        const res = await fetch(`${API_BASE}${endpoint}`, {
+          headers: token ? { 'Authorization': `Bearer ${token}` } : {}
+        });
+        const data = await res.json();
+        setOutput('apiOutput', `Status: ${res.status}\n\n${JSON.stringify(data, null, 2)}`, res.ok);
+        updateStats(res.ok);
+      } catch (e) {
+        setOutput('apiOutput', 'Error: ' + e.message, false);
+        updateStats(false);
+      }
+    }
+
+    async function testGemini() {
+      const prompt = document.getElementById('aiPrompt').value;
+      setOutput('geminiOutput', 'Testing Gemini AI...');
+      setStatus('geminiStatus', 'checking');
+      try {
+        const res = await fetch(`${API_BASE}/api/ai/test`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ prompt })
+        });
+        const data = await res.json();
+        const success = res.ok && data.success;
+        setOutput('geminiOutput', JSON.stringify(data, null, 2), success);
+        setStatus('geminiStatus', success ? 'online' : 'offline');
+        updateStats(success);
+      } catch (e) {
+        setOutput('geminiOutput', 'Error: ' + e.message + '\n\nNote: This endpoint may require authentication or may not exist.', false);
+        setStatus('geminiStatus', 'offline');
+        updateStats(false);
+      }
+    }
+
+    async function testConversation() {
+      const companyId = document.getElementById('companyId').value;
+      const message = document.getElementById('testMessage').value;
+      
+      if (!companyId) {
+        setOutput('convOutput', 'Please enter a Company ID first.\n\nYou can get company IDs from /api/conversations/browse-companies', false);
+        return;
+      }
+      
+      setOutput('convOutput', 'Starting conversation...');
+      try {
+        const token = localStorage.getItem('token') || '';
+        const res = await fetch(`${API_BASE}/api/conversations/start`, {
+          method: 'POST',
+          headers: { 
+            'Content-Type': 'application/json',
+            ...(token ? { 'Authorization': `Bearer ${token}` } : {})
+          },
+          body: JSON.stringify({
+            companyId,
+            type: 'inquiry',
+            initialMessage: message
+          })
+        });
+        const data = await res.json();
+        setOutput('convOutput', JSON.stringify(data, null, 2), res.ok && data.success);
+        updateStats(res.ok && data.success);
+      } catch (e) {
+        setOutput('convOutput', 'Error: ' + e.message, false);
+        updateStats(false);
+      }
+    }
+
+    function testWebSocket() {
+      setOutput('wsOutput', 'Connecting to Socket.io...');
+      try {
+        const socket = io(API_BASE, { 
+          transports: ['websocket', 'polling'],
+          timeout: 5000
+        });
+        
+        socket.on('connect', () => {
+          setOutput('wsOutput', `✅ Connected!\nSocket ID: ${socket.id}\nTransport: ${socket.io.engine.transport.name}`, true);
+          updateStats(true);
+          setTimeout(() => socket.disconnect(), 2000);
+        });
+        
+        socket.on('connect_error', (err) => {
+          setOutput('wsOutput', '❌ Connection failed: ' + err.message, false);
+          updateStats(false);
+        });
+        
+        setTimeout(() => {
+          if (!socket.connected) {
+            setOutput('wsOutput', '❌ Connection timeout', false);
+            updateStats(false);
+            socket.disconnect();
+          }
+        }, 6000);
+      } catch (e) {
+        setOutput('wsOutput', 'Error: ' + e.message, false);
+        updateStats(false);
+      }
+    }
+
+    async function testDatabase() {
+      setOutput('dbOutput', 'Testing database...');
+      setStatus('dbStatus', 'checking');
+      try {
+        // Use health endpoint which checks DB
+        const res = await fetch(`${API_BASE}/api/health`);
+        const data = await res.json();
+        const dbOk = data.database === 'connected' || data.status === 'ok';
+        setOutput('dbOutput', `Database Status: ${dbOk ? 'Connected' : 'Disconnected'}\n\n${JSON.stringify(data, null, 2)}`, dbOk);
+        setStatus('dbStatus', dbOk ? 'online' : 'offline');
+        updateStats(dbOk);
+      } catch (e) {
+        setOutput('dbOutput', 'Error: ' + e.message, false);
+        setStatus('dbStatus', 'offline');
+        updateStats(false);
+      }
+    }
+
+    // Auto-check on load
+    window.onload = () => {
+      setStatus('backendStatus', 'checking');
+      setStatus('dbStatus', 'checking');
+      setStatus('geminiStatus', 'checking');
+      testHealth();
+    };
+  </script>
+</body>
+</html>
