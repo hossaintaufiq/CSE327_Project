@@ -254,10 +254,17 @@ export default function OrdersPage() {
       let errorMessage = editingOrder ? "Failed to update order" : "Failed to create order";
       if (error.response) {
         const errorData = error.response.data;
-        errorMessage = errorData?.message ||
-                      errorData?.error?.message ||
-                      errorData?.error?.code ||
-                      `Server error: ${error.response.status}`;
+        // Check for specific validation errors
+        if (errorData?.error?.code === 'VALIDATION_ERROR' || errorData?.error?.message?.includes('Client')) {
+          errorMessage = errorData?.error?.message || errorData?.message || "Please select a valid client";
+        } else if (errorData?.error?.code === 'NOT_FOUND' && errorData?.error?.message?.includes('Client')) {
+          errorMessage = "Client not found. Please select a different client.";
+        } else {
+          errorMessage = errorData?.message ||
+                        errorData?.error?.message ||
+                        errorData?.error?.code ||
+                        `Server error: ${error.response.status}`;
+        }
       } else if (error.message) {
         errorMessage = error.message;
       }

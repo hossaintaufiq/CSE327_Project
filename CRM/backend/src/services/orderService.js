@@ -148,12 +148,24 @@ export async function createOrder({ companyId, createdBy, data }) {
     throw error;
   }
 
+  // Find User account associated with this Client (by email) for clientUserId
+  // If no User found, use createdBy as fallback (order created by company staff for lead)
+  let clientUserId = createdBy; // Default fallback
+  if (client.email) {
+    const { User } = await import('../models/User.js');
+    const clientUser = await User.findOne({ email: client.email.toLowerCase() });
+    if (clientUser) {
+      clientUserId = clientUser._id;
+    }
+  }
+
   const totalAmount = calculateTotalAmount(items);
   const orderNumber = generateOrderNumber();
 
   const order = await Order.create({
     companyId,
-    clientId,
+    clientUserId, // Required field - User account ID
+    clientId,     // Optional field - Client/Lead record ID
     orderNumber,
     items,
     totalAmount,
@@ -203,6 +215,15 @@ export async function updateOrder({ orderId, companyId, updatedBy, data }) {
       throw error;
     }
     order.clientId = clientId;
+    
+    // Update clientUserId if client email matches a User account
+    if (client.email) {
+      const { User } = await import('../models/User.js');
+      const clientUser = await User.findOne({ email: client.email.toLowerCase() });
+      if (clientUser) {
+        order.clientUserId = clientUser._id;
+      }
+    }
   }
 
   // Update items if provided

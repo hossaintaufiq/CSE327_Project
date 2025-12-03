@@ -15,6 +15,7 @@ import ApprovalModal from './ApprovalModal';
 export function PipelineBoard({ 
   pipelineType = 'lead',
   onEntityClick,
+  onError,
   className = '',
 }) {
   const [config, setConfig] = useState(null);
@@ -70,7 +71,19 @@ export function PipelineBoard({
       }
 
     } catch (err) {
-      setError(err.message || 'Failed to load pipeline data');
+      let errorMessage = 'Failed to load pipeline data. Please try again.';
+      if (err.response) {
+        const errorData = err.response.data;
+        errorMessage = errorData?.message || 
+                      errorData?.error?.message || 
+                      `Server error: ${err.response.status}`;
+      } else if (err.message) {
+        errorMessage = err.message.includes("Network") 
+          ? "Network error. Please check your connection."
+          : err.message;
+      }
+      setError(errorMessage);
+      if (onError) onError(errorMessage);
     } finally {
       setLoading(false);
     }
@@ -210,14 +223,16 @@ export function PipelineBoard({
     );
   }
 
-  if (error) {
+  // Error is passed to parent component for display
+  // We'll still show a minimal error state here for the board itself
+  if (error && !onError) {
     return (
       <div className={`p-4 ${className}`}>
-        <div className="bg-red-50 border border-red-200 rounded-lg p-4 flex items-center justify-between">
-          <p className="text-red-700">{error}</p>
+        <div className="bg-red-500/20 border border-red-500/50 rounded-lg p-4 flex items-center justify-between">
+          <p className="text-red-400">{error}</p>
           <button 
             onClick={() => { setError(null); loadPipelineData(); }}
-            className="text-red-600 hover:text-red-800 underline"
+            className="text-red-400 hover:text-red-300 underline text-sm"
           >
             Retry
           </button>
