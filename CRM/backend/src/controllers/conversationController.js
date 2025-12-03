@@ -159,6 +159,8 @@ export const sendMessage = async (req, res, next) => {
     // If client message and conversation is AI-handled, generate AI response
     if (isClient && existingConv.aiHandled && existingConv.status === 'active') {
       try {
+        console.log('Generating AI response for conversation:', conversationId);
+        
         // Build conversation context
         const recentMessages = existingConv.messages.slice(-5).map(m => 
           `${m.senderType}: ${m.content}`
@@ -174,7 +176,11 @@ client: ${content.trim()}
 Respond helpfully and professionally. If you cannot fully help with their request, suggest they can request a human representative.
 Keep your response concise (2-3 sentences max unless detailed explanation needed).`;
 
+        console.log('AI prompt:', aiPrompt.substring(0, 200) + '...');
+        
         const aiResponse = await geminiService.generateText(aiPrompt);
+        
+        console.log('AI response generated:', aiResponse.substring(0, 100) + '...');
         
         // Save AI response
         const { conversation: updatedConv } = await conversationService.sendMessage({
@@ -188,9 +194,12 @@ Keep your response concise (2-3 sentences max unless detailed explanation needed
         
         conversation = updatedConv;
       } catch (aiError) {
-        console.error('AI response error:', aiError);
+        console.error('AI response error:', aiError.message);
+        console.error('AI error stack:', aiError.stack);
         // Don't fail the request if AI fails, just log it
       }
+    } else {
+      console.log('Skipping AI response:', { isClient, aiHandled: existingConv?.aiHandled, status: existingConv?.status });
     }
     
     return successResponse(res, { conversation, message });

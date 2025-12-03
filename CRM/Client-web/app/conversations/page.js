@@ -187,9 +187,14 @@ export default function ConversationsPage() {
       });
       
       // Update with actual response including AI reply if any
-      if (res.data.data) {
-        setMessages(res.data.data.messages || []);
-        setSelectedConversation(res.data.data);
+      if (res.data?.data?.conversation) {
+        setMessages(res.data.data.conversation.messages || []);
+        setSelectedConversation(res.data.data.conversation);
+        
+        // Also update in conversations list
+        setConversations(prev => prev.map(c => 
+          c._id === res.data.data.conversation._id ? res.data.data.conversation : c
+        ));
       }
     } catch (err) {
       console.error("Error sending message:", err);
