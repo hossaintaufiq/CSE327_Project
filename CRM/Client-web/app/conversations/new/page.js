@@ -141,16 +141,16 @@ export default function NewConversationPage() {
 
     setCreating(true);
     try {
-      const res = await api.post("/conversations", {
+      const res = await api.post("/conversations/start", {
         companyId: selectedCompany._id,
-        conversationType: selectedType.id,
+        type: selectedType.id,
         productId: selectedProduct?._id,
-        subject: subject || `${selectedType.label} - ${selectedCompany.name}`,
+        productName: selectedProduct?.name,
         initialMessage: initialMessage.trim(),
       });
 
-      if (res.data.data?._id) {
-        router.push(`/conversations?id=${res.data.data._id}`);
+      if (res.data.data?.conversation?._id) {
+        router.push(`/conversations?id=${res.data.data.conversation._id}`);
       } else {
         router.push("/conversations");
       }

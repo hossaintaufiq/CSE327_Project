@@ -92,13 +92,14 @@ export default function ConversationsPage() {
   const fetchConversations = async () => {
     try {
       setLoading(true);
-      const res = await api.get("/conversations");
-      setConversations(res.data.data || []);
+      const res = await api.get("/conversations/my-conversations");
+      const conversationsList = res.data.data?.conversations || [];
+      setConversations(conversationsList);
       
       // If conversation ID in URL, select it
       const conversationId = searchParams.get("id");
       if (conversationId) {
-        const conv = res.data.data.find(c => c._id === conversationId);
+        const conv = conversationsList.find(c => c._id === conversationId);
         if (conv) {
           setSelectedConversation(conv);
           setMessages(conv.messages || []);
@@ -181,7 +182,7 @@ export default function ConversationsPage() {
     setMessages(prev => [...prev, tempMessage]);
 
     try {
-      const res = await api.post(`/conversations/${selectedConversation._id}/messages`, {
+      const res = await api.post(`/conversations/${selectedConversation._id}/message`, {
         content: messageContent
       });
       
