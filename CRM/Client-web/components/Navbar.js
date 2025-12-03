@@ -51,7 +51,7 @@ export default function Navbar() {
   return (
     <nav 
       id="main-navbar"
-      className="bg-gray-900 border-b border-gray-700 px-4 md:px-8 py-4 shadow-sm sticky top-0 z-50 w-full min-h-[60px]"
+      className="bg-gray-900 border-b border-gray-700 px-4 md:px-8 py-4 shadow-sm fixed top-0 left-0 right-0 z-50 w-full min-h-[60px]"
     >
       <div className="max-w-7xl mx-auto flex justify-between items-center">
         {/* Logo - Left Side */}

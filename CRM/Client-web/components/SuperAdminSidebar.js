@@ -98,7 +98,7 @@ export default function SuperAdminSidebar() {
       {/* Mobile Menu Button */}
       <button
         onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
-        className="lg:hidden fixed top-0 left-4 z-50 p-2 bg-gray-800 rounded-lg shadow-md hover:bg-gray-700 transition-colors mt-4"
+        className="lg:hidden fixed top-[70px] left-4 z-50 p-2 bg-gray-800 rounded-lg shadow-md hover:bg-gray-700 transition-colors"
         aria-label="Toggle menu"
       >
         {isMobileMenuOpen ? (
@@ -119,7 +119,7 @@ export default function SuperAdminSidebar() {
       {/* Sidebar */}
       <aside
         className={`
-          fixed top-0 left-0 h-screen w-64 bg-linear-to-b from-gray-900 to-gray-800 text-white z-30
+          fixed top-[60px] left-0 h-[calc(100vh-60px)] w-64 bg-linear-to-b from-gray-900 to-gray-800 text-white z-30
           transform transition-transform duration-300 ease-in-out
           lg:translate-x-0
           ${isMobileMenuOpen ? "translate-x-0" : "-translate-x-full"}

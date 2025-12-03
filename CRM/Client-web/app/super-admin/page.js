@@ -373,9 +373,9 @@ function SuperAdminPageContent() {
     <div className="min-h-screen bg-gray-900">
       <SuperAdminSidebar />
 
-      <main className="lg:ml-64 min-h-screen">
-        <div className="bg-gray-800 border-b border-gray-700 px-4 sm:px-6 lg:px-8 py-4 sticky top-0 z-20">
-          <h1 className="text-2xl font-bold text-white">Super Admin Dashboard</h1>
+      <main className="lg:ml-64 min-h-screen pt-[60px]">
+        <div className="bg-gray-800 border-b border-gray-700 px-4 sm:px-6 lg:px-8 py-6">
+          <h1 className="text-3xl font-bold text-white mb-2">Super Admin Dashboard</h1>
           <p className="text-gray-400 text-sm">Platform-wide management and analytics</p>
         </div>
 
