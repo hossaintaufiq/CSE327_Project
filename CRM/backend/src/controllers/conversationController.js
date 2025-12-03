@@ -5,6 +5,7 @@
  */
 
 import * as conversationService from '../services/conversationService.js';
+import * as geminiService from '../services/geminiService.js';
 import { successResponse, errorResponse, notFoundResponse } from '../utils/responseHelper.js';
 
 /**
@@ -80,7 +81,7 @@ export const startConversation = async (req, res, next) => {
       return errorResponse(res, 'VALIDATION_ERROR', 'Company ID is required', 400);
     }
     
-    const conversation = await conversationService.startConversation({
+    let conversation = await conversationService.startConversation({
       clientUserId: req.user._id,
       companyId,
       type,
@@ -88,6 +89,36 @@ export const startConversation = async (req, res, next) => {
       productName,
       initialMessage,
     });
+    
+    // Generate AI welcome/response if there's an initial message
+    if (initialMessage && conversation.aiHandled) {
+      try {
+        const companyName = conversation.companyId?.name || 'our company';
+        const typeLabel = {
+          inquiry: 'product inquiry',
+          order: 'order-related question',
+          complaint: 'complaint',
+          support: 'support request',
+          general: 'question',
+        }[type] || 'question';
+        
+        const aiPrompt = `You are a helpful customer service AI assistant for ${companyName}. 
+A client just started a new conversation with a ${typeLabel}.
+
+Their message: ${initialMessage}
+
+Respond helpfully and professionally. Acknowledge their ${typeLabel} and provide initial assistance.
+Keep your response concise (2-3 sentences) and offer to help further.`;
+
+        const aiResponse = await geminiService.generateText(aiPrompt);
+        
+        // Add AI response to conversation
+        conversation = await conversationService.addAIResponse(conversation._id, aiResponse);
+      } catch (aiError) {
+        console.error('AI welcome response error:', aiError);
+        // Don't fail if AI fails
+      }
+    }
     
     return successResponse(res, { conversation }, 201, 'Conversation started');
   } catch (error) {
@@ -115,7 +146,8 @@ export const sendMessage = async (req, res, next) => {
     
     const senderType = isClient ? 'client' : 'representative';
     
-    const { conversation, message } = await conversationService.sendMessage({
+    // Save the user's message
+    let { conversation, message } = await conversationService.sendMessage({
       conversationId,
       senderId: req.user._id,
       senderType,
@@ -123,6 +155,43 @@ export const sendMessage = async (req, res, next) => {
       messageType: messageType || 'text',
       metadata: metadata || {},
     });
+    
+    // If client message and conversation is AI-handled, generate AI response
+    if (isClient && existingConv.aiHandled && existingConv.status === 'active') {
+      try {
+        // Build conversation context
+        const recentMessages = existingConv.messages.slice(-5).map(m => 
+          `${m.senderType}: ${m.content}`
+        ).join('\n');
+        
+        const aiPrompt = `You are a helpful customer service AI assistant for ${existingConv.companyId?.name || 'our company'}. 
+You're helping a client with a ${existingConv.type || 'general'} inquiry.
+
+Recent conversation:
+${recentMessages}
+client: ${content.trim()}
+
+Respond helpfully and professionally. If you cannot fully help with their request, suggest they can request a human representative.
+Keep your response concise (2-3 sentences max unless detailed explanation needed).`;
+
+        const aiResponse = await geminiService.generateText(aiPrompt);
+        
+        // Save AI response
+        const { conversation: updatedConv } = await conversationService.sendMessage({
+          conversationId,
+          senderId: null,
+          senderType: 'ai',
+          content: aiResponse,
+          messageType: 'ai_response',
+          metadata: { aiGenerated: true },
+        });
+        
+        conversation = updatedConv;
+      } catch (aiError) {
+        console.error('AI response error:', aiError);
+        // Don't fail the request if AI fails, just log it
+      }
+    }
     
     return successResponse(res, { conversation, message });
   } catch (error) {

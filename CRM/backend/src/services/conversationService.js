@@ -215,6 +215,31 @@ export async function sendMessage({
 }
 
 /**
+ * Add AI response to a conversation
+ */
+export async function addAIResponse(conversationId, aiContent) {
+  const conversation = await Conversation.findById(conversationId);
+  
+  if (!conversation) {
+    throw new Error('Conversation not found');
+  }
+  
+  conversation.messages.push({
+    senderId: null,
+    senderType: 'ai',
+    content: aiContent,
+    messageType: 'ai_response',
+    metadata: { aiGenerated: true },
+  });
+  conversation.lastActivity = new Date();
+  await conversation.save();
+  
+  await conversation.populate('companyId', 'name domain');
+  
+  return conversation;
+}
+
+/**
  * Process AI response for a conversation
  */
 export async function processAIResponse(conversationId, clientMessage) {

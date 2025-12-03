@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation";
 import useAuthStore from "@/store/authStore";
 import apiClient from "@/utils/api";
 import Sidebar from "@/components/Sidebar";
-import { User, Mail, Phone, Building, Calendar, Save, Camera, ArrowLeft, Shield, Briefcase, RefreshCw, AlertCircle, CheckCircle, X } from "lucide-react";
+import { User, Mail, Phone, Building, Calendar, Save, Camera, ArrowLeft, Shield, Briefcase, RefreshCw, AlertCircle, CheckCircle, X, Send, Link2, Unlink, ExternalLink, Copy, Clock } from "lucide-react";
 
 export default function ProfilePage() {
   const router = useRouter();
@@ -23,6 +23,12 @@ export default function ProfilePage() {
     bio: "",
     avatar: "",
   });
+  
+  // Telegram linking state
+  const [telegramStatus, setTelegramStatus] = useState(null);
+  const [telegramLoading, setTelegramLoading] = useState(false);
+  const [telegramLink, setTelegramLink] = useState(null);
+  const [linkCopied, setLinkCopied] = useState(false);
 
   useEffect(() => {
     if (typeof window === "undefined") return;
@@ -82,6 +88,71 @@ export default function ProfilePage() {
       setLoading(false);
     }
   };
+
+  // Load Telegram link status
+  const loadTelegramStatus = async () => {
+    try {
+      const response = await apiClient.get("/telegram/link-status");
+      if (response?.data?.success) {
+        setTelegramStatus(response.data.data);
+      }
+    } catch (err) {
+      console.error("Error loading Telegram status:", err);
+    }
+  };
+
+  // Generate Telegram link code
+  const generateTelegramLink = async () => {
+    try {
+      setTelegramLoading(true);
+      const response = await apiClient.post("/telegram/generate-link");
+      if (response?.data?.success) {
+        setTelegramLink(response.data.data);
+      } else {
+        setError(response?.data?.message || "Failed to generate link");
+      }
+    } catch (err) {
+      console.error("Error generating Telegram link:", err);
+      setError(err.response?.data?.message || "Failed to generate Telegram link");
+    } finally {
+      setTelegramLoading(false);
+    }
+  };
+
+  // Unlink Telegram
+  const unlinkTelegram = async () => {
+    try {
+      setTelegramLoading(true);
+      const response = await apiClient.delete("/telegram/unlink");
+      if (response?.data?.success) {
+        setTelegramStatus(prev => ({ ...prev, linked: false, username: null, linkedAt: null }));
+        setTelegramLink(null);
+        setSuccess("Telegram unlinked successfully");
+      } else {
+        setError(response?.data?.message || "Failed to unlink Telegram");
+      }
+    } catch (err) {
+      console.error("Error unlinking Telegram:", err);
+      setError(err.response?.data?.message || "Failed to unlink Telegram");
+    } finally {
+      setTelegramLoading(false);
+    }
+  };
+
+  // Copy link to clipboard
+  const copyToClipboard = async (text) => {
+    try {
+      await navigator.clipboard.writeText(text);
+      setLinkCopied(true);
+      setTimeout(() => setLinkCopied(false), 2000);
+    } catch (err) {
+      console.error("Failed to copy:", err);
+    }
+  };
+
+  useEffect(() => {
+    loadTelegramStatus();
+  }, []);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -402,6 +473,117 @@ export default function ProfilePage() {
                   </div>
                 </form>
               </div>
+            </div>
+          </div>
+
+          {/* Telegram Integration Section */}
+          <div className="mt-6">
+            <div className="bg-gray-800 rounded-xl border border-gray-700 p-6">
+              <div className="flex items-center gap-3 mb-6">
+                <Send className="w-6 h-6 text-blue-400" />
+                <h3 className="text-xl font-bold text-white">Telegram Integration</h3>
+              </div>
+
+              {telegramStatus?.linked ? (
+                // Linked State
+                <div className="space-y-4">
+                  <div className="flex items-center gap-3 p-4 bg-green-500/10 border border-green-500/30 rounded-lg">
+                    <CheckCircle className="w-5 h-5 text-green-400" />
+                    <div className="flex-1">
+                      <p className="text-green-400 font-medium">Telegram Connected</p>
+                      <p className="text-sm text-gray-400">
+                        Linked to @{telegramStatus.username || 'Unknown'} 
+                        {telegramStatus.linkedAt && (
+                          <span className="ml-2">
+                            • {new Date(telegramStatus.linkedAt).toLocaleDateString()}
+                          </span>
+                        )}
+                      </p>
+                    </div>
+                    <button
+                      onClick={unlinkTelegram}
+                      disabled={telegramLoading}
+                      className="flex items-center gap-2 px-4 py-2 bg-red-500/20 text-red-400 rounded-lg hover:bg-red-500/30 transition-colors disabled:opacity-50"
+                    >
+                      <Unlink className="w-4 h-4" />
+                      {telegramLoading ? "Unlinking..." : "Unlink"}
+                    </button>
+                  </div>
+                  <p className="text-sm text-gray-400">
+                    You will receive notifications via Telegram when there are updates to your conversations.
+                  </p>
+                </div>
+              ) : telegramLink ? (
+                // Link Generated State
+                <div className="space-y-4">
+                  <p className="text-gray-300">
+                    Click the link below or copy it to your browser to connect your Telegram account:
+                  </p>
+                  
+                  <div className="flex items-center gap-2 p-4 bg-gray-700 rounded-lg">
+                    <Link2 className="w-5 h-5 text-blue-400 shrink-0" />
+                    <code className="flex-1 text-blue-400 text-sm break-all">{telegramLink.linkUrl}</code>
+                    <button
+                      onClick={() => copyToClipboard(telegramLink.linkUrl)}
+                      className="p-2 hover:bg-gray-600 rounded-lg transition-colors"
+                      title="Copy link"
+                    >
+                      {linkCopied ? (
+                        <CheckCircle className="w-5 h-5 text-green-400" />
+                      ) : (
+                        <Copy className="w-5 h-5 text-gray-400" />
+                      )}
+                    </button>
+                    <a
+                      href={telegramLink.linkUrl}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="p-2 hover:bg-gray-600 rounded-lg transition-colors"
+                      title="Open in Telegram"
+                    >
+                      <ExternalLink className="w-5 h-5 text-gray-400" />
+                    </a>
+                  </div>
+
+                  <div className="flex items-center gap-2 text-sm text-yellow-400">
+                    <Clock className="w-4 h-4" />
+                    <span>This link expires in 10 minutes</span>
+                  </div>
+
+                  <button
+                    onClick={generateTelegramLink}
+                    disabled={telegramLoading}
+                    className="flex items-center gap-2 px-4 py-2 bg-gray-700 text-gray-300 rounded-lg hover:bg-gray-600 transition-colors disabled:opacity-50"
+                  >
+                    <RefreshCw className={`w-4 h-4 ${telegramLoading ? 'animate-spin' : ''}`} />
+                    Generate New Link
+                  </button>
+                </div>
+              ) : (
+                // Not Linked State
+                <div className="space-y-4">
+                  <p className="text-gray-300">
+                    Connect your Telegram account to receive real-time notifications about your conversations, orders, and updates.
+                  </p>
+                  
+                  {!telegramStatus?.botAvailable ? (
+                    <div className="p-4 bg-yellow-500/10 border border-yellow-500/30 rounded-lg">
+                      <p className="text-yellow-400 text-sm">
+                        Telegram bot is not currently configured. Please contact support.
+                      </p>
+                    </div>
+                  ) : (
+                    <button
+                      onClick={generateTelegramLink}
+                      disabled={telegramLoading}
+                      className="flex items-center gap-2 px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors disabled:opacity-50"
+                    >
+                      <Send className="w-5 h-5" />
+                      {telegramLoading ? "Generating..." : "Connect Telegram"}
+                    </button>
+                  )}
+                </div>
+              )}
             </div>
           </div>
         </div>
