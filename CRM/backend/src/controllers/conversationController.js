@@ -34,7 +34,15 @@ export const getCompanyConversations = async (req, res, next) => {
     
     const { conversations, total } = await conversationService.getCompanyConversations(
       req.companyId,
-      { status, assignedTo, type, limit: parseInt(limit) || 50, offset: parseInt(offset) || 0 }
+      { 
+        status, 
+        assignedTo, 
+        type, 
+        userId: req.user._id,
+        role: req.companyRole,
+        limit: parseInt(limit) || 50, 
+        offset: parseInt(offset) || 0 
+      }
     );
     
     return successResponse(res, { conversations, total });

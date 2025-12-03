@@ -21,12 +21,33 @@ export const initTelegramBot = () => {
   try {
     bot = new Bot(token);
     
+    // Set up error handling for the bot
+    bot.catch((err) => {
+      const ctx = err.ctx;
+      const error = err.error;
+      // Handle Telegram API conflict errors gracefully (another bot instance running)
+      if (error.error_code === 409) {
+        console.log('⚠️ Telegram bot conflict detected - another instance may be running. Stopping bot polling.');
+        bot.stop();
+      } else {
+        console.error('❌ Telegram bot error:', error.message || error);
+      }
+    });
+    
     // Set up message handlers
     setupBotHandlers();
     
-    // Start the bot
+    // Start the bot with error handling for conflicts
     bot.start({
       onStart: () => console.log('✅ Telegram bot initialized and running'),
+      drop_pending_updates: true,
+    }).catch((error) => {
+      // Handle Telegram API conflict errors gracefully (another bot instance running)
+      if (error.error_code === 409) {
+        console.log('⚠️ Telegram bot conflict detected - another instance may be running. Notifications will still work.');
+      } else {
+        console.error('❌ Telegram bot error:', error.message);
+      }
     });
     
     return true;

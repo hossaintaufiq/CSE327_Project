@@ -36,12 +36,27 @@ export async function getClientConversations(clientUserId, { status, companyId, 
 
 /**
  * Get all conversations for a company (for representatives/admins)
+ * @param {string} companyId - Company ID
+ * @param {Object} options - Filter options
+ * @param {string} [options.status] - Filter by status
+ * @param {string} [options.assignedTo] - Filter by assigned representative
+ * @param {string} [options.type] - Filter by conversation type
+ * @param {string} [options.userId] - User ID for employee filtering
+ * @param {string} [options.role] - User role for access control
+ * @param {number} [options.limit] - Results limit
+ * @param {number} [options.offset] - Results offset
  */
-export async function getCompanyConversations(companyId, { status, assignedTo, type, limit = 50, offset = 0 }) {
+export async function getCompanyConversations(companyId, { status, assignedTo, type, userId, role, limit = 50, offset = 0 }) {
   const query = { companyId, isActive: true };
   
+  // Employees can only see their assigned conversations
+  if (role === 'employee' && userId) {
+    query.assignedRepresentative = userId;
+  } else if (assignedTo) {
+    query.assignedRepresentative = assignedTo;
+  }
+  
   if (status) query.status = status;
-  if (assignedTo) query.assignedRepresentative = assignedTo;
   if (type) query.type = type;
   
   const conversations = await Conversation.find(query)
