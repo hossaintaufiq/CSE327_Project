@@ -33,7 +33,7 @@ const conversationTypes = [
 export default function NewConversationPage() {
   const router = useRouter();
   const searchParams = useSearchParams();
-  const { user, isAuthenticated, loading: authLoading } = useAuthStore();
+  const { user } = useAuthStore();
   
   const [step, setStep] = useState(1);
   const [companies, setCompanies] = useState([]);
@@ -46,23 +46,30 @@ export default function NewConversationPage() {
   const [searchQuery, setSearchQuery] = useState("");
   const [loading, setLoading] = useState(true);
   const [creating, setCreating] = useState(false);
+  const [mounted, setMounted] = useState(false);
+
+  // Handle hydration
+  useEffect(() => {
+    setMounted(true);
+  }, []);
 
   useEffect(() => {
-    if (!authLoading && !isAuthenticated) {
+    if (!mounted) return;
+    
+    const storedUser = localStorage.getItem("user");
+    if (!storedUser) {
       router.push("/login");
       return;
     }
     
-    if (isAuthenticated) {
-      fetchCompanies();
-      
-      // Pre-select company if provided in URL
-      const companyId = searchParams.get("company");
-      if (companyId) {
-        setStep(2);
-      }
+    fetchCompanies();
+    
+    // Pre-select company if provided in URL
+    const companyId = searchParams.get("company");
+    if (companyId) {
+      setStep(2);
     }
-  }, [isAuthenticated, authLoading]);
+  }, [mounted]);
 
   const fetchCompanies = async () => {
     try {
@@ -161,7 +168,7 @@ export default function NewConversationPage() {
     company.industry?.toLowerCase().includes(searchQuery.toLowerCase())
   );
 
-  if (authLoading || loading) {
+  if (!mounted || loading) {
     return (
       <div className="min-h-screen bg-gray-50 flex items-center justify-center">
         <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>

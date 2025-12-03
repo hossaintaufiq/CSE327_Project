@@ -46,12 +46,13 @@ export default function ConversationDetailPage() {
   const router = useRouter();
   const params = useParams();
   const conversationId = params.conversationId;
-  const { user, activeCompanyRole, isAuthenticated, loading: authLoading } = useAuthStore();
+  const { user, activeCompanyRole, activeCompanyId } = useAuthStore();
   
   const [conversation, setConversation] = useState(null);
   const [messages, setMessages] = useState([]);
   const [newMessage, setNewMessage] = useState("");
   const [loading, setLoading] = useState(true);
+  const [mounted, setMounted] = useState(false);
   const [sendingMessage, setSendingMessage] = useState(false);
   const [employees, setEmployees] = useState([]);
   const [showAssignModal, setShowAssignModal] = useState(false);
@@ -59,17 +60,26 @@ export default function ConversationDetailPage() {
   const [resolveNotes, setResolveNotes] = useState("");
   const messagesEndRef = useRef(null);
 
+  // Handle hydration
   useEffect(() => {
-    if (!authLoading && !isAuthenticated) {
+    setMounted(true);
+  }, []);
+
+  useEffect(() => {
+    if (!mounted) return;
+    
+    // Check if user is logged in using localStorage
+    const storedUser = localStorage.getItem("user");
+    if (!storedUser) {
       router.push("/login");
       return;
     }
     
-    if (isAuthenticated && conversationId) {
+    if (conversationId) {
       loadConversation();
       loadEmployees();
     }
-  }, [isAuthenticated, authLoading, conversationId]);
+  }, [mounted, conversationId]);
 
   useEffect(() => {
     scrollToBottom();
@@ -215,7 +225,7 @@ export default function ConversationDetailPage() {
     }
   };
 
-  if (authLoading || loading) {
+  if (!mounted || loading) {
     return (
       <div className="min-h-screen bg-gray-900 flex items-center justify-center">
         <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-500"></div>

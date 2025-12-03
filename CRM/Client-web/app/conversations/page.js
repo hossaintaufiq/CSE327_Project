@@ -49,13 +49,14 @@ const statusColors = {
 export default function ConversationsPage() {
   const router = useRouter();
   const searchParams = useSearchParams();
-  const { user, activeCompanyRole, isAuthenticated, loading: authLoading } = useAuthStore();
+  const { user, activeCompanyRole } = useAuthStore();
   
   const [conversations, setConversations] = useState([]);
   const [selectedConversation, setSelectedConversation] = useState(null);
   const [messages, setMessages] = useState([]);
   const [newMessage, setNewMessage] = useState("");
   const [loading, setLoading] = useState(true);
+  const [mounted, setMounted] = useState(false);
   const [sendingMessage, setSendingMessage] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
   const [filterType, setFilterType] = useState("all");
@@ -63,16 +64,22 @@ export default function ConversationsPage() {
   const [showNewConversation, setShowNewConversation] = useState(false);
   const messagesEndRef = useRef(null);
 
+  // Handle hydration
   useEffect(() => {
-    if (!authLoading && !isAuthenticated) {
+    setMounted(true);
+  }, []);
+
+  useEffect(() => {
+    if (!mounted) return;
+    
+    const storedUser = localStorage.getItem("user");
+    if (!storedUser) {
       router.push("/login");
       return;
     }
     
-    if (isAuthenticated) {
-      fetchConversations();
-    }
-  }, [isAuthenticated, authLoading]);
+    fetchConversations();
+  }, [mounted]);
 
   useEffect(() => {
     scrollToBottom();
@@ -268,7 +275,7 @@ export default function ConversationsPage() {
     }
   };
 
-  if (authLoading) {
+  if (!mounted || loading) {
     return (
       <div className="min-h-screen bg-gray-50 flex items-center justify-center">
         <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>

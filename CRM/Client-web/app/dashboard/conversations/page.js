@@ -47,12 +47,13 @@ const statusConfig = {
 
 export default function AdminConversationsPage() {
   const router = useRouter();
-  const { user, activeCompanyId, activeCompanyRole, isAuthenticated, loading: authLoading } = useAuthStore();
+  const { user, activeCompanyId, activeCompanyRole } = useAuthStore();
   
   const [conversations, setConversations] = useState([]);
   const [employees, setEmployees] = useState([]);
   const [stats, setStats] = useState(null);
   const [loading, setLoading] = useState(true);
+  const [mounted, setMounted] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
   const [statusFilter, setStatusFilter] = useState("all");
   const [typeFilter, setTypeFilter] = useState("all");
@@ -61,29 +62,54 @@ export default function AdminConversationsPage() {
   const [showAssignModal, setShowAssignModal] = useState(false);
   const [assigningConversation, setAssigningConversation] = useState(null);
 
+  // Handle hydration
   useEffect(() => {
-    if (!authLoading && !isAuthenticated) {
+    setMounted(true);
+  }, []);
+
+  useEffect(() => {
+    if (!mounted) return;
+    
+    // Check if user is logged in using localStorage
+    const storedUser = localStorage.getItem("user");
+    const storedCompanyId = localStorage.getItem("companyId");
+    
+    if (!storedUser) {
       router.push("/login");
       return;
     }
     
-    if (isAuthenticated && !["company_admin", "manager", "employee"].includes(activeCompanyRole)) {
+    // Wait for store to hydrate with role info - need both activeCompanyId and activeCompanyRole
+    if (!activeCompanyId || !activeCompanyRole) {
+      // Store is still hydrating, wait for next re-render
+      return;
+    }
+    
+    // Check if user has required role for this page
+    if (!["company_admin", "manager", "employee"].includes(activeCompanyRole)) {
       router.push("/dashboard");
       return;
     }
 
-    if (isAuthenticated && activeCompanyId) {
-      loadData();
-    }
-  }, [isAuthenticated, authLoading, activeCompanyId, activeCompanyRole]);
+    loadData();
+  }, [mounted, activeCompanyId, activeCompanyRole]);
 
   const loadData = async () => {
     try {
       setLoading(true);
+      
+      // Wrap all API calls with individual catch to prevent one failure from breaking all
       const [conversationsRes, statsRes, employeesRes] = await Promise.all([
-        api.get("/conversations/company/list"),
-        api.get("/conversations/company/stats").catch(() => ({ data: { data: { stats: {} } } })),
-        api.get("/company/members").catch(() => ({ data: { data: { members: [] } } })),
+        api.get("/conversations/company/list").catch((e) => { 
+          console.error("Conversations error:", e.response?.status, e.message); 
+          return { data: { data: { conversations: [] } } }; 
+        }),
+        api.get("/conversations/company/stats").catch((e) => { 
+          return { data: { data: { stats: {} } } }; 
+        }),
+        api.get("/company/members").catch((e) => { 
+          return { data: { data: { members: [] } } }; 
+        }),
       ]);
       
       setConversations(conversationsRes.data?.data?.conversations || []);
@@ -199,7 +225,7 @@ export default function AdminConversationsPage() {
     return date.toLocaleDateString();
   };
 
-  if (authLoading || loading) {
+  if (!mounted || loading) {
     return (
       <div className="min-h-screen bg-gray-900 flex items-center justify-center">
         <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-500"></div>

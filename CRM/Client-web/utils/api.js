@@ -63,33 +63,53 @@ export default apiClient;
 apiClient.interceptors.response.use(
   (response) => response,
   async (error) => {
+    // Only auto-logout on 401 if:
+    // 1. It's an actual authentication failure (not a missing header or expired token that can be refreshed)
+    // 2. The current page isn't already the login page
     if (error.response?.status === 401) {
-      console.log("401 error detected - clearing auth and redirecting to login");
-
-      // Clear authentication data
-      localStorage.removeItem('idToken');
-      localStorage.removeItem('user');
-      localStorage.removeItem('companyId');
-
-      // Clear auth store
-      try {
-        const { default: useAuthStore } = await import('@/store/authStore');
-        useAuthStore.getState().logout();
-      } catch (e) {
-        // Store not available
+      const currentPath = typeof window !== 'undefined' ? window.location.pathname : '';
+      
+      // Don't auto-redirect if already on login page or if the error is from a background request
+      if (currentPath === '/login' || currentPath === '/signup') {
+        return Promise.reject(error);
       }
+      
+      // Check if this is a token refresh scenario or a real auth failure
+      const errorMessage = error.response?.data?.message || '';
+      
+      // Only logout on definitive auth failures
+      if (errorMessage.includes('Invalid token') || 
+          errorMessage.includes('Token expired') ||
+          errorMessage.includes('No token provided')) {
+        console.log("401 error detected - clearing auth and redirecting to login");
 
-      // Clear notification store
-      try {
-        const { default: useNotificationStore } = await import('@/store/notificationStore');
-        useNotificationStore.getState().clearNotifications();
-      } catch (e) {
-        // Store not available
-      }
+        // Clear authentication data
+        localStorage.removeItem('idToken');
+        localStorage.removeItem('user');
+        localStorage.removeItem('companyId');
 
-      // Redirect to login if in browser
-      if (typeof window !== 'undefined') {
-        window.location.href = '/login';
+        // Clear auth store
+        try {
+          const { default: useAuthStore } = await import('@/store/authStore');
+          useAuthStore.getState().logout();
+        } catch (e) {
+          // Store not available
+        }
+
+        // Clear notification store
+        try {
+          const { default: useNotificationStore } = await import('@/store/notificationStore');
+          useNotificationStore.getState().clearNotifications();
+        } catch (e) {
+          // Store not available
+        }
+
+        // Redirect to login if in browser
+        if (typeof window !== 'undefined') {
+          window.location.href = '/login';
+        }
+      } else {
+        console.log("401 error (non-auth):", errorMessage);
       }
     }
 
