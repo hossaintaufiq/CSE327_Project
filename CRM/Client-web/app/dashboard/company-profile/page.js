@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation";
 import useAuthStore from "@/store/authStore";
 import apiClient from "@/utils/api";
 import Sidebar from "@/components/Sidebar";
-import { Building2, Users, UserCheck, ShoppingCart, FolderKanban, CheckSquare, Calendar, Edit, Save, X } from "lucide-react";
+import { Building2, Users, UserCheck, ShoppingCart, FolderKanban, CheckSquare, Calendar, Edit, Save, X, RefreshCw, AlertCircle, CheckCircle } from "lucide-react";
 
 export default function CompanyProfilePage() {
   const router = useRouter();
@@ -20,6 +20,7 @@ export default function CompanyProfilePage() {
     domain: "",
   });
   const [error, setError] = useState("");
+  const [successMessage, setSuccessMessage] = useState("");
 
   useEffect(() => {
     if (typeof window === "undefined") return;
@@ -38,12 +39,13 @@ export default function CompanyProfilePage() {
     loadCompanyProfile();
   }, [activeCompanyId, router, isSuperAdmin, activeCompanyRole]);
 
-  const loadCompanyProfile = async () => {
+  const loadCompanyProfile = async (showError = true) => {
     try {
       setLoading(true);
       setError("");
+      setSuccessMessage("");
       const response = await apiClient.get("/company/profile");
-      if (response.data.success) {
+      if (response?.data?.success === true) {
         setCompanyData(response.data.data.company);
         setStatistics(response.data.data.statistics);
         setFormData({
@@ -51,11 +53,27 @@ export default function CompanyProfilePage() {
           domain: response.data.data.company.domain || "",
         });
       } else {
-        setError("Failed to load company profile");
+        const errorMsg = response?.data?.message || response?.data?.error?.message || "Failed to load company profile";
+        if (showError) {
+          setError(errorMsg);
+        }
       }
     } catch (error) {
       console.error("Error loading company profile:", error);
-      setError(error.response?.data?.message || "Failed to load company profile");
+      let errorMessage = "Failed to load company profile. Please try again.";
+      if (error.response) {
+        const errorData = error.response.data;
+        errorMessage = errorData?.message || 
+                      errorData?.error?.message || 
+                      `Server error: ${error.response.status}`;
+      } else if (error.message) {
+        errorMessage = error.message.includes("Network") 
+          ? "Network error. Please check your connection."
+          : error.message;
+      }
+      if (showError) {
+        setError(errorMessage);
+      }
     } finally {
       setLoading(false);
     }
@@ -69,22 +87,47 @@ export default function CompanyProfilePage() {
     try {
       setSubmitting(true);
       setError("");
+      setSuccessMessage("");
 
-      if (!formData.name) {
+      if (!formData.name || !formData.name.trim()) {
         setError("Company name is required");
+        setSubmitting(false);
         return;
       }
 
-      const response = await apiClient.put("/company/profile", formData);
-      if (response.data.success) {
-        await loadCompanyProfile();
+      const payload = {
+        name: formData.name.trim(),
+        domain: formData.domain && formData.domain.trim() ? formData.domain.trim() : null,
+      };
+
+      const response = await apiClient.put("/company/profile", payload);
+      if (response?.data?.success === true) {
+        setSuccessMessage("Company profile updated successfully!");
+        setError("");
+        await loadCompanyProfile(false);
         setIsEditing(false);
+        setTimeout(() => setSuccessMessage(""), 3000);
       } else {
-        setError(response.data.message || "Failed to update company profile");
+        const errorMsg = response?.data?.error?.message || 
+                        response?.data?.message || 
+                        "Failed to update company profile. Please try again.";
+        setError(errorMsg);
+        setSuccessMessage("");
       }
     } catch (error) {
       console.error("Error updating company profile:", error);
-      setError(error.response?.data?.message || "Failed to update company profile");
+      let errorMessage = "Failed to update company profile";
+      if (error.response) {
+        const errorData = error.response.data;
+        errorMessage = errorData?.message ||
+                      errorData?.error?.message ||
+                      errorData?.error?.code ||
+                      `Server error: ${error.response.status}`;
+      } else if (error.message) {
+        errorMessage = error.message;
+      }
+      setError(errorMessage);
+      setSuccessMessage("");
     } finally {
       setSubmitting(false);
     }
@@ -120,21 +163,63 @@ export default function CompanyProfilePage() {
               <h1 className="text-3xl font-bold text-white mb-2">Company Profile</h1>
               <p className="text-gray-400">Manage your company information</p>
             </div>
-            {!isEditing && (
+            <div className="flex items-center gap-3">
               <button
-                onClick={() => setIsEditing(true)}
-                className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+                onClick={() => loadCompanyProfile()}
+                disabled={loading}
+                className="flex items-center gap-2 px-4 py-2 bg-gray-800 hover:bg-gray-700 text-white rounded-lg border border-gray-700 transition-colors disabled:opacity-50"
+                title="Refresh profile"
               >
-                <Edit className="w-5 h-5" />
-                Edit Profile
+                <RefreshCw className={`w-5 h-5 ${loading ? 'animate-spin' : ''}`} />
+                <span className="hidden sm:inline">Refresh</span>
               </button>
-            )}
+              {!isEditing && (
+                <button
+                  onClick={() => {
+                    setIsEditing(true);
+                    setError("");
+                    setSuccessMessage("");
+                  }}
+                  className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+                >
+                  <Edit className="w-5 h-5" />
+                  Edit Profile
+                </button>
+              )}
+            </div>
           </div>
+
+          {/* Success Message */}
+          {successMessage && (
+            <div className="mb-6 p-4 bg-green-500/20 border border-green-500/50 rounded-lg flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                <CheckCircle className="w-5 h-5 text-green-400 shrink-0" />
+                <p className="text-green-400">{successMessage}</p>
+              </div>
+              <button
+                onClick={() => setSuccessMessage("")}
+                className="text-green-400 hover:text-green-300 shrink-0"
+                aria-label="Dismiss success message"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+          )}
 
           {/* Error Message */}
           {error && (
-            <div className="mb-6 p-4 bg-red-500/20 border border-red-500/50 rounded-lg">
-              <p className="text-red-400">{error}</p>
+            <div className="mb-6 p-4 bg-red-500/20 border border-red-500/50 rounded-lg flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                <AlertCircle className="w-5 h-5 text-red-400 shrink-0" />
+                <p className="text-red-400">{error}</p>
+              </div>
+              <button
+                onClick={() => setError("")}
+                className="text-red-400 hover:text-red-300 shrink-0"
+                aria-label="Dismiss error"
+              >
+                <X className="w-5 h-5" />
+              </button>
             </div>
           )}
 
@@ -233,6 +318,7 @@ export default function CompanyProfilePage() {
                         domain: companyData?.domain || "",
                       });
                       setError("");
+                      setSuccessMessage("");
                     }}
                     className="px-4 py-2 bg-gray-700 text-white rounded-lg hover:bg-gray-600 transition-colors"
                   >

@@ -8,7 +8,7 @@ import { syncAllEntitiesNow } from "@/utils/jiraApi";
 import Sidebar from "@/components/Sidebar";
 import JiraIssueCreator from "@/components/JiraIssueCreator";
 import JiraIssuesList from "@/components/JiraIssuesList";
-import { Plus, Edit, Trash2, Search, FolderKanban, Calendar, User, Target, X, TrendingUp, Users, RefreshCw } from "lucide-react";
+import { Plus, Edit, Trash2, Search, FolderKanban, Calendar, User, Target, X, TrendingUp, Users, RefreshCw, AlertCircle, CheckCircle } from "lucide-react";
 
 export default function ProjectsPage() {
   const router = useRouter();
@@ -37,6 +37,7 @@ export default function ProjectsPage() {
     notes: "",
   });
   const [error, setError] = useState("");
+  const [successMessage, setSuccessMessage] = useState("");
 
   useEffect(() => {
     if (typeof window === "undefined") return;
@@ -57,19 +58,37 @@ export default function ProjectsPage() {
     loadData();
   }, [activeCompanyId, router, isSuperAdmin]);
 
-  const loadProjects = async () => {
+  const loadProjects = async (showError = true) => {
     try {
       setLoading(true);
       setError("");
+      setSuccessMessage("");
       const response = await apiClient.get("/projects");
-      if (response.data.success) {
+      if (response?.data?.success === true) {
         setProjects(response.data.data.projects || []);
       } else {
-        setError("Failed to load projects");
+        const errorMsg = response?.data?.message || response?.data?.error?.message || "Failed to load projects";
+        if (showError) {
+          setError(errorMsg);
+        }
+        setProjects([]);
       }
     } catch (error) {
       console.error("Error loading projects:", error);
-      setError(error.response?.data?.message || "Failed to load projects");
+      let errorMessage = "Failed to load projects. Please try again.";
+      if (error.response) {
+        const errorData = error.response.data;
+        errorMessage = errorData?.message || 
+                      errorData?.error?.message || 
+                      `Server error: ${error.response.status}`;
+      } else if (error.message) {
+        errorMessage = error.message.includes("Network") 
+          ? "Network error. Please check your connection."
+          : error.message;
+      }
+      if (showError) {
+        setError(errorMessage);
+      }
       setProjects([]);
     } finally {
       setLoading(false);
@@ -100,13 +119,26 @@ export default function ProjectsPage() {
   const handleSyncAll = async () => {
     try {
       setSyncing(true);
+      setError("");
+      setSuccessMessage("");
       await syncAllEntitiesNow();
       // Reload projects to show any synced changes
-      await loadProjects();
-      alert("Sync completed successfully!");
+      await loadProjects(false);
+      setSuccessMessage("Sync completed successfully!");
+      setTimeout(() => setSuccessMessage(""), 3000);
     } catch (error) {
       console.error("Error syncing:", error);
-      alert("Failed to sync entities. Check console for details.");
+      let errorMessage = "Failed to sync entities. Please try again.";
+      if (error.response) {
+        const errorData = error.response.data;
+        errorMessage = errorData?.message || 
+                      errorData?.error?.message || 
+                      `Server error: ${error.response.status}`;
+      } else if (error.message) {
+        errorMessage = error.message;
+      }
+      setError(errorMessage);
+      setSuccessMessage("");
     } finally {
       setSyncing(false);
     }
@@ -120,45 +152,61 @@ export default function ProjectsPage() {
     try {
       setSubmitting(true);
       setError("");
+      setSuccessMessage("");
 
-      if (!formData.name) {
+      if (!formData.name || !formData.name.trim()) {
         setError("Project name is required");
+        setSubmitting(false);
         return;
       }
 
       const payload = {
         ...formData,
+        name: formData.name.trim(),
         budget: formData.budget ? parseFloat(formData.budget) : 0,
         members: formData.members || [],
       };
 
+      let response;
       if (editingProject) {
-        const response = await apiClient.put(`/projects/${editingProject._id}`, payload);
-        if (response.data.success) {
-          await loadProjects();
+        response = await apiClient.put(`/projects/${editingProject._id}`, payload);
+      } else {
+        response = await apiClient.post("/projects", payload);
+      }
+
+      if (response?.data?.success === true) {
+        setSuccessMessage(editingProject ? "Project updated successfully!" : "Project created successfully!");
+        setError("");
+        setTimeout(async () => {
+          await loadProjects(false);
           setShowModal(false);
           setEditingProject(null);
           resetForm();
+          setSuccessMessage("");
           // Dispatch event to refresh dashboard
           window.dispatchEvent(new CustomEvent('projectUpdated'));
-        } else {
-          setError(response.data.message || "Failed to update project");
-        }
+        }, 1000);
       } else {
-        const response = await apiClient.post("/projects", payload);
-        if (response.data.success) {
-          await loadProjects();
-          setShowModal(false);
-          resetForm();
-          // Dispatch event to refresh dashboard
-          window.dispatchEvent(new CustomEvent('projectUpdated'));
-        } else {
-          setError(response.data.message || "Failed to create project");
-        }
+        const errorMsg = response?.data?.error?.message || 
+                        response?.data?.message || 
+                        (editingProject ? "Failed to update project. Please try again." : "Failed to create project. Please try again.");
+        setError(errorMsg);
+        setSuccessMessage("");
       }
     } catch (error) {
       console.error("Error submitting project:", error);
-      setError(error.response?.data?.message || "Failed to save project");
+      let errorMessage = editingProject ? "Failed to update project" : "Failed to create project";
+      if (error.response) {
+        const errorData = error.response.data;
+        errorMessage = errorData?.message ||
+                      errorData?.error?.message ||
+                      errorData?.error?.code ||
+                      `Server error: ${error.response.status}`;
+      } else if (error.message) {
+        errorMessage = error.message;
+      }
+      setError(errorMessage);
+      setSuccessMessage("");
     } finally {
       setSubmitting(false);
     }
@@ -178,6 +226,8 @@ export default function ProjectsPage() {
       budget: project.budget || "",
       notes: project.notes || "",
     });
+    setError("");
+    setSuccessMessage("");
     setShowModal(true);
   };
 
@@ -186,17 +236,39 @@ export default function ProjectsPage() {
     
     try {
       setDeleting(projectId);
+      setError("");
+      setSuccessMessage("");
       const response = await apiClient.delete(`/projects/${projectId}`);
-      if (response.data.success) {
-        await loadProjects();
-        // Dispatch event to refresh dashboard
-        window.dispatchEvent(new CustomEvent('projectUpdated'));
+      
+      if (response?.data?.success === true) {
+        setSuccessMessage("Project deleted successfully!");
+        setTimeout(async () => {
+          await loadProjects(false);
+          setSuccessMessage("");
+          // Dispatch event to refresh dashboard
+          window.dispatchEvent(new CustomEvent('projectUpdated'));
+        }, 1500);
       } else {
-        setError(response.data.message || "Failed to delete project");
+        const errorMsg = response?.data?.error?.message || 
+                        response?.data?.message || 
+                        "Failed to delete project. Please try again.";
+        setError(errorMsg);
+        setSuccessMessage("");
       }
     } catch (error) {
       console.error("Error deleting project:", error);
-      setError(error.response?.data?.message || "Failed to delete project");
+      let errorMessage = "Failed to delete project";
+      if (error.response) {
+        const errorData = error.response.data;
+        errorMessage = errorData?.message ||
+                      errorData?.error?.message ||
+                      errorData?.error?.code ||
+                      `Server error: ${error.response.status}`;
+      } else if (error.message) {
+        errorMessage = error.message;
+      }
+      setError(errorMessage);
+      setSuccessMessage("");
     } finally {
       setDeleting(null);
     }
@@ -215,6 +287,8 @@ export default function ProjectsPage() {
       budget: "",
       notes: "",
     });
+    setError("");
+    setSuccessMessage("");
   };
 
   const filteredProjects = projects.filter((project) => {
@@ -300,6 +374,15 @@ export default function ProjectsPage() {
             {(activeCompanyRole === "company_admin" || activeCompanyRole === "manager" || activeCompanyRole === "employee") && (
               <div className="flex items-center gap-3">
                 <button
+                  onClick={() => loadProjects()}
+                  disabled={loading}
+                  className="flex items-center gap-2 px-4 py-2 bg-gray-800 hover:bg-gray-700 text-white rounded-lg border border-gray-700 transition-colors disabled:opacity-50"
+                  title="Refresh projects"
+                >
+                  <RefreshCw className={`w-5 h-5 ${loading ? 'animate-spin' : ''}`} />
+                  <span className="hidden sm:inline">Refresh</span>
+                </button>
+                <button
                   onClick={handleSyncAll}
                   disabled={syncing}
                   className="flex items-center gap-2 px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
@@ -311,6 +394,8 @@ export default function ProjectsPage() {
                   onClick={() => {
                     setEditingProject(null);
                     resetForm();
+                    setError("");
+                    setSuccessMessage("");
                     setShowModal(true);
                   }}
                   className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
@@ -321,6 +406,23 @@ export default function ProjectsPage() {
               </div>
             )}
           </div>
+
+          {/* Success Message */}
+          {successMessage && (
+            <div className="mb-6 p-4 bg-green-500/20 border border-green-500/50 rounded-lg flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                <CheckCircle className="w-5 h-5 text-green-400 shrink-0" />
+                <p className="text-green-400">{successMessage}</p>
+              </div>
+              <button
+                onClick={() => setSuccessMessage("")}
+                className="text-green-400 hover:text-green-300 shrink-0"
+                aria-label="Dismiss success message"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+          )}
 
           {/* Statistics Cards */}
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6 mb-8">
@@ -393,8 +495,18 @@ export default function ProjectsPage() {
 
           {/* Error Message */}
           {error && (
-            <div className="mb-6 p-4 bg-red-500/20 border border-red-500/50 rounded-lg">
-              <p className="text-red-400">{error}</p>
+            <div className="mb-6 p-4 bg-red-500/20 border border-red-500/50 rounded-lg flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                <AlertCircle className="w-5 h-5 text-red-400 shrink-0" />
+                <p className="text-red-400">{error}</p>
+              </div>
+              <button
+                onClick={() => setError("")}
+                className="text-red-400 hover:text-red-300 shrink-0"
+                aria-label="Dismiss error"
+              >
+                <X className="w-5 h-5" />
+              </button>
             </div>
           )}
 
@@ -550,6 +662,7 @@ export default function ProjectsPage() {
                   setEditingProject(null);
                   resetForm();
                   setError("");
+                  setSuccessMessage("");
                 }}
                 className="p-2 text-gray-400 hover:text-white hover:bg-gray-700 rounded-lg transition-colors"
               >
@@ -673,6 +786,14 @@ export default function ProjectsPage() {
                 />
               </div>
 
+              {/* Success Message */}
+              {successMessage && (
+                <div className="p-3 bg-green-500/20 border border-green-500/50 rounded-lg">
+                  <p className="text-green-400 text-sm">{successMessage}</p>
+                </div>
+              )}
+
+              {/* Error Message */}
               {error && (
                 <div className="p-3 bg-red-500/20 border border-red-500/50 rounded-lg">
                   <p className="text-red-400 text-sm">{error}</p>
@@ -687,6 +808,7 @@ export default function ProjectsPage() {
                     setEditingProject(null);
                     resetForm();
                     setError("");
+                    setSuccessMessage("");
                   }}
                   className="flex-1 px-4 py-2 bg-gray-700 text-white rounded-lg hover:bg-gray-600 transition-colors"
                 >

@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation";
 import useAuthStore from "@/store/authStore";
 import apiClient from "@/utils/api";
 import Sidebar from "@/components/Sidebar";
-import { Search, Mail, User, Calendar, Shield, Users, UserCheck, Briefcase, X, Phone, Building, FileText, TrendingUp, MessageSquare, ShoppingCart, UserCheck as UserCheckIcon } from "lucide-react";
+import { Search, Mail, User, Calendar, Shield, Users, UserCheck, Briefcase, X, Phone, Building, FileText, TrendingUp, MessageSquare, ShoppingCart, UserCheck as UserCheckIcon, RefreshCw, AlertCircle } from "lucide-react";
 
 export default function EmployeesPage() {
   const router = useRouter();
@@ -35,19 +35,36 @@ export default function EmployeesPage() {
     loadEmployees();
   }, [activeCompanyId, router, isSuperAdmin]);
 
-  const loadEmployees = async () => {
+  const loadEmployees = async (showError = true) => {
     try {
       setLoading(true);
       setError("");
       const response = await apiClient.get("/company/members");
-      if (response.data.success) {
+      if (response?.data?.success === true) {
         setEmployees(response.data.data.members || []);
       } else {
-        setError("Failed to load employees");
+        const errorMsg = response?.data?.message || response?.data?.error?.message || "Failed to load employees";
+        if (showError) {
+          setError(errorMsg);
+        }
+        setEmployees([]);
       }
     } catch (error) {
       console.error("Error loading employees:", error);
-      setError(error.response?.data?.message || "Failed to load employees");
+      let errorMessage = "Failed to load employees. Please try again.";
+      if (error.response) {
+        const errorData = error.response.data;
+        errorMessage = errorData?.message || 
+                      errorData?.error?.message || 
+                      `Server error: ${error.response.status}`;
+      } else if (error.message) {
+        errorMessage = error.message.includes("Network") 
+          ? "Network error. Please check your connection."
+          : error.message;
+      }
+      if (showError) {
+        setError(errorMessage);
+      }
       setEmployees([]);
     } finally {
       setLoading(false);
@@ -117,16 +134,33 @@ export default function EmployeesPage() {
   const handleViewProfile = async (employee) => {
     setSelectedEmployee(employee);
     setLoadingProfile(true);
+    setError("");
     try {
       const response = await apiClient.get(`/company/members/${employee.userId}/profile`);
-      if (response.data.success) {
+      if (response?.data?.success === true) {
         setEmployeeProfile(response.data.data);
       } else {
-        setError("Failed to load employee profile");
+        const errorMsg = response?.data?.message || 
+                        response?.data?.error?.message || 
+                        "Failed to load employee profile";
+        setError(errorMsg);
+        setEmployeeProfile(null);
       }
     } catch (error) {
       console.error("Error loading employee profile:", error);
-      setError(error.response?.data?.message || "Failed to load employee profile");
+      let errorMessage = "Failed to load employee profile. Please try again.";
+      if (error.response) {
+        const errorData = error.response.data;
+        errorMessage = errorData?.message ||
+                      errorData?.error?.message ||
+                      `Server error: ${error.response.status}`;
+      } else if (error.message) {
+        errorMessage = error.message.includes("Network") 
+          ? "Network error. Please check your connection."
+          : error.message;
+      }
+      setError(errorMessage);
+      setEmployeeProfile(null);
     } finally {
       setLoadingProfile(false);
     }
@@ -135,7 +169,7 @@ export default function EmployeesPage() {
   const handleCloseProfile = () => {
     setSelectedEmployee(null);
     setEmployeeProfile(null);
-    setError("");
+    // Keep error for employees list, don't clear it when closing profile
   };
 
   // Group employees by role
@@ -165,17 +199,38 @@ export default function EmployeesPage() {
       <main className="lg:ml-64 min-h-screen">
         <div className="p-4 sm:p-6 lg:p-8">
           {/* Page Header */}
-          <div className="mb-8">
-            <h1 className="text-3xl font-bold text-white mb-2">Employees</h1>
-            <p className="text-gray-400">
-              Manage employees for {activeCompany?.companyName || "your company"}
-            </p>
+          <div className="mb-8 flex justify-between items-start">
+            <div>
+              <h1 className="text-3xl font-bold text-white mb-2">Employees</h1>
+              <p className="text-gray-400">
+                Manage employees for {activeCompany?.companyName || "your company"}
+              </p>
+            </div>
+            <button
+              onClick={() => loadEmployees()}
+              disabled={loading}
+              className="flex items-center gap-2 px-4 py-2 bg-gray-800 hover:bg-gray-700 text-white rounded-lg border border-gray-700 transition-colors disabled:opacity-50"
+              title="Refresh employees"
+            >
+              <RefreshCw className={`w-5 h-5 ${loading ? 'animate-spin' : ''}`} />
+              <span className="hidden sm:inline">Refresh</span>
+            </button>
           </div>
 
           {/* Error Message */}
           {error && (
-            <div className="mb-6 p-4 bg-red-500/20 border border-red-500/50 rounded-lg">
-              <p className="text-red-400">{error}</p>
+            <div className="mb-6 p-4 bg-red-500/20 border border-red-500/50 rounded-lg flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                <AlertCircle className="w-5 h-5 text-red-400 shrink-0" />
+                <p className="text-red-400">{error}</p>
+              </div>
+              <button
+                onClick={() => setError("")}
+                className="text-red-400 hover:text-red-300 shrink-0"
+                aria-label="Dismiss error"
+              >
+                <X className="w-5 h-5" />
+              </button>
             </div>
           )}
 
@@ -342,6 +397,17 @@ export default function EmployeesPage() {
             {loadingProfile ? (
               <div className="flex items-center justify-center py-12">
                 <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-500"></div>
+              </div>
+            ) : error && !employeeProfile ? (
+              <div className="text-center py-12">
+                <AlertCircle className="w-12 h-12 text-red-400 mx-auto mb-3" />
+                <p className="text-red-400 mb-4">{error}</p>
+                <button
+                  onClick={() => handleViewProfile(selectedEmployee)}
+                  className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+                >
+                  Try Again
+                </button>
               </div>
             ) : employeeProfile ? (
               <div className="space-y-6">

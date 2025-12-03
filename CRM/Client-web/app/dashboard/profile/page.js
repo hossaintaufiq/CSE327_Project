@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation";
 import useAuthStore from "@/store/authStore";
 import apiClient from "@/utils/api";
 import Sidebar from "@/components/Sidebar";
-import { User, Mail, Phone, Building, Calendar, Save, Camera, ArrowLeft, Shield, Briefcase } from "lucide-react";
+import { User, Mail, Phone, Building, Calendar, Save, Camera, ArrowLeft, Shield, Briefcase, RefreshCw, AlertCircle, CheckCircle, X } from "lucide-react";
 
 export default function ProfilePage() {
   const router = useRouter();
@@ -36,13 +36,14 @@ export default function ProfilePage() {
     loadProfile();
   }, [router, isSuperAdmin]);
 
-  const loadProfile = async () => {
+  const loadProfile = async (showError = true) => {
     try {
       setLoading(true);
       setError("");
+      setSuccess("");
       
       const response = await apiClient.get("/auth/me");
-      if (response.data.success) {
+      if (response?.data?.success === true) {
         const userData = response.data.data.user;
         setFormData({
           name: userData.name || "",
@@ -53,10 +54,30 @@ export default function ProfilePage() {
           bio: userData.bio || "",
           avatar: userData.avatar || "",
         });
+      } else {
+        const errorMsg = response?.data?.message || 
+                        response?.data?.error?.message || 
+                        "Failed to load profile";
+        if (showError) {
+          setError(errorMsg);
+        }
       }
     } catch (err) {
       console.error("Error loading profile:", err);
-      setError(err.response?.data?.message || "Failed to load profile");
+      let errorMessage = "Failed to load profile. Please try again.";
+      if (err.response) {
+        const errorData = err.response.data;
+        errorMessage = errorData?.message || 
+                      errorData?.error?.message || 
+                      `Server error: ${err.response.status}`;
+      } else if (err.message) {
+        errorMessage = err.message.includes("Network") 
+          ? "Network error. Please check your connection."
+          : err.message;
+      }
+      if (showError) {
+        setError(errorMessage);
+      }
     } finally {
       setLoading(false);
     }
@@ -81,8 +102,9 @@ export default function ProfilePage() {
         avatar: formData.avatar,
       });
 
-      if (response.data.success) {
+      if (response?.data?.success === true) {
         setSuccess("Profile updated successfully!");
+        setError("");
         // Update user in store
         const updatedUser = { ...user, ...formData };
         setUser(updatedUser);
@@ -90,10 +112,27 @@ export default function ProfilePage() {
         localStorage.setItem("user", JSON.stringify(updatedUser));
         
         setTimeout(() => setSuccess(""), 3000);
+      } else {
+        const errorMsg = response?.data?.error?.message || 
+                        response?.data?.message || 
+                        "Failed to update profile. Please try again.";
+        setError(errorMsg);
+        setSuccess("");
       }
     } catch (err) {
       console.error("Error updating profile:", err);
-      setError(err.response?.data?.message || "Failed to update profile");
+      let errorMessage = "Failed to update profile";
+      if (err.response) {
+        const errorData = err.response.data;
+        errorMessage = errorData?.message ||
+                      errorData?.error?.message ||
+                      errorData?.error?.code ||
+                      `Server error: ${err.response.status}`;
+      } else if (err.message) {
+        errorMessage = err.message;
+      }
+      setError(errorMessage);
+      setSuccess("");
     } finally {
       setSaving(false);
     }
@@ -129,28 +168,61 @@ export default function ProfilePage() {
       <main className="lg:ml-64 min-h-screen">
         <div className="p-4 sm:p-6 lg:p-8">
           {/* Header */}
-          <div className="flex items-center gap-4 mb-8">
-            <button
-              onClick={() => router.push('/dashboard')}
-              className="p-2 hover:bg-gray-800 rounded-lg transition-colors"
-            >
-              <ArrowLeft className="w-5 h-5 text-gray-400" />
-            </button>
-            <div>
-              <h1 className="text-3xl font-bold text-white">My Profile</h1>
-              <p className="text-gray-400">Manage your personal information</p>
+          <div className="flex items-center justify-between mb-8">
+            <div className="flex items-center gap-4">
+              <button
+                onClick={() => router.push('/dashboard')}
+                className="p-2 hover:bg-gray-800 rounded-lg transition-colors"
+              >
+                <ArrowLeft className="w-5 h-5 text-gray-400" />
+              </button>
+              <div>
+                <h1 className="text-3xl font-bold text-white">My Profile</h1>
+                <p className="text-gray-400">Manage your personal information</p>
+              </div>
             </div>
+            <button
+              onClick={() => loadProfile()}
+              disabled={loading}
+              className="flex items-center gap-2 px-4 py-2 bg-gray-800 hover:bg-gray-700 text-white rounded-lg border border-gray-700 transition-colors disabled:opacity-50"
+              title="Refresh profile"
+            >
+              <RefreshCw className={`w-5 h-5 ${loading ? 'animate-spin' : ''}`} />
+              <span className="hidden sm:inline">Refresh</span>
+            </button>
           </div>
 
-          {/* Error/Success Messages */}
+          {/* Error Message */}
           {error && (
-            <div className="mb-6 p-4 bg-red-500/20 border border-red-500/50 rounded-lg">
-              <p className="text-red-400">{error}</p>
+            <div className="mb-6 p-4 bg-red-500/20 border border-red-500/50 rounded-lg flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                <AlertCircle className="w-5 h-5 text-red-400 shrink-0" />
+                <p className="text-red-400">{error}</p>
+              </div>
+              <button
+                onClick={() => setError("")}
+                className="text-red-400 hover:text-red-300 shrink-0"
+                aria-label="Dismiss error"
+              >
+                <X className="w-5 h-5" />
+              </button>
             </div>
           )}
+
+          {/* Success Message */}
           {success && (
-            <div className="mb-6 p-4 bg-green-500/20 border border-green-500/50 rounded-lg">
-              <p className="text-green-400">{success}</p>
+            <div className="mb-6 p-4 bg-green-500/20 border border-green-500/50 rounded-lg flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                <CheckCircle className="w-5 h-5 text-green-400 shrink-0" />
+                <p className="text-green-400">{success}</p>
+              </div>
+              <button
+                onClick={() => setSuccess("")}
+                className="text-green-400 hover:text-green-300 shrink-0"
+                aria-label="Dismiss success message"
+              >
+                <X className="w-5 h-5" />
+              </button>
             </div>
           )}
 

@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation";
 import useAuthStore from "@/store/authStore";
 import apiClient from "@/utils/api";
 import Sidebar from "@/components/Sidebar";
-import { Settings, Bell, ToggleLeft, ToggleRight, Save, Mail, ShoppingCart, UserCheck, FolderKanban, CheckSquare } from "lucide-react";
+import { Settings, Bell, ToggleLeft, ToggleRight, Save, Mail, ShoppingCart, UserCheck, FolderKanban, CheckSquare, RefreshCw, AlertCircle, CheckCircle, X } from "lucide-react";
 
 export default function SettingsPage() {
   const router = useRouter();
@@ -34,6 +34,7 @@ export default function SettingsPage() {
     },
   });
   const [error, setError] = useState("");
+  const [successMessage, setSuccessMessage] = useState("");
 
   useEffect(() => {
     if (typeof window === "undefined") return;
@@ -52,12 +53,13 @@ export default function SettingsPage() {
     loadSettings();
   }, [activeCompanyId, router, isSuperAdmin, activeCompanyRole]);
 
-  const loadSettings = async () => {
+  const loadSettings = async (showError = true) => {
     try {
       setLoading(true);
       setError("");
+      setSuccessMessage("");
       const response = await apiClient.get("/company/settings");
-      if (response.data.success) {
+      if (response?.data?.success === true) {
         const loadedSettings = response.data.data.settings;
         setSettings(loadedSettings);
         setFormData({
@@ -66,11 +68,27 @@ export default function SettingsPage() {
           preferences: loadedSettings.preferences || formData.preferences,
         });
       } else {
-        setError("Failed to load settings");
+        const errorMsg = response?.data?.message || response?.data?.error?.message || "Failed to load settings";
+        if (showError) {
+          setError(errorMsg);
+        }
       }
     } catch (error) {
       console.error("Error loading settings:", error);
-      setError(error.response?.data?.message || "Failed to load settings");
+      let errorMessage = "Failed to load settings. Please try again.";
+      if (error.response) {
+        const errorData = error.response.data;
+        errorMessage = errorData?.message || 
+                      errorData?.error?.message || 
+                      `Server error: ${error.response.status}`;
+      } else if (error.message) {
+        errorMessage = error.message.includes("Network") 
+          ? "Network error. Please check your connection."
+          : error.message;
+      }
+      if (showError) {
+        setError(errorMessage);
+      }
     } finally {
       setLoading(false);
     }
@@ -84,19 +102,35 @@ export default function SettingsPage() {
     try {
       setSubmitting(true);
       setError("");
+      setSuccessMessage("");
 
       const response = await apiClient.put("/company/settings", formData);
-      if (response.data.success) {
-        await loadSettings();
+      if (response?.data?.success === true) {
+        setSuccessMessage("Settings saved successfully!");
         setError("");
-        // Show success message
-        alert("Settings saved successfully!");
+        await loadSettings(false);
+        setTimeout(() => setSuccessMessage(""), 3000);
       } else {
-        setError(response.data.message || "Failed to update settings");
+        const errorMsg = response?.data?.error?.message || 
+                        response?.data?.message || 
+                        "Failed to update settings. Please try again.";
+        setError(errorMsg);
+        setSuccessMessage("");
       }
     } catch (error) {
       console.error("Error updating settings:", error);
-      setError(error.response?.data?.message || "Failed to update settings");
+      let errorMessage = "Failed to update settings";
+      if (error.response) {
+        const errorData = error.response.data;
+        errorMessage = errorData?.message ||
+                      errorData?.error?.message ||
+                      errorData?.error?.code ||
+                      `Server error: ${error.response.status}`;
+      } else if (error.message) {
+        errorMessage = error.message;
+      }
+      setError(errorMessage);
+      setSuccessMessage("");
     } finally {
       setSubmitting(false);
     }
@@ -138,15 +172,53 @@ export default function SettingsPage() {
       <Sidebar />
       <main className="lg:ml-64 min-h-screen">
         <div className="p-4 sm:p-6 lg:p-8">
-          <div className="mb-8">
-            <h1 className="text-3xl font-bold text-white mb-2">Settings</h1>
-            <p className="text-gray-400">Manage your company settings and preferences</p>
+          <div className="mb-8 flex justify-between items-start">
+            <div>
+              <h1 className="text-3xl font-bold text-white mb-2">Settings</h1>
+              <p className="text-gray-400">Manage your company settings and preferences</p>
+            </div>
+            <button
+              onClick={() => loadSettings()}
+              disabled={loading}
+              className="flex items-center gap-2 px-4 py-2 bg-gray-800 hover:bg-gray-700 text-white rounded-lg border border-gray-700 transition-colors disabled:opacity-50"
+              title="Refresh settings"
+            >
+              <RefreshCw className={`w-5 h-5 ${loading ? 'animate-spin' : ''}`} />
+              <span className="hidden sm:inline">Refresh</span>
+            </button>
           </div>
+
+          {/* Success Message */}
+          {successMessage && (
+            <div className="mb-6 p-4 bg-green-500/20 border border-green-500/50 rounded-lg flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                <CheckCircle className="w-5 h-5 text-green-400 shrink-0" />
+                <p className="text-green-400">{successMessage}</p>
+              </div>
+              <button
+                onClick={() => setSuccessMessage("")}
+                className="text-green-400 hover:text-green-300 shrink-0"
+                aria-label="Dismiss success message"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+          )}
 
           {/* Error Message */}
           {error && (
-            <div className="mb-6 p-4 bg-red-500/20 border border-red-500/50 rounded-lg">
-              <p className="text-red-400">{error}</p>
+            <div className="mb-6 p-4 bg-red-500/20 border border-red-500/50 rounded-lg flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                <AlertCircle className="w-5 h-5 text-red-400 shrink-0" />
+                <p className="text-red-400">{error}</p>
+              </div>
+              <button
+                onClick={() => setError("")}
+                className="text-red-400 hover:text-red-300 shrink-0"
+                aria-label="Dismiss error"
+              >
+                <X className="w-5 h-5" />
+              </button>
             </div>
           )}
 

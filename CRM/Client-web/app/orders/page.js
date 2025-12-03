@@ -94,6 +94,7 @@ export default function OrdersPage() {
     try {
       setLoading(true);
       setError("");
+      setSuccessMessage("");
       const response = await apiClient.get("/orders");
       if (response.data.success) {
         setOrders(response.data.data.orders || []);
@@ -109,15 +110,44 @@ export default function OrdersPage() {
     }
   };
 
-  const loadClients = async () => {
+  const loadClients = async (showError = false) => {
     try {
       setLoadingClients(true);
       const response = await apiClient.get("/clients");
-      if (response.data.success) {
-        setClients(response.data.data.clients || []);
+      if (response?.data?.success === true) {
+        const loadedClients = response.data.data.clients || [];
+        setClients(loadedClients);
+        console.log("Clients loaded:", loadedClients.length, loadedClients);
+        if (showError && loadedClients.length === 0) {
+          const roleMessage = activeCompanyRole === 'employee' 
+            ? "No clients assigned to you. Please contact your manager."
+            : "No clients found. Please add clients first.";
+          setError(roleMessage);
+        }
+      } else {
+        const errorMsg = response?.data?.message || response?.data?.error?.message || "Failed to load clients";
+        console.error("Failed to load clients:", errorMsg);
+        if (showError) {
+          setError(errorMsg);
+        }
+        setClients([]);
       }
     } catch (error) {
       console.error("Error loading clients:", error);
+      let errorMessage = "Failed to load clients. Please try again.";
+      if (error.response) {
+        const errorData = error.response.data;
+        errorMessage = errorData?.message || 
+                      errorData?.error?.message || 
+                      `Server error: ${error.response.status}`;
+      } else if (error.message) {
+        errorMessage = error.message.includes("Network") 
+          ? "Network error. Please check your connection."
+          : error.message;
+      }
+      if (showError) {
+        setError(errorMessage);
+      }
       setClients([]);
     } finally {
       setLoadingClients(false);
@@ -420,19 +450,21 @@ export default function OrdersPage() {
               <p className="text-gray-400">{pageDescription}</p>
             </div>
             {!isClient && (activeCompanyRole === "company_admin" || activeCompanyRole === "manager" || activeCompanyRole === "employee") && (
-              <button
-                onClick={() => {
-                  setEditingOrder(null);
-                  resetForm();
-                  setError("");
-                  setSuccessMessage("");
-                  setShowModal(true);
-                }}
-                className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
-              >
-                <Plus className="w-5 h-5" />
-                Create Sale
-              </button>
+                <button
+                  onClick={async () => {
+                    setEditingOrder(null);
+                    resetForm();
+                    setError("");
+                    setSuccessMessage("");
+                    // Reload clients when opening modal to ensure fresh data
+                    await loadClients(true);
+                    setShowModal(true);
+                  }}
+                  className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+                >
+                  <Plus className="w-5 h-5" />
+                  Create Sale
+                </button>
             )}
           </div>
 
@@ -705,7 +737,19 @@ export default function OrdersPage() {
             <form onSubmit={handleSubmit} className="space-y-4">
               {/* Client Selection */}
               <div>
-                <label className="block text-sm font-medium text-gray-300 mb-1">Client *</label>
+                <div className="flex items-center justify-between mb-1">
+                  <label className="block text-sm font-medium text-gray-300">Client *</label>
+                  {!loadingClients && clients.length === 0 && (
+                    <button
+                      type="button"
+                      onClick={() => loadClients(true)}
+                      className="text-xs text-blue-400 hover:text-blue-300 flex items-center gap-1"
+                    >
+                      <RefreshCw className="w-3 h-3" />
+                      Refresh
+                    </button>
+                  )}
+                </div>
                 <select
                   required
                   value={formData.clientId}
@@ -713,19 +757,35 @@ export default function OrdersPage() {
                   disabled={loadingClients || submitting}
                   className="w-full px-3 py-2 bg-gray-700 text-white border border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:opacity-50 disabled:cursor-not-allowed"
                 >
-                  <option value="">Select a client</option>
+                  <option value="">{loadingClients ? "Loading clients..." : "Select a client"}</option>
                   {loadingClients ? (
-                    <option value="">Loading clients...</option>
+                    <option value="" disabled>Loading clients...</option>
                   ) : clients.length === 0 ? (
-                    <option value="">No clients available</option>
+                    <option value="" disabled>No clients available. Please add clients first.</option>
                   ) : (
                     clients.map((client) => (
                       <option key={client._id} value={client._id}>
-                        {client.name} {client.email && `(${client.email})`}
+                        {client.name || client.email} {client.email && client.name && `(${client.email})`}
                       </option>
                     ))
                   )}
                 </select>
+                {!loadingClients && clients.length === 0 && (
+                  <div className="mt-2 p-3 bg-yellow-500/10 border border-yellow-500/30 rounded-lg">
+                    <p className="text-xs text-yellow-400 mb-2">
+                      {activeCompanyRole === 'employee' 
+                        ? "No clients assigned to you. Please contact your manager to assign clients, or add clients from the Clients page."
+                        : "No clients found. Please add clients from the Clients page first."}
+                    </p>
+                    <button
+                      type="button"
+                      onClick={() => router.push('/clients')}
+                      className="text-xs text-blue-400 hover:text-blue-300 underline"
+                    >
+                      Go to Clients Page →
+                    </button>
+                  </div>
+                )}
               </div>
 
               {/* Order Items */}

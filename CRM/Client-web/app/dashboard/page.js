@@ -20,6 +20,9 @@ import {
   MessageSquare,
   Briefcase,
   Clock,
+  RefreshCw,
+  X,
+  AlertCircle,
 } from "lucide-react";
 
 export default function DashboardPage() {
@@ -34,6 +37,8 @@ export default function DashboardPage() {
   const [recentOrders, setRecentOrders] = useState([]);
   const [dashboardRole, setDashboardRole] = useState(null);
   const [mounted, setMounted] = useState(false);
+  const [error, setError] = useState("");
+  const [retryCount, setRetryCount] = useState(0);
 
   useEffect(() => {
     setMounted(true);
@@ -145,7 +150,7 @@ export default function DashboardPage() {
     };
   }, [router, activeCompanyId, companies, isSuperAdmin]);
 
-  const loadDashboardData = async () => {
+  const loadDashboardData = async (showError = true) => {
     const companyId = activeCompanyId || localStorage.getItem("companyId");
     if (!companyId) {
       setLoading(false);
@@ -154,16 +159,22 @@ export default function DashboardPage() {
 
     try {
       setLoading(true);
+      setError("");
       const response = await apiClient.get("/dashboard/stats");
-      if (response.data.success) {
+      if (response?.data?.success === true) {
         setDashboardRole(response.data.data.role || activeCompanyRole);
-        setStats(response.data.data.stats);
+        setStats(response.data.data.stats || {});
         setRevenueTrend(response.data.data.revenueTrend || []);
         setRecentActivity(response.data.data.recentActivity || []);
         setTopDeals(response.data.data.topDeals || []);
         setRecentOrders(response.data.data.recentOrders || []);
+        setRetryCount(0);
       } else {
-        console.error("Failed to load dashboard stats:", response.data);
+        const errorMsg = response?.data?.message || response?.data?.error?.message || "Failed to load dashboard data";
+        if (showError) {
+          setError(errorMsg);
+        }
+        // Set default stats
         setStats({
           monthlyRevenue: 0,
           newLeads30d: 0,
@@ -176,9 +187,27 @@ export default function DashboardPage() {
         setRevenueTrend([]);
         setRecentActivity([]);
         setTopDeals([]);
+        setRecentOrders([]);
       }
     } catch (error) {
       console.error("Error loading dashboard data:", error);
+      let errorMessage = "Failed to load dashboard data. Please try again.";
+      if (error.response) {
+        const errorData = error.response.data;
+        errorMessage = errorData?.message || 
+                      errorData?.error?.message || 
+                      `Server error: ${error.response.status}`;
+      } else if (error.message) {
+        errorMessage = error.message.includes("Network") 
+          ? "Network error. Please check your connection."
+          : error.message;
+      }
+      
+      if (showError) {
+        setError(errorMessage);
+      }
+      
+      // Set default stats on error
       setStats({
         monthlyRevenue: 0,
         newLeads30d: 0,
@@ -191,6 +220,7 @@ export default function DashboardPage() {
       setRevenueTrend([]);
       setRecentActivity([]);
       setTopDeals([]);
+      setRecentOrders([]);
     } finally {
       setLoading(false);
     }
@@ -290,11 +320,11 @@ export default function DashboardPage() {
 
   // Render role-specific dashboard
   if (role === 'employee') {
-    return <EmployeeDashboard user={user} stats={stats} recentActivity={recentActivity} formatCurrency={formatCurrency} formatTimeAgo={formatTimeAgo} getActivityIcon={getActivityIcon} getActivityColor={getActivityColor} />;
+    return <EmployeeDashboard user={user} stats={stats} recentActivity={recentActivity} error={error} onRefresh={() => loadDashboardData()} loading={loading} formatCurrency={formatCurrency} formatTimeAgo={formatTimeAgo} getActivityIcon={getActivityIcon} getActivityColor={getActivityColor} />;
   } else if (role === 'manager') {
-    return <ManagerDashboard user={user} stats={stats} recentActivity={recentActivity} formatCurrency={formatCurrency} formatTimeAgo={formatTimeAgo} getActivityIcon={getActivityIcon} getActivityColor={getActivityColor} />;
+    return <ManagerDashboard user={user} stats={stats} recentActivity={recentActivity} error={error} onRefresh={() => loadDashboardData()} loading={loading} formatCurrency={formatCurrency} formatTimeAgo={formatTimeAgo} getActivityIcon={getActivityIcon} getActivityColor={getActivityColor} />;
   } else if (role === 'client') {
-    return <ClientDashboard user={user} stats={stats} recentOrders={recentOrders} recentActivity={recentActivity} formatCurrency={formatCurrency} formatTimeAgo={formatTimeAgo} getStatusColor={getStatusColor} />;
+    return <ClientDashboard user={user} stats={stats} recentOrders={recentOrders} recentActivity={recentActivity} error={error} onRefresh={() => loadDashboardData()} loading={loading} formatCurrency={formatCurrency} formatTimeAgo={formatTimeAgo} getStatusColor={getStatusColor} />;
   }
 
   // Company Admin Dashboard (default)
@@ -306,14 +336,42 @@ export default function DashboardPage() {
       <main className="lg:ml-64 min-h-screen">
         <div className="p-4 sm:p-6 lg:p-8">
           {/* Page Header */}
-          <div className="mb-8">
-            <h1 className="text-3xl font-bold text-white mb-2">
-              {activeCompany?.companyName || "Company"} Dashboard
-            </h1>
-            <p className="text-gray-400">
-              Welcome back, {user?.name || user?.email}
-            </p>
+          <div className="mb-8 flex justify-between items-start">
+            <div>
+              <h1 className="text-3xl font-bold text-white mb-2">
+                {activeCompany?.companyName || "Company"} Dashboard
+              </h1>
+              <p className="text-gray-400">
+                Welcome back, {user?.name || user?.email}
+              </p>
+            </div>
+            <button
+              onClick={() => loadDashboardData()}
+              disabled={loading}
+              className="flex items-center gap-2 px-4 py-2 bg-gray-800 hover:bg-gray-700 text-white rounded-lg border border-gray-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+              title="Refresh dashboard"
+            >
+              <RefreshCw className={`w-4 h-4 ${loading ? 'animate-spin' : ''}`} />
+              <span className="hidden sm:inline">Refresh</span>
+            </button>
           </div>
+
+          {/* Error Message */}
+          {error && (
+            <div className="mb-6 p-4 bg-red-500/20 border border-red-500/50 rounded-lg flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                <AlertCircle className="w-5 h-5 text-red-400 shrink-0" />
+                <p className="text-red-400">{error}</p>
+              </div>
+              <button
+                onClick={() => setError("")}
+                className="text-red-400 hover:text-red-300 shrink-0"
+                aria-label="Dismiss error"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+          )}
 
           {/* Top KPI Cards */}
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6 mb-8">
@@ -549,16 +607,42 @@ export default function DashboardPage() {
 }
 
 // Employee Dashboard Component
-function EmployeeDashboard({ user, stats, recentActivity, formatCurrency, formatTimeAgo, getActivityIcon, getActivityColor }) {
+function EmployeeDashboard({ user, stats, recentActivity, error, onRefresh, loading, formatCurrency, formatTimeAgo, getActivityIcon, getActivityColor }) {
   return (
     <div className="min-h-screen bg-gray-900">
       <Sidebar />
       <main className="lg:ml-64 min-h-screen">
         <div className="p-4 sm:p-6 lg:p-8">
-          <div className="mb-8">
-            <h1 className="text-3xl font-bold text-white mb-2">My Dashboard</h1>
-            <p className="text-gray-400">Welcome back, {user?.name || user?.email}</p>
+          <div className="mb-8 flex justify-between items-start">
+            <div>
+              <h1 className="text-3xl font-bold text-white mb-2">My Dashboard</h1>
+              <p className="text-gray-400">Welcome back, {user?.name || user?.email}</p>
+            </div>
+            {onRefresh && (
+              <button
+                onClick={onRefresh}
+                disabled={loading}
+                className="flex items-center gap-2 px-4 py-2 bg-gray-800 hover:bg-gray-700 text-white rounded-lg border border-gray-700 transition-colors disabled:opacity-50"
+                title="Refresh dashboard"
+              >
+                <RefreshCw className={`w-4 h-4 ${loading ? 'animate-spin' : ''}`} />
+                <span className="hidden sm:inline">Refresh</span>
+              </button>
+            )}
           </div>
+
+          {/* Error Message */}
+          {error && (
+            <div className="mb-6 p-4 bg-red-500/20 border border-red-500/50 rounded-lg flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                <AlertCircle className="w-5 h-5 text-red-400 shrink-0" />
+                <p className="text-red-400">{error}</p>
+              </div>
+              <button onClick={() => {}} className="text-red-400 hover:text-red-300 shrink-0">
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+          )}
 
           {/* KPI Cards */}
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6 mb-8">
@@ -644,16 +728,42 @@ function EmployeeDashboard({ user, stats, recentActivity, formatCurrency, format
 }
 
 // Manager Dashboard Component
-function ManagerDashboard({ user, stats, recentActivity, formatCurrency, formatTimeAgo, getActivityIcon, getActivityColor }) {
+function ManagerDashboard({ user, stats, recentActivity, error, onRefresh, loading, formatCurrency, formatTimeAgo, getActivityIcon, getActivityColor }) {
   return (
     <div className="min-h-screen bg-gray-900">
       <Sidebar />
       <main className="lg:ml-64 min-h-screen">
         <div className="p-4 sm:p-6 lg:p-8">
-          <div className="mb-8">
-            <h1 className="text-3xl font-bold text-white mb-2">Manager Dashboard</h1>
-            <p className="text-gray-400">Welcome back, {user?.name || user?.email}</p>
+          <div className="mb-8 flex justify-between items-start">
+            <div>
+              <h1 className="text-3xl font-bold text-white mb-2">Manager Dashboard</h1>
+              <p className="text-gray-400">Welcome back, {user?.name || user?.email}</p>
+            </div>
+            {onRefresh && (
+              <button
+                onClick={onRefresh}
+                disabled={loading}
+                className="flex items-center gap-2 px-4 py-2 bg-gray-800 hover:bg-gray-700 text-white rounded-lg border border-gray-700 transition-colors disabled:opacity-50"
+                title="Refresh dashboard"
+              >
+                <RefreshCw className={`w-4 h-4 ${loading ? 'animate-spin' : ''}`} />
+                <span className="hidden sm:inline">Refresh</span>
+              </button>
+            )}
           </div>
+
+          {/* Error Message */}
+          {error && (
+            <div className="mb-6 p-4 bg-red-500/20 border border-red-500/50 rounded-lg flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                <AlertCircle className="w-5 h-5 text-red-400 shrink-0" />
+                <p className="text-red-400">{error}</p>
+              </div>
+              <button onClick={() => {}} className="text-red-400 hover:text-red-300 shrink-0">
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+          )}
 
           {/* Team Stats */}
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6 mb-8">
@@ -759,11 +869,12 @@ function ManagerDashboard({ user, stats, recentActivity, formatCurrency, formatT
 }
 
 // Client Dashboard Component
-function ClientDashboard({ user, stats, recentOrders, recentActivity, formatCurrency, formatTimeAgo, getStatusColor }) {
+function ClientDashboard({ user, stats, recentOrders, recentActivity, error, onRefresh, loading, formatCurrency, formatTimeAgo, getStatusColor }) {
   const router = useRouter();
   const [companies, setCompanies] = useState([]);
   const [conversations, setConversations] = useState([]);
   const [loadingExtra, setLoadingExtra] = useState(true);
+  const [clientError, setClientError] = useState("");
 
   useEffect(() => {
     loadClientData();
@@ -771,25 +882,35 @@ function ClientDashboard({ user, stats, recentOrders, recentActivity, formatCurr
 
   const loadClientData = async () => {
     try {
+      setLoadingExtra(true);
+      setClientError("");
       // Load companies and recent conversations for client
       const [companiesRes, conversationsRes] = await Promise.all([
-        apiClient.get("/conversations/client-companies").catch(() => ({ data: { data: [] } })),
-        apiClient.get("/conversations?limit=5").catch(() => ({ data: { data: [] } }))
+        apiClient.get("/conversations/client-companies").catch((err) => {
+          console.error("Error loading companies:", err);
+          return { data: { data: [] } };
+        }),
+        apiClient.get("/conversations?limit=5").catch((err) => {
+          console.error("Error loading conversations:", err);
+          return { data: { data: [] } };
+        })
       ]);
       
       setCompanies(companiesRes.data?.data || []);
       setConversations(conversationsRes.data?.data || []);
     } catch (err) {
       console.error("Error loading client data:", err);
-      // Mock data for demo
-      setCompanies([
-        { _id: "1", name: "TechCorp Solutions", orderCount: 5, conversationCount: 3 },
-        { _id: "2", name: "Global Supplies Inc", orderCount: 12, conversationCount: 7 },
-      ]);
-      setConversations([
-        { _id: "1", company: { name: "TechCorp" }, subject: "Product Inquiry", status: "ai_handling", lastActivity: new Date().toISOString() },
-        { _id: "2", company: { name: "Global Supplies" }, subject: "Order Status", status: "representative_assigned", lastActivity: new Date(Date.now() - 86400000).toISOString() },
-      ]);
+      let errorMsg = "Failed to load some dashboard data.";
+      if (err.response) {
+        errorMsg = err.response.data?.message || `Server error: ${err.response.status}`;
+      } else if (err.message) {
+        errorMsg = err.message.includes("Network") 
+          ? "Network error. Please check your connection."
+          : err.message;
+      }
+      setClientError(errorMsg);
+      setCompanies([]);
+      setConversations([]);
     } finally {
       setLoadingExtra(false);
     }
@@ -810,10 +931,39 @@ function ClientDashboard({ user, stats, recentOrders, recentActivity, formatCurr
       <Sidebar />
       <main className="lg:ml-64 min-h-screen">
         <div className="p-4 sm:p-6 lg:p-8">
-          <div className="mb-8">
-            <h1 className="text-3xl font-bold text-white mb-2">Welcome back!</h1>
-            <p className="text-gray-400">{user?.name || user?.email}</p>
+          <div className="mb-8 flex justify-between items-start">
+            <div>
+              <h1 className="text-3xl font-bold text-white mb-2">Welcome back!</h1>
+              <p className="text-gray-400">{user?.name || user?.email}</p>
+            </div>
+            {onRefresh && (
+              <button
+                onClick={onRefresh}
+                disabled={loading}
+                className="flex items-center gap-2 px-4 py-2 bg-gray-800 hover:bg-gray-700 text-white rounded-lg border border-gray-700 transition-colors disabled:opacity-50"
+                title="Refresh dashboard"
+              >
+                <RefreshCw className={`w-4 h-4 ${loading ? 'animate-spin' : ''}`} />
+                <span className="hidden sm:inline">Refresh</span>
+              </button>
+            )}
           </div>
+
+          {/* Error Message */}
+          {(error || clientError) && (
+            <div className="mb-6 p-4 bg-red-500/20 border border-red-500/50 rounded-lg flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                <AlertCircle className="w-5 h-5 text-red-400 shrink-0" />
+                <p className="text-red-400">{error || clientError}</p>
+              </div>
+              <button 
+                onClick={() => { setClientError(""); if (onRefresh) onRefresh(); }} 
+                className="text-red-400 hover:text-red-300 shrink-0"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+          )}
 
           {/* KPI Cards */}
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6 mb-8">
