@@ -1,6 +1,6 @@
 import "./globals.css";
 import Navbar from "@/components/Navbar";
-import Footer from "@/components/Footer";
+import ConditionalFooter from "@/components/ConditionalFooter";
 
 export const metadata = {
   title: "CRM Prime - Powerful CRM for Modern Businesses",
@@ -13,7 +13,7 @@ export default function RootLayout({ children }) {
       <body style={{ margin: 0, padding: 0, minHeight: "100vh", display: "flex", flexDirection: "column" }}>
         <Navbar/>
         <main style={{ flex: 1 }}>{children}</main>
-        <Footer/>
+        <ConditionalFooter/>
       </body>
     </html>
   );
