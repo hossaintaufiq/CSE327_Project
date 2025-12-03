@@ -39,11 +39,11 @@ const conversationTypes = {
 };
 
 const statusColors = {
-  ai_handling: "bg-blue-100 text-blue-700",
-  waiting_representative: "bg-yellow-100 text-yellow-700",
-  representative_assigned: "bg-green-100 text-green-700",
-  resolved: "bg-gray-100 text-gray-700",
-  closed: "bg-gray-100 text-gray-500",
+  ai_handling: "bg-blue-500/20 text-blue-400",
+  waiting_representative: "bg-yellow-500/20 text-yellow-400",
+  representative_assigned: "bg-green-500/20 text-green-400",
+  resolved: "bg-gray-500/20 text-gray-400",
+  closed: "bg-gray-500/20 text-gray-500",
 };
 
 export default function ConversationsPage() {
@@ -268,34 +268,34 @@ export default function ConversationsPage() {
   const getSenderColor = (senderType) => {
     switch (senderType) {
       case "client": return "bg-blue-600 text-white";
-      case "ai": return "bg-purple-100 text-purple-900";
-      case "representative": return "bg-green-100 text-green-900";
-      case "system": return "bg-gray-100 text-gray-700";
-      default: return "bg-gray-100 text-gray-900";
+      case "ai": return "bg-purple-500/20 text-purple-200";
+      case "representative": return "bg-green-500/20 text-green-200";
+      case "system": return "bg-gray-700 text-gray-300";
+      default: return "bg-gray-700 text-gray-200";
     }
   };
 
   if (!mounted || loading) {
     return (
-      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
-        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
+      <div className="min-h-screen bg-gray-900 flex items-center justify-center">
+        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-500"></div>
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className="min-h-screen bg-gray-900">
       <Navbar />
       <Sidebar />
       
       <main className="lg:ml-64 pt-[60px]">
         <div className="h-[calc(100vh-64px)] flex">
           {/* Conversations List */}
-          <div className={`${selectedConversation ? 'hidden md:flex' : 'flex'} flex-col w-full md:w-96 border-r border-gray-200 bg-white`}>
+          <div className={`${selectedConversation ? 'hidden md:flex' : 'flex'} flex-col w-full md:w-96 border-r border-gray-700 bg-gray-800`}>
             {/* List Header */}
-            <div className="p-4 border-b border-gray-200">
+            <div className="p-4 border-b border-gray-700">
               <div className="flex items-center justify-between mb-4">
-                <h2 className="text-xl font-bold text-gray-900">Conversations</h2>
+                <h2 className="text-xl font-bold text-white">Conversations</h2>
                 <button
                   onClick={() => router.push("/conversations/new")}
                   className="p-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
@@ -305,13 +305,13 @@ export default function ConversationsPage() {
               </div>
               
               <div className="relative">
-                <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-500" />
                 <input
                   type="text"
                   placeholder="Search conversations..."
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
-                  className="w-full pl-10 pr-4 py-2 border border-gray-200 rounded-lg text-sm focus:ring-2 focus:ring-blue-500"
+                  className="w-full pl-10 pr-4 py-2 bg-gray-700 border border-gray-600 rounded-lg text-sm text-white placeholder-gray-400 focus:ring-2 focus:ring-blue-500"
                 />
               </div>
 
@@ -319,7 +319,7 @@ export default function ConversationsPage() {
                 <select
                   value={filterType}
                   onChange={(e) => setFilterType(e.target.value)}
-                  className="flex-1 px-3 py-1.5 text-sm border border-gray-200 rounded-lg"
+                  className="flex-1 px-3 py-1.5 text-sm bg-gray-700 border border-gray-600 rounded-lg text-white"
                 >
                   <option value="all">All Types</option>
                   <option value="inquiry">Inquiry</option>
@@ -330,7 +330,7 @@ export default function ConversationsPage() {
                 <select
                   value={filterStatus}
                   onChange={(e) => setFilterStatus(e.target.value)}
-                  className="flex-1 px-3 py-1.5 text-sm border border-gray-200 rounded-lg"
+                  className="flex-1 px-3 py-1.5 text-sm bg-gray-700 border border-gray-600 rounded-lg text-white"
                 >
                   <option value="all">All Status</option>
                   <option value="ai_handling">AI Handling</option>
@@ -345,12 +345,12 @@ export default function ConversationsPage() {
             <div className="flex-1 overflow-y-auto">
               {loading ? (
                 <div className="flex items-center justify-center h-full">
-                  <Loader2 className="w-8 h-8 text-blue-600 animate-spin" />
+                  <Loader2 className="w-8 h-8 text-blue-500 animate-spin" />
                 </div>
               ) : filteredConversations.length === 0 ? (
                 <div className="flex flex-col items-center justify-center h-full text-center p-6">
-                  <MessageSquare className="w-12 h-12 text-gray-300 mb-4" />
-                  <p className="text-gray-500">No conversations yet</p>
+                  <MessageSquare className="w-12 h-12 text-gray-600 mb-4" />
+                  <p className="text-gray-400">No conversations yet</p>
                   <button
                     onClick={() => router.push("/conversations/new")}
                     className="mt-4 px-4 py-2 bg-blue-600 text-white rounded-lg text-sm hover:bg-blue-700"
@@ -367,29 +367,29 @@ export default function ConversationsPage() {
                     <div
                       key={conv._id}
                       onClick={() => handleSelectConversation(conv)}
-                      className={`p-4 border-b border-gray-100 cursor-pointer hover:bg-gray-50 transition-colors ${
-                        selectedConversation?._id === conv._id ? "bg-blue-50" : ""
+                      className={`p-4 border-b border-gray-700 cursor-pointer hover:bg-gray-700/50 transition-colors ${
+                        selectedConversation?._id === conv._id ? "bg-blue-600/20" : ""
                       }`}
                     >
                       <div className="flex items-start gap-3">
                         <div className={`p-2 rounded-lg ${
-                          conversationTypes[conv.conversationType]?.color === "blue" ? "bg-blue-100 text-blue-600" :
-                          conversationTypes[conv.conversationType]?.color === "green" ? "bg-green-100 text-green-600" :
-                          conversationTypes[conv.conversationType]?.color === "red" ? "bg-red-100 text-red-600" :
-                          conversationTypes[conv.conversationType]?.color === "purple" ? "bg-purple-100 text-purple-600" :
-                          "bg-gray-100 text-gray-600"
+                          conversationTypes[conv.conversationType]?.color === "blue" ? "bg-blue-500/20 text-blue-400" :
+                          conversationTypes[conv.conversationType]?.color === "green" ? "bg-green-500/20 text-green-400" :
+                          conversationTypes[conv.conversationType]?.color === "red" ? "bg-red-500/20 text-red-400" :
+                          conversationTypes[conv.conversationType]?.color === "purple" ? "bg-purple-500/20 text-purple-400" :
+                          "bg-gray-500/20 text-gray-400"
                         }`}>
                           <TypeIcon className="w-5 h-5" />
                         </div>
                         
                         <div className="flex-1 min-w-0">
                           <div className="flex items-center justify-between mb-1">
-                            <h3 className="font-medium text-gray-900 truncate">{conv.subject}</h3>
+                            <h3 className="font-medium text-white truncate">{conv.subject}</h3>
                             <span className="text-xs text-gray-500">{formatTime(conv.lastActivity)}</span>
                           </div>
-                          <p className="text-sm text-gray-500 truncate">{conv.company?.name}</p>
+                          <p className="text-sm text-gray-400 truncate">{conv.company?.name}</p>
                           {lastMessage && (
-                            <p className="text-sm text-gray-600 truncate mt-1">
+                            <p className="text-sm text-gray-500 truncate mt-1">
                               {lastMessage.senderType === "client" ? "You: " : ""}
                               {lastMessage.content}
                             </p>
@@ -407,24 +407,24 @@ export default function ConversationsPage() {
           </div>
 
           {/* Chat Area */}
-          <div className={`${selectedConversation ? 'flex' : 'hidden md:flex'} flex-col flex-1 bg-gray-50`}>
+          <div className={`${selectedConversation ? 'flex' : 'hidden md:flex'} flex-col flex-1 bg-gray-900`}>
             {selectedConversation ? (
               <>
                 {/* Chat Header */}
-                <div className="p-4 bg-white border-b border-gray-200 flex items-center gap-4">
+                <div className="p-4 bg-gray-800 border-b border-gray-700 flex items-center gap-4">
                   <button
                     onClick={() => {
                       setSelectedConversation(null);
                       router.push("/conversations", { scroll: false });
                     }}
-                    className="md:hidden p-2 hover:bg-gray-100 rounded-lg"
+                    className="md:hidden p-2 hover:bg-gray-700 rounded-lg"
                   >
-                    <ChevronLeft className="w-5 h-5" />
+                    <ChevronLeft className="w-5 h-5 text-gray-300" />
                   </button>
                   
                   <div className="flex-1">
-                    <h3 className="font-semibold text-gray-900">{selectedConversation.subject}</h3>
-                    <div className="flex items-center gap-2 text-sm text-gray-500">
+                    <h3 className="font-semibold text-white">{selectedConversation.subject}</h3>
+                    <div className="flex items-center gap-2 text-sm text-gray-400">
                       <Building2 className="w-4 h-4" />
                       <span>{selectedConversation.company?.name}</span>
                       <span className={`px-2 py-0.5 text-xs rounded-full ${statusColors[selectedConversation.status]}`}>
@@ -437,16 +437,16 @@ export default function ConversationsPage() {
                     {selectedConversation.status === "ai_handling" && (
                       <button
                         onClick={handleRequestRepresentative}
-                        className="px-3 py-1.5 text-sm bg-purple-100 text-purple-700 rounded-lg hover:bg-purple-200 transition-colors"
+                        className="px-3 py-1.5 text-sm bg-purple-500/20 text-purple-400 rounded-lg hover:bg-purple-500/30 transition-colors"
                       >
                         Talk to Human
                       </button>
                     )}
-                    <button className="p-2 hover:bg-gray-100 rounded-lg">
-                      <Phone className="w-5 h-5 text-gray-500" />
+                    <button className="p-2 hover:bg-gray-700 rounded-lg">
+                      <Phone className="w-5 h-5 text-gray-400" />
                     </button>
-                    <button className="p-2 hover:bg-gray-100 rounded-lg">
-                      <MoreVertical className="w-5 h-5 text-gray-500" />
+                    <button className="p-2 hover:bg-gray-700 rounded-lg">
+                      <MoreVertical className="w-5 h-5 text-gray-400" />
                     </button>
                   </div>
                 </div>
@@ -464,9 +464,9 @@ export default function ConversationsPage() {
                         <div className={`flex items-end gap-2 max-w-[80%] ${isClient ? "flex-row-reverse" : ""}`}>
                           {!isClient && (
                             <div className={`w-8 h-8 rounded-full flex items-center justify-center shrink-0 ${
-                              message.senderType === "ai" ? "bg-purple-100 text-purple-600" :
-                              message.senderType === "representative" ? "bg-green-100 text-green-600" :
-                              "bg-gray-100 text-gray-600"
+                              message.senderType === "ai" ? "bg-purple-500/20 text-purple-400" :
+                              message.senderType === "representative" ? "bg-green-500/20 text-green-400" :
+                              "bg-gray-700 text-gray-400"
                             }`}>
                               {getSenderIcon(message.senderType)}
                             </div>
@@ -485,7 +485,7 @@ export default function ConversationsPage() {
                             }`}>
                               <p className="text-sm whitespace-pre-wrap">{message.content}</p>
                             </div>
-                            <p className={`text-xs text-gray-400 mt-1 ${isClient ? "text-right" : "text-left"}`}>
+                            <p className={`text-xs text-gray-500 mt-1 ${isClient ? "text-right" : "text-left"}`}>
                               {formatTime(message.createdAt)}
                             </p>
                           </div>
@@ -496,9 +496,9 @@ export default function ConversationsPage() {
                   
                   {sendingMessage && (
                     <div className="flex justify-start">
-                      <div className="flex items-center gap-2 px-4 py-2 bg-gray-100 rounded-2xl">
-                        <Loader2 className="w-4 h-4 animate-spin text-gray-500" />
-                        <span className="text-sm text-gray-500">AI is typing...</span>
+                      <div className="flex items-center gap-2 px-4 py-2 bg-gray-700 rounded-2xl">
+                        <Loader2 className="w-4 h-4 animate-spin text-gray-400" />
+                        <span className="text-sm text-gray-400">AI is typing...</span>
                       </div>
                     </div>
                   )}
@@ -507,11 +507,11 @@ export default function ConversationsPage() {
                 </div>
 
                 {/* Message Input */}
-                <form onSubmit={handleSendMessage} className="p-4 bg-white border-t border-gray-200">
+                <form onSubmit={handleSendMessage} className="p-4 bg-gray-800 border-t border-gray-700">
                   <div className="flex items-end gap-2">
                     <button
                       type="button"
-                      className="p-2 text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded-lg"
+                      className="p-2 text-gray-500 hover:text-gray-300 hover:bg-gray-700 rounded-lg"
                     >
                       <Paperclip className="w-5 h-5" />
                     </button>
@@ -528,14 +528,14 @@ export default function ConversationsPage() {
                         }}
                         placeholder="Type your message..."
                         rows={1}
-                        className="w-full px-4 py-2 border border-gray-200 rounded-xl resize-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                        className="w-full px-4 py-2 bg-gray-700 border border-gray-600 rounded-xl text-white placeholder-gray-400 resize-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                         style={{ minHeight: "42px", maxHeight: "120px" }}
                       />
                     </div>
 
                     <button
                       type="button"
-                      className="p-2 text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded-lg"
+                      className="p-2 text-gray-500 hover:text-gray-300 hover:bg-gray-700 rounded-lg"
                     >
                       <Smile className="w-5 h-5" />
                     </button>
@@ -552,11 +552,11 @@ export default function ConversationsPage() {
               </>
             ) : (
               <div className="flex flex-col items-center justify-center h-full text-center p-6">
-                <div className="w-20 h-20 bg-gray-100 rounded-full flex items-center justify-center mb-4">
-                  <MessageSquare className="w-10 h-10 text-gray-400" />
+                <div className="w-20 h-20 bg-gray-800 rounded-full flex items-center justify-center mb-4">
+                  <MessageSquare className="w-10 h-10 text-gray-600" />
                 </div>
-                <h3 className="text-xl font-semibold text-gray-900 mb-2">Select a Conversation</h3>
-                <p className="text-gray-500 mb-6 max-w-sm">
+                <h3 className="text-xl font-semibold text-white mb-2">Select a Conversation</h3>
+                <p className="text-gray-400 mb-6 max-w-sm">
                   Choose a conversation from the list or start a new one to begin chatting
                 </p>
                 <button

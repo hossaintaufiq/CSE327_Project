@@ -170,14 +170,14 @@ export default function NewConversationPage() {
 
   if (!mounted || loading) {
     return (
-      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
-        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
+      <div className="min-h-screen bg-gray-900 flex items-center justify-center">
+        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-500"></div>
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className="min-h-screen bg-gray-900">
       <Navbar />
       <Sidebar />
       
@@ -193,13 +193,13 @@ export default function NewConversationPage() {
                   router.push("/conversations");
                 }
               }}
-              className="p-2 hover:bg-gray-200 rounded-lg transition-colors"
+              className="p-2 hover:bg-gray-700 rounded-lg transition-colors"
             >
-              <ArrowLeft className="w-5 h-5 text-gray-600" />
+              <ArrowLeft className="w-5 h-5 text-gray-400" />
             </button>
             <div>
-              <h1 className="text-2xl font-bold text-gray-900">New Conversation</h1>
-              <p className="text-gray-500">Start a conversation with a company</p>
+              <h1 className="text-2xl font-bold text-white">New Conversation</h1>
+              <p className="text-gray-400">Start a conversation with a company</p>
             </div>
           </div>
 
@@ -209,32 +209,32 @@ export default function NewConversationPage() {
               <div key={s} className="flex items-center gap-2">
                 <div
                   className={`w-8 h-8 rounded-full flex items-center justify-center text-sm font-medium transition-colors ${
-                    step >= s ? "bg-blue-600 text-white" : "bg-gray-200 text-gray-500"
+                    step >= s ? "bg-blue-600 text-white" : "bg-gray-700 text-gray-400"
                   }`}
                 >
                   {s}
                 </div>
-                <span className={`text-sm ${step >= s ? "text-gray-900" : "text-gray-400"}`}>
+                <span className={`text-sm ${step >= s ? "text-white" : "text-gray-500"}`}>
                   {s === 1 ? "Company" : s === 2 ? "Type" : "Message"}
                 </span>
-                {s < 3 && <div className={`w-12 h-0.5 ${step > s ? "bg-blue-600" : "bg-gray-200"}`} />}
+                {s < 3 && <div className={`w-12 h-0.5 ${step > s ? "bg-blue-600" : "bg-gray-700"}`} />}
               </div>
             ))}
           </div>
 
           {/* Step 1: Select Company */}
           {step === 1 && (
-            <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6">
-              <h2 className="text-lg font-semibold text-gray-900 mb-4">Select a Company</h2>
+            <div className="bg-gray-800 rounded-xl border border-gray-700 p-6">
+              <h2 className="text-lg font-semibold text-white mb-4">Select a Company</h2>
               
               <div className="relative mb-6">
-                <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-500" />
                 <input
                   type="text"
                   placeholder="Search companies..."
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
-                  className="w-full pl-10 pr-4 py-3 border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500"
+                  className="w-full pl-10 pr-4 py-3 bg-gray-700 border border-gray-600 rounded-lg text-white placeholder-gray-400 focus:ring-2 focus:ring-blue-500"
                 />
               </div>
 
@@ -243,21 +243,21 @@ export default function NewConversationPage() {
                   <button
                     key={company._id}
                     onClick={() => handleSelectCompany(company)}
-                    className="w-full flex items-center gap-4 p-4 border border-gray-200 rounded-lg hover:border-blue-500 hover:bg-blue-50 transition-all group"
+                    className="w-full flex items-center gap-4 p-4 bg-gray-700/50 border border-gray-600 rounded-lg hover:border-blue-500 hover:bg-gray-700 transition-all group"
                   >
                     <div className="w-12 h-12 bg-gradient-to-br from-blue-500 to-purple-600 rounded-lg flex items-center justify-center text-white font-bold text-lg shrink-0">
                       {company.name?.charAt(0) || "C"}
                     </div>
                     <div className="flex-1 text-left">
-                      <h3 className="font-medium text-gray-900">{company.name}</h3>
-                      <p className="text-sm text-gray-500">{company.industry}</p>
+                      <h3 className="font-medium text-white">{company.name}</h3>
+                      <p className="text-sm text-gray-400">{company.industry}</p>
                     </div>
-                    <ChevronRight className="w-5 h-5 text-gray-400 group-hover:text-blue-600" />
+                    <ChevronRight className="w-5 h-5 text-gray-500 group-hover:text-blue-400" />
                   </button>
                 ))}
 
                 {filteredCompanies.length === 0 && (
-                  <div className="text-center py-8 text-gray-500">
+                  <div className="text-center py-8 text-gray-400">
                     No companies found
                   </div>
                 )}
@@ -267,49 +267,49 @@ export default function NewConversationPage() {
 
           {/* Step 2: Select Conversation Type */}
           {step === 2 && (
-            <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6">
-              <div className="flex items-center gap-3 mb-6 pb-4 border-b border-gray-100">
+            <div className="bg-gray-800 rounded-xl border border-gray-700 p-6">
+              <div className="flex items-center gap-3 mb-6 pb-4 border-b border-gray-700">
                 <div className="w-10 h-10 bg-gradient-to-br from-blue-500 to-purple-600 rounded-lg flex items-center justify-center text-white font-bold">
                   {selectedCompany?.name?.charAt(0) || "C"}
                 </div>
                 <div>
-                  <h3 className="font-medium text-gray-900">{selectedCompany?.name}</h3>
-                  <p className="text-sm text-gray-500">{selectedCompany?.industry}</p>
+                  <h3 className="font-medium text-white">{selectedCompany?.name}</h3>
+                  <p className="text-sm text-gray-400">{selectedCompany?.industry}</p>
                 </div>
               </div>
 
-              <h2 className="text-lg font-semibold text-gray-900 mb-4">What would you like to discuss?</h2>
+              <h2 className="text-lg font-semibold text-white mb-4">What would you like to discuss?</h2>
               
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 {conversationTypes.map((type) => {
                   const Icon = type.icon;
                   const colorClasses = {
-                    blue: "hover:border-blue-500 hover:bg-blue-50",
-                    green: "hover:border-green-500 hover:bg-green-50",
-                    red: "hover:border-red-500 hover:bg-red-50",
-                    purple: "hover:border-purple-500 hover:bg-purple-50",
-                    gray: "hover:border-gray-400 hover:bg-gray-50",
+                    blue: "hover:border-blue-500 hover:bg-blue-500/10",
+                    green: "hover:border-green-500 hover:bg-green-500/10",
+                    red: "hover:border-red-500 hover:bg-red-500/10",
+                    purple: "hover:border-purple-500 hover:bg-purple-500/10",
+                    gray: "hover:border-gray-500 hover:bg-gray-500/10",
                   };
                   const iconColorClasses = {
-                    blue: "bg-blue-100 text-blue-600",
-                    green: "bg-green-100 text-green-600",
-                    red: "bg-red-100 text-red-600",
-                    purple: "bg-purple-100 text-purple-600",
-                    gray: "bg-gray-100 text-gray-600",
+                    blue: "bg-blue-500/20 text-blue-400",
+                    green: "bg-green-500/20 text-green-400",
+                    red: "bg-red-500/20 text-red-400",
+                    purple: "bg-purple-500/20 text-purple-400",
+                    gray: "bg-gray-500/20 text-gray-400",
                   };
                   
                   return (
                     <button
                       key={type.id}
                       onClick={() => handleSelectType(type)}
-                      className={`flex items-start gap-4 p-4 border border-gray-200 rounded-lg transition-all ${colorClasses[type.color]}`}
+                      className={`flex items-start gap-4 p-4 bg-gray-700/50 border border-gray-600 rounded-lg transition-all ${colorClasses[type.color]}`}
                     >
                       <div className={`p-3 rounded-lg ${iconColorClasses[type.color]}`}>
                         <Icon className="w-6 h-6" />
                       </div>
                       <div className="text-left">
-                        <h3 className="font-medium text-gray-900">{type.label}</h3>
-                        <p className="text-sm text-gray-500">{type.description}</p>
+                        <h3 className="font-medium text-white">{type.label}</h3>
+                        <p className="text-sm text-gray-400">{type.description}</p>
                       </div>
                     </button>
                   );
@@ -318,8 +318,8 @@ export default function NewConversationPage() {
 
               {/* Product Selection (Optional) */}
               {products.length > 0 && (
-                <div className="mt-6 pt-6 border-t border-gray-100">
-                  <h3 className="text-sm font-medium text-gray-700 mb-3">Related to a specific product? (Optional)</h3>
+                <div className="mt-6 pt-6 border-t border-gray-700">
+                  <h3 className="text-sm font-medium text-gray-300 mb-3">Related to a specific product? (Optional)</h3>
                   <div className="flex flex-wrap gap-2">
                     {products.map((product) => (
                       <button
@@ -328,7 +328,7 @@ export default function NewConversationPage() {
                         className={`px-4 py-2 rounded-full text-sm transition-colors ${
                           selectedProduct?._id === product._id
                             ? "bg-blue-600 text-white"
-                            : "bg-gray-100 text-gray-700 hover:bg-gray-200"
+                            : "bg-gray-700 text-gray-300 hover:bg-gray-600"
                         }`}
                       >
                         {product.name}
@@ -342,15 +342,15 @@ export default function NewConversationPage() {
 
           {/* Step 3: Write Message */}
           {step === 3 && (
-            <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6">
+            <div className="bg-gray-800 rounded-xl border border-gray-700 p-6">
               {/* Summary */}
-              <div className="flex items-center gap-4 mb-6 pb-4 border-b border-gray-100">
+              <div className="flex items-center gap-4 mb-6 pb-4 border-b border-gray-700">
                 <div className="w-10 h-10 bg-gradient-to-br from-blue-500 to-purple-600 rounded-lg flex items-center justify-center text-white font-bold">
                   {selectedCompany?.name?.charAt(0) || "C"}
                 </div>
                 <div className="flex-1">
-                  <h3 className="font-medium text-gray-900">{selectedCompany?.name}</h3>
-                  <div className="flex items-center gap-2 text-sm text-gray-500">
+                  <h3 className="font-medium text-white">{selectedCompany?.name}</h3>
+                  <div className="flex items-center gap-2 text-sm text-gray-400">
                     <selectedType.icon className="w-4 h-4" />
                     <span>{selectedType?.label}</span>
                     {selectedProduct && (
@@ -364,13 +364,13 @@ export default function NewConversationPage() {
               </div>
 
               {/* AI Info */}
-              <div className="bg-gradient-to-r from-purple-50 to-blue-50 rounded-lg p-4 mb-6 flex items-start gap-3">
-                <div className="p-2 bg-white rounded-lg shadow-sm">
-                  <Sparkles className="w-5 h-5 text-purple-600" />
+              <div className="bg-gradient-to-r from-purple-500/20 to-blue-500/20 rounded-lg p-4 mb-6 flex items-start gap-3 border border-purple-500/20">
+                <div className="p-2 bg-gray-700 rounded-lg">
+                  <Sparkles className="w-5 h-5 text-purple-400" />
                 </div>
                 <div>
-                  <h4 className="font-medium text-gray-900">AI-Powered Support</h4>
-                  <p className="text-sm text-gray-600">
+                  <h4 className="font-medium text-white">AI-Powered Support</h4>
+                  <p className="text-sm text-gray-400">
                     Your conversation will start with our AI assistant. You can request a human representative at any time.
                   </p>
                 </div>
@@ -378,7 +378,7 @@ export default function NewConversationPage() {
 
               {/* Subject */}
               <div className="mb-4">
-                <label className="block text-sm font-medium text-gray-700 mb-2">
+                <label className="block text-sm font-medium text-gray-300 mb-2">
                   Subject (Optional)
                 </label>
                 <input
@@ -386,13 +386,13 @@ export default function NewConversationPage() {
                   value={subject}
                   onChange={(e) => setSubject(e.target.value)}
                   placeholder={`${selectedType?.label} - ${selectedCompany?.name}`}
-                  className="w-full px-4 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500"
+                  className="w-full px-4 py-2 bg-gray-700 border border-gray-600 rounded-lg text-white placeholder-gray-400 focus:ring-2 focus:ring-blue-500"
                 />
               </div>
 
               {/* Message */}
               <div className="mb-6">
-                <label className="block text-sm font-medium text-gray-700 mb-2">
+                <label className="block text-sm font-medium text-gray-300 mb-2">
                   Your Message
                 </label>
                 <textarea
@@ -400,7 +400,7 @@ export default function NewConversationPage() {
                   onChange={(e) => setInitialMessage(e.target.value)}
                   placeholder="Describe what you need help with..."
                   rows={5}
-                  className="w-full px-4 py-3 border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500 resize-none"
+                  className="w-full px-4 py-3 bg-gray-700 border border-gray-600 rounded-lg text-white placeholder-gray-400 focus:ring-2 focus:ring-blue-500 resize-none"
                 />
               </div>
 
