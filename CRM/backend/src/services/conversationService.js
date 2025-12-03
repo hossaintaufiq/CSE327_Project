@@ -399,6 +399,31 @@ export async function getClientOrders(clientUserId, { companyId, status, limit =
 }
 
 /**
+ * Get all available companies for clients to browse
+ */
+export async function getAvailableCompanies({ search, limit = 50, offset = 0 }) {
+  const query = { isActive: true };
+  
+  if (search) {
+    query.$or = [
+      { name: { $regex: search, $options: 'i' } },
+      { domain: { $regex: search, $options: 'i' } },
+    ];
+  }
+  
+  const companies = await Company.find(query)
+    .select('name domain createdAt')
+    .sort({ name: 1 })
+    .skip(offset)
+    .limit(limit)
+    .lean();
+  
+  const total = await Company.countDocuments(query);
+  
+  return { companies, total };
+}
+
+/**
  * Get conversation statistics for a company
  */
 export async function getConversationStats(companyId) {

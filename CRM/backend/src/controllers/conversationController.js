@@ -239,6 +239,25 @@ export const getMyCompanies = async (req, res, next) => {
 };
 
 /**
+ * Browse available companies (for starting new conversations)
+ */
+export const browseCompanies = async (req, res, next) => {
+  try {
+    const { search, limit, offset } = req.query;
+    
+    const { companies, total } = await conversationService.getAvailableCompanies({
+      search,
+      limit: parseInt(limit) || 50,
+      offset: parseInt(offset) || 0,
+    });
+    
+    return successResponse(res, { companies, total });
+  } catch (error) {
+    next(error);
+  }
+};
+
+/**
  * Get client's orders across all companies
  */
 export const getMyOrders = async (req, res, next) => {

@@ -74,13 +74,13 @@ export default function NewConversationPage() {
   const fetchCompanies = async () => {
     try {
       setLoading(true);
-      const res = await api.get("/companies");
-      setCompanies(res.data.data || []);
+      const res = await api.get("/conversations/browse-companies");
+      setCompanies(res.data.data?.companies || []);
       
       // Check if company was pre-selected
       const companyId = searchParams.get("company");
       if (companyId) {
-        const company = res.data.data?.find(c => c._id === companyId);
+        const company = res.data.data?.companies?.find(c => c._id === companyId);
         if (company) {
           setSelectedCompany(company);
           setStep(2);
@@ -89,22 +89,8 @@ export default function NewConversationPage() {
       }
     } catch (err) {
       console.error("Error fetching companies:", err);
-      // Mock data
-      const mockCompanies = [
-        { _id: "1", name: "TechCorp Solutions", industry: "Technology", logo: null },
-        { _id: "2", name: "Global Supplies Inc", industry: "Manufacturing", logo: null },
-        { _id: "3", name: "Digital Marketing Pro", industry: "Marketing", logo: null },
-      ];
-      setCompanies(mockCompanies);
-      
-      const companyId = searchParams.get("company");
-      if (companyId) {
-        const company = mockCompanies.find(c => c._id === companyId);
-        if (company) {
-          setSelectedCompany(company);
-          setStep(2);
-        }
-      }
+      // No fallback to mock data - show empty state
+      setCompanies([]);
     } finally {
       setLoading(false);
     }
@@ -112,16 +98,12 @@ export default function NewConversationPage() {
 
   const fetchProducts = async (companyId) => {
     try {
-      const res = await api.get(`/companies/${companyId}/products`);
+      const res = await api.get(`/company/${companyId}/products`);
       setProducts(res.data.data || []);
     } catch (err) {
       console.error("Error fetching products:", err);
-      // Mock products
-      setProducts([
-        { _id: "p1", name: "Enterprise CRM", category: "Software" },
-        { _id: "p2", name: "Cloud Hosting", category: "Services" },
-        { _id: "p3", name: "Data Analytics", category: "Software" },
-      ]);
+      // Products are optional
+      setProducts([]);
     }
   };
 

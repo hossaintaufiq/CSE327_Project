@@ -19,6 +19,7 @@ import {
   resolveConversation,
   rateConversation,
   getMyCompanies,
+  browseCompanies,
   getMyOrders,
   getConversationStats,
 } from '../controllers/conversationController.js';
@@ -35,6 +36,9 @@ router.get('/my-conversations', getMyConversations);
 
 // Get my companies (companies I'm a client of)
 router.get('/my-companies', getMyCompanies);
+
+// Browse available companies (for starting new conversations)
+router.get('/browse-companies', browseCompanies);
 
 // Get my orders across all companies
 router.get('/my-orders', getMyOrders);
