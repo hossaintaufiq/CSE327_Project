@@ -8,7 +8,6 @@
 import mongoose from 'mongoose';
 import { Order } from '../models/Order.js';
 import { Client } from '../models/Client.js';
-import { ActivityLog } from '../models/ActivityLog.js';
 
 // Valid order statuses
 const VALID_STATUSES = ['pending', 'processing', 'shipped', 'delivered', 'cancelled'];
@@ -166,15 +165,8 @@ export async function createOrder({ companyId, createdBy, data }) {
   await order.populate('clientId', 'name email phone company');
   await order.populate('assignedTo', 'name email');
 
-  // Log activity
-  await ActivityLog.create({
-    companyId,
-    userId: createdBy,
-    action: 'create_order',
-    entityType: 'order',
-    entityId: order._id,
-    meta: { orderNumber, totalAmount, clientName: client.name },
-  });
+  // Note: ActivityLog is for security/admin logs, not entity CRUD operations
+  // Order creation is logged through the order's timestamps and createdBy field
 
   return order.toObject();
 }
@@ -243,17 +235,8 @@ export async function updateOrder({ orderId, companyId, updatedBy, data }) {
   await order.populate('clientId', 'name email phone company');
   await order.populate('assignedTo', 'name email');
 
-  // Log activity if status changed
-  if (oldStatus !== order.status) {
-    await ActivityLog.create({
-      companyId,
-      userId: updatedBy,
-      action: 'update_order_status',
-      entityType: 'order',
-      entityId: order._id,
-      meta: { orderNumber: order.orderNumber, oldStatus, newStatus: order.status },
-    });
-  }
+  // Note: ActivityLog is for security/admin logs, not entity CRUD operations
+  // Order updates are logged through the order's timestamps and updatedAt field
 
   return order.toObject();
 }
@@ -276,15 +259,8 @@ export async function deleteOrder({ orderId, companyId, deletedBy }) {
     throw error;
   }
 
-  // Log activity
-  await ActivityLog.create({
-    companyId,
-    userId: deletedBy,
-    action: 'delete_order',
-    entityType: 'order',
-    entityId: orderId,
-    meta: { orderNumber: order.orderNumber },
-  });
+  // Note: ActivityLog is for security/admin logs, not entity CRUD operations
+  // Order deletion is logged through the order's deletion timestamp
 
   return order.toObject();
 }

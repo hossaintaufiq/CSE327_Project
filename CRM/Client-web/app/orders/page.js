@@ -32,6 +32,7 @@ export default function OrdersPage() {
     notes: "",
   });
   const [error, setError] = useState("");
+  const [successMessage, setSuccessMessage] = useState("");
   const [companies, setCompanies] = useState([]);
   const [companyFilter, setCompanyFilter] = useState("all");
 
@@ -152,15 +153,18 @@ export default function OrdersPage() {
     try {
       setSubmitting(true);
       setError("");
+      setSuccessMessage("");
 
       // Validate items
       if (!formData.clientId) {
         setError("Please select a client");
+        setSubmitting(false);
         return;
       }
 
       if (!formData.items || formData.items.length === 0) {
         setError("Please add at least one item");
+        setSubmitting(false);
         return;
       }
 
@@ -168,45 +172,67 @@ export default function OrdersPage() {
       for (const item of formData.items) {
         if (!item.productName || !item.quantity || item.price === undefined) {
           setError("Please fill in all item fields");
+          setSubmitting(false);
           return;
         }
         if (item.quantity < 1) {
           setError("Quantity must be at least 1");
+          setSubmitting(false);
           return;
         }
         if (item.price < 0) {
           setError("Price cannot be negative");
+          setSubmitting(false);
           return;
         }
       }
 
+      let response;
       if (editingOrder) {
         // Update order
-        const response = await apiClient.put(`/orders/${editingOrder._id}`, formData);
-        if (response.data.success) {
+        response = await apiClient.put(`/orders/${editingOrder._id}`, formData);
+      } else {
+        // Create order
+        response = await apiClient.post("/orders", formData);
+      }
+
+      // Check if response indicates success - simple and clear check
+      if (response?.data?.success === true) {
+        // Order created/updated successfully
+        setSuccessMessage(editingOrder ? "Order updated successfully!" : "Order created successfully!");
+        setError("");
+        setTimeout(async () => {
           await loadOrders();
           setShowModal(false);
           setEditingOrder(null);
           resetForm();
-        } else {
-          setError(response.data.message || "Failed to update order");
-        }
+          setSuccessMessage("");
+          if (!editingOrder) {
+            // Dispatch event to refresh dashboard
+            window.dispatchEvent(new CustomEvent('orderUpdated'));
+          }
+        }, 1000);
       } else {
-        // Create order
-        const response = await apiClient.post("/orders", formData);
-        if (response.data.success) {
-          await loadOrders();
-          setShowModal(false);
-          resetForm();
-          // Dispatch event to refresh dashboard
-          window.dispatchEvent(new CustomEvent('orderUpdated'));
-        } else {
-          setError(response.data.message || "Failed to create order");
-        }
+        const errorMsg = response?.data?.error?.message || 
+                        response?.data?.message || 
+                        (editingOrder ? "Failed to update order. Please try again." : "Failed to create order. Please try again.");
+        setError(errorMsg);
+        setSuccessMessage("");
       }
     } catch (error) {
       console.error("Error submitting order:", error);
-      setError(error.response?.data?.message || "Failed to save order");
+      let errorMessage = editingOrder ? "Failed to update order" : "Failed to create order";
+      if (error.response) {
+        const errorData = error.response.data;
+        errorMessage = errorData?.message ||
+                      errorData?.error?.message ||
+                      errorData?.error?.code ||
+                      `Server error: ${error.response.status}`;
+      } else if (error.message) {
+        errorMessage = error.message;
+      }
+      setError(errorMessage);
+      setSuccessMessage("");
     } finally {
       setSubmitting(false);
     }
@@ -221,6 +247,8 @@ export default function OrdersPage() {
       assignedTo: order.assignedTo?._id || order.assignedTo || "",
       notes: order.notes || "",
     });
+    setError("");
+    setSuccessMessage("");
     setShowModal(true);
   };
 
@@ -229,17 +257,39 @@ export default function OrdersPage() {
     
     try {
       setDeleting(orderId);
+      setError("");
+      setSuccessMessage("");
       const response = await apiClient.delete(`/orders/${orderId}`);
-      if (response.data.success) {
-        await loadOrders();
-        // Dispatch event to refresh dashboard
-        window.dispatchEvent(new CustomEvent('orderUpdated'));
+      
+      if (response?.data?.success === true) {
+        setSuccessMessage("Order deleted successfully!");
+        setTimeout(async () => {
+          await loadOrders();
+          setSuccessMessage("");
+          // Dispatch event to refresh dashboard
+          window.dispatchEvent(new CustomEvent('orderUpdated'));
+        }, 1500);
       } else {
-        setError(response.data.message || "Failed to delete order");
+        const errorMsg = response?.data?.error?.message || 
+                        response?.data?.message || 
+                        "Failed to delete order. Please try again.";
+        setError(errorMsg);
+        setSuccessMessage("");
       }
     } catch (error) {
       console.error("Error deleting order:", error);
-      setError(error.response?.data?.message || "Failed to delete order");
+      let errorMessage = "Failed to delete order";
+      if (error.response) {
+        const errorData = error.response.data;
+        errorMessage = errorData?.message ||
+                      errorData?.error?.message ||
+                      errorData?.error?.code ||
+                      `Server error: ${error.response.status}`;
+      } else if (error.message) {
+        errorMessage = error.message;
+      }
+      setError(errorMessage);
+      setSuccessMessage("");
     } finally {
       setDeleting(null);
     }
@@ -253,6 +303,8 @@ export default function OrdersPage() {
       assignedTo: "",
       notes: "",
     });
+    setError("");
+    setSuccessMessage("");
   };
 
   const addItem = () => {
@@ -372,6 +424,8 @@ export default function OrdersPage() {
                 onClick={() => {
                   setEditingOrder(null);
                   resetForm();
+                  setError("");
+                  setSuccessMessage("");
                   setShowModal(true);
                 }}
                 className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
@@ -471,10 +525,29 @@ export default function OrdersPage() {
             </select>
           </div>
 
+          {/* Success Message */}
+          {successMessage && (
+            <div className="mb-6 p-4 bg-green-500/20 border border-green-500/50 rounded-lg flex items-center justify-between">
+              <p className="text-green-400">{successMessage}</p>
+              <button
+                onClick={() => setSuccessMessage("")}
+                className="text-green-400 hover:text-green-300"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+          )}
+
           {/* Error Message */}
           {error && (
-            <div className="mb-6 p-4 bg-red-500/20 border border-red-500/50 rounded-lg">
+            <div className="mb-6 p-4 bg-red-500/20 border border-red-500/50 rounded-lg flex items-center justify-between">
               <p className="text-red-400">{error}</p>
+              <button
+                onClick={() => setError("")}
+                className="text-red-400 hover:text-red-300"
+              >
+                <X className="w-5 h-5" />
+              </button>
             </div>
           )}
 
@@ -621,6 +694,7 @@ export default function OrdersPage() {
                   setEditingOrder(null);
                   resetForm();
                   setError("");
+                  setSuccessMessage("");
                 }}
                 className="p-2 text-gray-400 hover:text-white hover:bg-gray-700 rounded-lg transition-colors"
               >
@@ -784,6 +858,13 @@ export default function OrdersPage() {
                 />
               </div>
 
+              {/* Success Message */}
+              {successMessage && (
+                <div className="p-3 bg-green-500/20 border border-green-500/50 rounded-lg">
+                  <p className="text-green-400 text-sm">{successMessage}</p>
+                </div>
+              )}
+
               {/* Error Message */}
               {error && (
                 <div className="p-3 bg-red-500/20 border border-red-500/50 rounded-lg">
@@ -800,6 +881,7 @@ export default function OrdersPage() {
                     setEditingOrder(null);
                     resetForm();
                     setError("");
+                    setSuccessMessage("");
                   }}
                   className="flex-1 px-4 py-2 bg-gray-700 text-white rounded-lg hover:bg-gray-600 transition-colors"
                 >

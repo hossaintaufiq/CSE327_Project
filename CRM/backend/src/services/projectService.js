@@ -8,7 +8,6 @@
 import mongoose from 'mongoose';
 import { Project } from '../models/Project.js';
 import { Task } from '../models/Task.js';
-import { ActivityLog } from '../models/ActivityLog.js';
 
 // Valid project statuses
 const VALID_STATUSES = ['planning', 'in_progress', 'on_hold', 'completed', 'cancelled'];
@@ -155,15 +154,8 @@ export async function createProject({ companyId, createdBy, data }) {
   await project.populate('assignedTo', 'name email');
   await project.populate('members.userId', 'name email');
 
-  // Log activity
-  await ActivityLog.create({
-    companyId,
-    userId: createdBy,
-    action: 'create_project',
-    entityType: 'project',
-    entityId: project._id,
-    meta: { name: project.name, status: project.status },
-  });
+  // Note: ActivityLog is for security/admin logs, not entity CRUD operations
+  // Project creation is logged through the project's timestamps and createdBy field
 
   return project.toObject();
 }
@@ -208,17 +200,8 @@ export async function updateProject({ projectId, companyId, updatedBy, data }) {
   await project.populate('assignedTo', 'name email');
   await project.populate('members.userId', 'name email');
 
-  // Log activity if status changed
-  if (oldStatus !== project.status) {
-    await ActivityLog.create({
-      companyId,
-      userId: updatedBy,
-      action: 'update_project_status',
-      entityType: 'project',
-      entityId: project._id,
-      meta: { name: project.name, oldStatus, newStatus: project.status },
-    });
-  }
+  // Note: ActivityLog is for security/admin logs, not entity CRUD operations
+  // Project updates are logged through the project's timestamps and updatedAt field
 
   return project.toObject();
 }
@@ -244,15 +227,8 @@ export async function deleteProject({ projectId, companyId, deletedBy }) {
   project.isActive = false;
   await project.save();
 
-  // Log activity
-  await ActivityLog.create({
-    companyId,
-    userId: deletedBy,
-    action: 'delete_project',
-    entityType: 'project',
-    entityId: project._id,
-    meta: { name: project.name },
-  });
+  // Note: ActivityLog is for security/admin logs, not entity CRUD operations
+  // Project deletion is logged through the project's isActive flag and timestamps
 
   return project.toObject();
 }

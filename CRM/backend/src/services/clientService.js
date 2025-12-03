@@ -12,7 +12,6 @@
  */
 
 import { Client } from '../models/Client.js';
-import { ActivityLog } from '../models/ActivityLog.js';
 
 /**
  * Get all clients/leads for a company
@@ -103,15 +102,8 @@ export async function createClient({ companyId, createdBy, data }) {
     notes: notes?.trim() || '',
   });
 
-  // Log activity
-  await ActivityLog.create({
-    companyId,
-    userId: createdBy,
-    action: 'create_client',
-    entityType: 'client',
-    entityId: client._id,
-    meta: { name: client.name, status: client.status },
-  });
+  // Note: ActivityLog is for security/admin logs, not entity CRUD operations
+  // Client creation is logged through the client's timestamps and createdBy field
 
   return client.toObject();
 }
@@ -148,17 +140,8 @@ export async function updateClient({ clientId, companyId, updatedBy, data }) {
 
   await client.save();
 
-  // Log activity if status changed
-  if (oldStatus !== client.status) {
-    await ActivityLog.create({
-      companyId,
-      userId: updatedBy,
-      action: 'update_client_status',
-      entityType: 'client',
-      entityId: client._id,
-      meta: { oldStatus, newStatus: client.status, name: client.name },
-    });
-  }
+  // Note: ActivityLog is for security/admin logs, not entity CRUD operations
+  // Client updates are logged through the client's timestamps and updatedAt field
 
   return client.toObject();
 }
@@ -184,15 +167,8 @@ export async function deleteClient({ clientId, companyId, deletedBy }) {
   client.isActive = false;
   await client.save();
 
-  // Log activity
-  await ActivityLog.create({
-    companyId,
-    userId: deletedBy,
-    action: 'delete_client',
-    entityType: 'client',
-    entityId: client._id,
-    meta: { name: client.name },
-  });
+  // Note: ActivityLog is for security/admin logs, not entity CRUD operations
+  // Client deletion is logged through the client's isActive flag and timestamps
 
   return client.toObject();
 }
@@ -236,20 +212,8 @@ export async function convertLeadToClient({ leadId, companyId, convertedBy, addi
 
   await lead.save();
 
-  // Log activity
-  await ActivityLog.create({
-    companyId,
-    userId: convertedBy,
-    action: 'convert_lead_to_customer',
-    entityType: 'client',
-    entityId: lead._id,
-    meta: { 
-      name: lead.name, 
-      oldStatus, 
-      newStatus: 'customer',
-      convertedAt: new Date().toISOString(),
-    },
-  });
+  // Note: ActivityLog is for security/admin logs, not entity CRUD operations
+  // Lead conversion is tracked through the client's status field and timestamps
 
   return lead.toObject();
 }
