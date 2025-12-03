@@ -8,7 +8,6 @@
 import mongoose from 'mongoose';
 import { Task } from '../models/Task.js';
 import { Project } from '../models/Project.js';
-import { ActivityLog } from '../models/ActivityLog.js';
 import { createNotification, sendStatusChangeNotification } from './notificationService.js';
 
 // Valid task statuses
@@ -160,15 +159,8 @@ export async function createTask({ companyId, createdBy, data }) {
   await task.populate('assignedTo', 'name email');
   await task.populate('createdBy', 'name email');
 
-  // Log activity
-  await ActivityLog.create({
-    companyId,
-    userId: createdBy,
-    action: 'create_task',
-    entityType: 'task',
-    entityId: task._id,
-    meta: { title: task.title, status: task.status, projectId: task.projectId },
-  });
+  // Note: ActivityLog is for security/admin logs, not entity CRUD operations
+  // Task creation is logged through the task's timestamps and createdBy field
 
   // Send notification to assigned user if task is assigned to someone else
   if (assignedTo && assignedTo !== createdBy.toString()) {
@@ -256,16 +248,10 @@ export async function updateTask({ taskId, companyId, updatedBy, data }) {
   await task.populate('assignedTo', 'name email');
   await task.populate('createdBy', 'name email');
 
-  // Log activity if status changed
+  // Note: ActivityLog is for security/admin logs, not entity CRUD operations
+  // Task updates are logged through the task's timestamps and updatedAt field
+  // Status changes are handled below for notifications
   if (oldStatus !== task.status) {
-    await ActivityLog.create({
-      companyId,
-      userId: updatedBy,
-      action: 'update_task_status',
-      entityType: 'task',
-      entityId: task._id,
-      meta: { title: task.title, oldStatus, newStatus: task.status },
-    });
 
     // Send notification to assigned user about status change
     if (task.assignedTo && task.assignedTo._id.toString() !== updatedBy.toString()) {
@@ -309,16 +295,9 @@ export async function deleteTask({ taskId, companyId, deletedBy }) {
   task.isActive = false;
   await task.save();
 
-  // Log activity
-  await ActivityLog.create({
-    companyId,
-    userId: deletedBy,
-    action: 'delete_task',
-    entityType: 'task',
-    entityId: task._id,
-    meta: { title: task.title },
-  });
-
+  // Note: ActivityLog is for security/admin logs, not entity CRUD operations
+  // Task deletion is logged through the task's isActive flag and timestamps
+  
   return task.toObject();
 }
 
@@ -364,15 +343,8 @@ export async function assignTask({ taskId, companyId, assignedTo, assignedBy }) 
     data: { assignedTo },
   });
 
-  // Log assignment activity
-  await ActivityLog.create({
-    companyId,
-    userId: assignedBy,
-    action: 'assign_task',
-    entityType: 'task',
-    entityId: taskId,
-    meta: { title: task.title, assignedTo },
-  });
+  // Note: ActivityLog is for security/admin logs, not entity CRUD operations
+  // Task assignment is tracked through the task's assignedTo field and timestamps
 
   // Send notification to newly assigned user
   if (assignedTo && assignedTo !== assignedBy.toString()) {
