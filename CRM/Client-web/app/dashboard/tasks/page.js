@@ -40,6 +40,7 @@ export default function TasksPage() {
     notes: "",
   });
   const [error, setError] = useState("");
+  const [successMessage, setSuccessMessage] = useState("");
 
   useEffect(() => {
     if (typeof window === "undefined") return;
@@ -140,13 +141,32 @@ export default function TasksPage() {
   const handleSyncAll = async () => {
     try {
       setSyncing(true);
+      setError("");
+      setSuccessMessage("");
+      
       await syncAllEntitiesNow();
       // Reload tasks to show any synced changes
       await loadTasks();
-      alert("Sync completed successfully!");
+      setSuccessMessage("Sync completed successfully!");
+      
+      // Clear success message after 3 seconds
+      setTimeout(() => {
+        setSuccessMessage("");
+      }, 3000);
     } catch (error) {
       console.error("Error syncing:", error);
-      alert("Failed to sync entities. Check console for details.");
+      
+      let errorMessage = "Failed to sync entities. Please try again.";
+      if (error.response) {
+        const errorData = error.response.data;
+        errorMessage = errorData?.error?.message || 
+                      errorData?.message || 
+                      `Sync failed: ${errorData?.error?.code || 'Unknown error'}`;
+      } else if (error.message) {
+        errorMessage = `Sync failed: ${error.message}`;
+      }
+      
+      setError(errorMessage);
     } finally {
       setSyncing(false);
     }
@@ -160,46 +180,84 @@ export default function TasksPage() {
     try {
       setSubmitting(true);
       setError("");
+      setSuccessMessage("");
 
-      if (!formData.title) {
+      // Validate required fields
+      if (!formData.title || !formData.title.trim()) {
         setError("Task title is required");
+        setSubmitting(false);
         return;
       }
 
+      // Build clean payload - only send valid values
       const payload = {
-        ...formData,
-        projectId: formData.projectId || null,
-        tags: formData.tags ? formData.tags.split(',').map(tag => tag.trim()).filter(tag => tag) : [],
+        title: formData.title.trim(),
+        description: formData.description || '',
+        status: formData.status || 'todo',
+        priority: formData.priority || 'medium',
+        projectId: formData.projectId && formData.projectId.trim() ? formData.projectId : null,
+        assignedTo: formData.assignedTo && formData.assignedTo.trim() ? formData.assignedTo : null,
+        dueDate: formData.dueDate && formData.dueDate.trim() ? formData.dueDate : null,
         estimatedHours: formData.estimatedHours ? parseFloat(formData.estimatedHours) : 0,
+        tags: formData.tags && formData.tags.trim() 
+          ? formData.tags.split(',').map(tag => tag.trim()).filter(tag => tag) 
+          : [],
       };
 
+      // Only include notes if provided
+      if (formData.notes && formData.notes.trim()) {
+        payload.notes = formData.notes.trim();
+      }
+
+      let response;
       if (editingTask) {
-        const response = await apiClient.put(`/tasks/${editingTask._id}`, payload);
-        if (response.data.success) {
+        response = await apiClient.put(`/tasks/${editingTask._id}`, payload);
+      } else {
+        response = await apiClient.post("/tasks", payload);
+      }
+
+      // Check if response indicates success - simple and clear check
+      if (response?.data?.success === true) {
+        // Task created/updated successfully
+        setSuccessMessage(editingTask ? "Task updated successfully!" : "Task created successfully!");
+        setError(""); // Clear any errors
+        
+        // Wait a moment to show success message, then close modal
+        setTimeout(async () => {
           await loadTasks();
           setShowModal(false);
           setEditingTask(null);
           resetForm();
+          setSuccessMessage("");
           // Dispatch event to refresh dashboard
           window.dispatchEvent(new CustomEvent('taskUpdated'));
-        } else {
-          setError(response.data.message || "Failed to update task");
-        }
+        }, 1000);
       } else {
-        const response = await apiClient.post("/tasks", payload);
-        if (response.data.success) {
-          await loadTasks();
-          setShowModal(false);
-          resetForm();
-          // Dispatch event to refresh dashboard
-          window.dispatchEvent(new CustomEvent('taskUpdated'));
-        } else {
-          setError(response.data.message || "Failed to create task");
-        }
+        // Response doesn't indicate success
+        const errorMsg = response?.data?.error?.message || 
+                        response?.data?.message || 
+                        (editingTask ? "Failed to update task. Please try again." : "Failed to create task. Please try again.");
+        setError(errorMsg);
+        setSuccessMessage("");
       }
     } catch (error) {
       console.error("Error submitting task:", error);
-      setError(error.response?.data?.message || "Failed to save task");
+      
+      // Extract error message from response
+      let errorMessage = editingTask ? "Failed to update task. Please try again." : "Failed to create task. Please try again.";
+      
+      if (error.response) {
+        const errorData = error.response.data;
+        errorMessage = errorData?.error?.message || 
+                      errorData?.message || 
+                      errorData?.error?.code ||
+                      `Server error (${error.response.status}). Please try again.`;
+      } else if (error.message) {
+        errorMessage = error.message;
+      }
+      
+      setError(errorMessage);
+      setSuccessMessage("");
     } finally {
       setSubmitting(false);
     }
@@ -219,6 +277,8 @@ export default function TasksPage() {
       estimatedHours: task.estimatedHours || "",
       notes: task.notes || "",
     });
+    setError("");
+    setSuccessMessage("");
     setShowModal(true);
   };
 
@@ -227,17 +287,40 @@ export default function TasksPage() {
     
     try {
       setDeleting(taskId);
+      setError("");
+      setSuccessMessage("");
+      
       const response = await apiClient.delete(`/tasks/${taskId}`);
-      if (response.data.success) {
+      
+      if (response?.data?.success === true) {
+        setSuccessMessage("Task deleted successfully!");
         await loadTasks();
         // Dispatch event to refresh dashboard
         window.dispatchEvent(new CustomEvent('taskUpdated'));
+        
+        // Clear success message after 3 seconds
+        setTimeout(() => {
+          setSuccessMessage("");
+        }, 3000);
       } else {
-        setError(response.data.message || "Failed to delete task");
+        const errorMsg = response?.data?.error?.message || 
+                        response?.data?.message || 
+                        "Failed to delete task. Please try again.";
+        setError(errorMsg);
       }
     } catch (error) {
       console.error("Error deleting task:", error);
-      setError(error.response?.data?.message || "Failed to delete task");
+      
+      let errorMessage = "Failed to delete task. Please try again.";
+      if (error.response) {
+        const errorData = error.response.data;
+        errorMessage = errorData?.error?.message || 
+                      errorData?.message || 
+                      errorData?.error?.code ||
+                      `Server error (${error.response.status}). Please try again.`;
+      }
+      
+      setError(errorMessage);
     } finally {
       setDeleting(null);
     }
@@ -454,10 +537,29 @@ export default function TasksPage() {
             </select>
           </div>
 
+          {/* Success Message */}
+          {successMessage && (
+            <div className="mb-6 p-4 bg-green-500/20 border border-green-500/50 rounded-lg flex items-center justify-between">
+              <p className="text-green-400">{successMessage}</p>
+              <button
+                onClick={() => setSuccessMessage("")}
+                className="text-green-400 hover:text-green-300 transition-colors"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+          )}
+
           {/* Error Message */}
           {error && (
-            <div className="mb-6 p-4 bg-red-500/20 border border-red-500/50 rounded-lg">
+            <div className="mb-6 p-4 bg-red-500/20 border border-red-500/50 rounded-lg flex items-center justify-between">
               <p className="text-red-400">{error}</p>
+              <button
+                onClick={() => setError("")}
+                className="text-red-400 hover:text-red-300 transition-colors"
+              >
+                <X className="w-5 h-5" />
+              </button>
             </div>
           )}
 
@@ -588,6 +690,7 @@ export default function TasksPage() {
                   setEditingTask(null);
                   resetForm();
                   setError("");
+                  setSuccessMessage("");
                 }}
                 className="p-2 text-gray-400 hover:text-white hover:bg-gray-700 rounded-lg transition-colors"
               >
@@ -731,6 +834,12 @@ export default function TasksPage() {
                 />
               </div>
 
+              {successMessage && (
+                <div className="p-3 bg-green-500/20 border border-green-500/50 rounded-lg">
+                  <p className="text-green-400 text-sm">{successMessage}</p>
+                </div>
+              )}
+
               {error && (
                 <div className="p-3 bg-red-500/20 border border-red-500/50 rounded-lg">
                   <p className="text-red-400 text-sm">{error}</p>
@@ -745,6 +854,7 @@ export default function TasksPage() {
                     setEditingTask(null);
                     resetForm();
                     setError("");
+                    setSuccessMessage("");
                   }}
                   className="flex-1 px-4 py-2 bg-gray-700 text-white rounded-lg hover:bg-gray-600 transition-colors"
                 >
