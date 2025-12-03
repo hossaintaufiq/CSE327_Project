@@ -10,6 +10,8 @@ import { Project } from '../models/Project.js';
 import { Task } from '../models/Task.js';
 import { Client } from '../models/Client.js';
 import { Order } from '../models/Order.js';
+import { User } from '../models/User.js';
+import mongoose from 'mongoose';
 
 /**
  * Check AI service health
@@ -243,6 +245,183 @@ export const suggestResponses = async (req, res, next) => {
   }
 };
 
+/**
+ * Get company dashboard insights and recommendations
+ */
+export const getCompanyInsights = async (req, res, next) => {
+  try {
+    const companyId = req.companyId;
+    
+    // Fetch key company statistics for AI analysis
+    const now = new Date();
+    const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
+    const thirtyDaysAgo = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000);
+    
+    // Monthly Revenue
+    const monthlyRevenueResult = await Order.aggregate([
+      {
+        $match: {
+          companyId: new mongoose.Types.ObjectId(companyId),
+          status: 'delivered',
+          createdAt: { $gte: startOfMonth },
+        },
+      },
+      { $group: { _id: null, total: { $sum: '$totalAmount' } } },
+    ]);
+    const monthlyRevenue = monthlyRevenueResult[0]?.total || 0;
+    
+    // Total Revenue
+    const totalRevenueResult = await Order.aggregate([
+      {
+        $match: {
+          companyId: new mongoose.Types.ObjectId(companyId),
+          status: 'delivered',
+        },
+      },
+      { $group: { _id: null, total: { $sum: '$totalAmount' } } },
+    ]);
+    const totalRevenue = totalRevenueResult[0]?.total || 0;
+    
+    // New Leads (30d)
+    const newLeads30d = await Client.countDocuments({
+      companyId,
+      isActive: true,
+      createdAt: { $gte: thirtyDaysAgo },
+    });
+    
+    // Total Clients
+    const totalClients = await Client.countDocuments({
+      companyId,
+      isActive: true,
+    });
+    
+    // Total Orders
+    const totalOrders = await Order.countDocuments({ companyId });
+    
+    // Pipeline Value
+    const pipelineResult = await Order.aggregate([
+      {
+        $match: {
+          companyId: new mongoose.Types.ObjectId(companyId),
+          status: { $in: ['pending', 'processing'] },
+        },
+      },
+      { $group: { _id: null, total: { $sum: '$totalAmount' } } },
+    ]);
+    const pipelineValue = pipelineResult[0]?.total || 0;
+    
+    // Active Tasks
+    const activeTasks = await Task.countDocuments({
+      companyId,
+      isActive: true,
+      status: { $in: ['todo', 'in_progress', 'review'] },
+    });
+    
+    // Total Employees
+    const employeesResult = await User.aggregate([
+      { $unwind: '$companies' },
+      {
+        $match: {
+          'companies.companyId': new mongoose.Types.ObjectId(companyId),
+          'companies.isActive': true,
+          isActive: true,
+        },
+      },
+      { $count: 'total' },
+    ]);
+    const totalEmployees = employeesResult[0]?.total || 0;
+    
+    // Revenue Trend (last 6 months)
+    const revenueTrend = [];
+    for (let i = 5; i >= 0; i--) {
+      const monthStart = new Date(now.getFullYear(), now.getMonth() - i, 1);
+      const monthEnd = new Date(now.getFullYear(), now.getMonth() - i + 1, 0, 23, 59, 59);
+      const monthRevenue = await Order.aggregate([
+        {
+          $match: {
+            companyId: new mongoose.Types.ObjectId(companyId),
+            status: 'delivered',
+            createdAt: { $gte: monthStart, $lte: monthEnd },
+          },
+        },
+        { $group: { _id: null, total: { $sum: '$totalAmount' } } },
+      ]);
+      const monthNames = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+      revenueTrend.push({
+        month: monthNames[monthStart.getMonth()],
+        revenue: monthRevenue[0]?.total || 0,
+      });
+    }
+    
+    // Calculate metrics
+    const allDeliveredOrders = await Order.find({
+      companyId,
+      status: 'delivered',
+    }).lean();
+    const avgDealSize = allDeliveredOrders.length > 0 ? totalRevenue / allDeliveredOrders.length : 0;
+    const conversionRate = totalOrders > 0 ? (allDeliveredOrders.length / totalOrders) * 100 : 0;
+    
+    const companyData = {
+      monthlyRevenue,
+      totalRevenue,
+      newLeads30d,
+      totalClients,
+      totalOrders,
+      pipelineValue,
+      activeTasks,
+      totalEmployees,
+      avgDealSize,
+      conversionRate,
+      revenueTrend,
+    };
+    
+    // Check if Gemini API is configured
+    if (!process.env.GEMINI_API_KEY || process.env.GEMINI_API_KEY.trim() === '') {
+      return errorResponse(
+        res,
+        'CONFIG_ERROR',
+        'Gemini API key is not configured. Please add GEMINI_API_KEY to your backend .env file. Get your free API key at: https://makersuite.google.com/app/apikey',
+        503
+      );
+    }
+    
+    // Generate AI insights
+    console.log('[AI Insights] Starting insight generation for company:', companyId);
+    const insights = await geminiService.generateCompanyInsights(companyData);
+    console.log('[AI Insights] Successfully generated insights');
+    
+    return successResponse(res, { 
+      insights,
+      stats: companyData,
+      generatedAt: new Date().toISOString()
+    });
+  } catch (error) {
+    console.error('[AI Insights] Error generating insights:', error);
+    
+    // Provide user-friendly error messages
+    if (error.message?.includes('API key') || error.message?.includes('403') || error.message?.includes('Forbidden')) {
+      return errorResponse(
+        res,
+        'API_KEY_ERROR',
+        error.message || 'Gemini API key is invalid. Please check your GEMINI_API_KEY in the backend .env file. Get your free API key at: https://makersuite.google.com/app/apikey',
+        503
+      );
+    }
+    
+    // Check for model errors
+    if (error.message?.includes('404') || error.message?.includes('not found')) {
+      return errorResponse(
+        res,
+        'MODEL_ERROR',
+        'Gemini model not available. Please check backend configuration. Error: ' + error.message,
+        503
+      );
+    }
+    
+    next(error);
+  }
+};
+
 export default {
   checkHealth,
   generateText,
@@ -253,4 +432,5 @@ export default {
   smartSearch,
   generateProjectDescription,
   suggestResponses,
+  getCompanyInsights,
 };

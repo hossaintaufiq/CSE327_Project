@@ -249,6 +249,78 @@ Only respond with valid JSON array.`;
 }
 
 /**
+ * Generate company dashboard insights and recommendations
+ * @param {Object} companyData - Company dashboard statistics and data
+ * @returns {Promise<Object>} AI-generated insights with tips and recommendations
+ */
+export async function generateCompanyInsights(companyData) {
+  const prompt = `You are an expert business analyst AI assistant. Analyze the following company CRM data and provide actionable insights to improve sales and management:
+
+COMPANY STATISTICS:
+- Monthly Revenue: $${companyData.monthlyRevenue || 0}
+- Total Revenue: $${companyData.totalRevenue || 0}
+- New Leads (30 days): ${companyData.newLeads30d || 0}
+- Total Clients: ${companyData.totalClients || 0}
+- Total Orders: ${companyData.totalOrders || 0}
+- Pipeline Value: $${companyData.pipelineValue || 0}
+- Active Tasks: ${companyData.activeTasks || 0}
+- Total Employees: ${companyData.totalEmployees || 0}
+- Average Deal Size: $${companyData.avgDealSize || 0}
+- Conversion Rate: ${companyData.conversionRate?.toFixed(2) || 0}%
+- Revenue Trend (last 6 months): ${JSON.stringify(companyData.revenueTrend || [])}
+
+Provide a comprehensive analysis as a JSON object with the following structure:
+{
+  "overallHealthScore": number (1-100, overall business health),
+  "salesPerformance": {
+    "score": number (1-100),
+    "strengths": array of 2-3 strings,
+    "weaknesses": array of 2-3 strings,
+    "trend": "improving" | "stable" | "declining"
+  },
+  "managementPerformance": {
+    "score": number (1-100),
+    "strengths": array of 2-3 strings,
+    "weaknesses": array of 2-3 strings,
+    "trend": "improving" | "stable" | "declining"
+  },
+  "recommendations": array of objects, each with:
+    - "category": string (e.g., "Sales", "Marketing", "Operations", "Growth"),
+    - "priority": "high" | "medium" | "low",
+    - "tip": string (actionable advice)
+  "quickTips": array of 3-5 strings (brief actionable tips),
+  "keyMetrics": {
+    "needsAttention": array of 2-3 strings (metrics that need improvement),
+    "performingWell": array of 2-3 strings (metrics performing well)
+  }
+}
+
+Only respond with valid JSON, no additional text or markdown formatting.`;
+
+  try {
+    const response = await generateText(prompt);
+    // Extract JSON from response (handle markdown code blocks)
+    const jsonMatch = response.match(/\{[\s\S]*\}/);
+    if (jsonMatch) {
+      const insights = JSON.parse(jsonMatch[0]);
+      return insights;
+    }
+    // Fallback if JSON parsing fails
+    return {
+      overallHealthScore: 70,
+      salesPerformance: { score: 70, strengths: [], weaknesses: [], trend: "stable" },
+      managementPerformance: { score: 70, strengths: [], weaknesses: [], trend: "stable" },
+      recommendations: [],
+      quickTips: [],
+      keyMetrics: { needsAttention: [], performingWell: [] }
+    };
+  } catch (error) {
+    console.error('Error generating company insights:', error);
+    throw new Error(`Failed to generate insights: ${error.message}`);
+  }
+}
+
+/**
  * Check if Gemini service is configured and available
  * @returns {Promise<boolean>} Service availability status
  */
@@ -278,4 +350,5 @@ export default {
   generateProjectDescription,
   suggestResponses,
   checkHealth,
+  generateCompanyInsights,
 };

@@ -246,6 +246,12 @@ export const aiApi = {
     const response = await apiClient.post('/ai/suggest-responses', { message, clientName, conversationContext });
     return response.data;
   },
+
+  // Get company dashboard insights and recommendations
+  getCompanyInsights: async () => {
+    const response = await apiClient.get('/ai/company/insights');
+    return response.data;
+  },
 };
 
 // MCP API functions

@@ -17,6 +17,7 @@ import {
   smartSearch,
   generateProjectDescription,
   suggestResponses,
+  getCompanyInsights,
 } from '../controllers/aiController.js';
 
 const router = express.Router();
@@ -51,5 +52,8 @@ router.post('/generate-description', generateProjectDescription);
 
 // Suggest chat responses
 router.post('/suggest-responses', suggestResponses);
+
+// Get company dashboard insights and recommendations
+router.get('/company/insights', getCompanyInsights);
 
 export default router;

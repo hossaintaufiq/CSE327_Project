@@ -6,6 +6,7 @@ import useAuthStore from "@/store/authStore";
 import apiClient from "@/utils/api";
 import { useNotifications } from "@/utils/useNotifications";
 import Sidebar from "@/components/Sidebar";
+import AIInsightsPanel from "@/components/AIInsightsPanel";
 import {
   DollarSign,
   TrendingUp,
@@ -600,6 +601,13 @@ export default function DashboardPage() {
               </div>
             </div>
           </div>
+
+          {/* AI Insights Panel */}
+          {activeCompanyRole === 'company_admin' && (
+            <div className="mt-8">
+              <AIInsightsPanel companyId={activeCompanyId} />
+            </div>
+          )}
         </div>
       </main>
     </div>
