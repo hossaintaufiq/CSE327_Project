@@ -153,7 +153,7 @@ export default function CompaniesPage() {
       <Navbar />
       <Sidebar />
       
-      <main className="lg:ml-64 pt-16 p-6">
+      <main className="lg:ml-64 pt-[60px] p-6">
         <div className="max-w-7xl mx-auto">
           {/* Header */}
           <div className="mb-8">

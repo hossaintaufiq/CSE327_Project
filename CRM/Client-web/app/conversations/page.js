@@ -281,7 +281,7 @@ export default function ConversationsPage() {
       <Navbar />
       <Sidebar />
       
-      <main className="lg:ml-64 pt-16">
+      <main className="lg:ml-64 pt-[60px]">
         <div className="h-[calc(100vh-64px)] flex">
           {/* Conversations List */}
           <div className={`${selectedConversation ? 'hidden md:flex' : 'flex'} flex-col w-full md:w-96 border-r border-gray-200 bg-white`}>

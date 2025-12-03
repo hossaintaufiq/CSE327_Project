@@ -282,7 +282,7 @@ export default function RolesPage() {
   return (
     <div className="min-h-screen bg-gray-900">
       <Sidebar />
-      <main className="lg:ml-64 min-h-screen">
+      <main className="lg:ml-64 min-h-screen pt-[60px]">
         <div className="p-4 sm:p-6 lg:p-8">
           <div className="mb-8 flex justify-between items-start">
             <div>

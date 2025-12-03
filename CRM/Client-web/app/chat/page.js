@@ -326,8 +326,8 @@ function ChatPage() {
   }
 
   return (
-    <div className="min-h-screen bg-gray-900 text-white">
-      <div className="flex h-screen">
+    <div className="min-h-screen bg-gray-900 text-white pt-[60px]">
+      <div className="flex h-[calc(100vh-60px)]">
         {/* Chat Rooms Sidebar */}
         <div className="w-80 bg-gray-800 border-r border-gray-700 flex flex-col">
           {/* Header */}
