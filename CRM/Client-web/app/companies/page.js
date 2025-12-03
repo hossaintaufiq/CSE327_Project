@@ -26,30 +26,38 @@ import api from "@/utils/api";
 
 export default function CompaniesPage() {
   const router = useRouter();
-  const { user, activeCompanyRole, isAuthenticated, loading: authLoading } = useAuthStore();
+  const { user, activeCompanyRole } = useAuthStore();
   const [companies, setCompanies] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [mounted, setMounted] = useState(false);
   const [error, setError] = useState(null);
   const [searchQuery, setSearchQuery] = useState("");
   const [viewMode, setViewMode] = useState("grid");
   const [selectedCategory, setSelectedCategory] = useState("all");
   const [stats, setStats] = useState({});
 
+  // Handle hydration
   useEffect(() => {
-    if (!authLoading && !isAuthenticated) {
+    setMounted(true);
+  }, []);
+
+  useEffect(() => {
+    if (!mounted) return;
+    
+    const storedUser = localStorage.getItem("user");
+    if (!storedUser) {
       router.push("/login");
       return;
     }
     
-    if (isAuthenticated && activeCompanyRole !== "client") {
+    // Only redirect if role is set and not client
+    if (activeCompanyRole && activeCompanyRole !== "client") {
       router.push("/dashboard");
       return;
     }
 
-    if (isAuthenticated) {
-      fetchCompanies();
-    }
-  }, [isAuthenticated, authLoading, activeCompanyRole]);
+    fetchCompanies();
+  }, [mounted, activeCompanyRole]);
 
   const fetchCompanies = async () => {
     try {
@@ -140,7 +148,7 @@ export default function CompaniesPage() {
     return date.toLocaleDateString();
   };
 
-  if (authLoading || loading) {
+  if (!mounted || loading) {
     return (
       <div className="min-h-screen bg-gray-50 flex items-center justify-center">
         <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
