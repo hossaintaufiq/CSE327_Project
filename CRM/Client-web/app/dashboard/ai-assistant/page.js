@@ -179,7 +179,7 @@ export default function AIAssistantPage() {
   }
 
   return (
-    <div className="min-h-screen bg-linear-to-br from-gray-900 via-gray-800 to-black">
+    <div className="min-h-screen bg-gradient-to-br from-gray-900 via-gray-800 to-black">
       <Navbar />
       <div className="flex">
         <Sidebar />
@@ -187,8 +187,8 @@ export default function AIAssistantPage() {
           {/* Header */}
           <div className="mb-6">
             <div className="flex items-center justify-between">
-              <div className="flex items-center gap-3">
-                <div className="p-3 bg-linear-to-br from-purple-500 to-blue-500 rounded-xl">
+              <div className="flex items-center gap-4">
+                <div className="p-3 bg-gradient-to-br from-purple-500 to-blue-500 rounded-xl">
                   <Sparkles className="w-6 h-6 text-white" />
                 </div>
                 <div>
@@ -216,7 +216,7 @@ export default function AIAssistantPage() {
                   className={`flex gap-3 ${message.role === "user" ? "justify-end" : "justify-start"}`}
                 >
                   {message.role === "assistant" && (
-                    <div className="shrink-0 w-8 h-8 rounded-full bg-linear-to-br from-purple-500 to-blue-500 flex items-center justify-center">
+                    <div className="shrink-0 w-8 h-8 rounded-full bg-gradient-to-br from-purple-500 to-blue-500 flex items-center justify-center">
                       <Bot className="w-5 h-5 text-white" />
                     </div>
                   )}
@@ -224,7 +224,7 @@ export default function AIAssistantPage() {
                   <div
                     className={`max-w-[70%] rounded-2xl p-4 ${
                       message.role === "user"
-                        ? "bg-linear-to-br from-blue-600 to-purple-600 text-white"
+                        ? "bg-gradient-to-br from-blue-600 to-purple-600 text-white"
                         : message.isError
                         ? "bg-red-500/20 text-red-300 border border-red-500/30"
                         : "bg-gray-700/50 text-gray-100 border border-gray-600/30"
@@ -237,7 +237,7 @@ export default function AIAssistantPage() {
                   </div>
 
                   {message.role === "user" && (
-                    <div className="shrink-0 w-8 h-8 rounded-full bg-linear-to-br from-green-500 to-teal-500 flex items-center justify-center">
+                    <div className="shrink-0 w-8 h-8 rounded-full bg-gradient-to-br from-green-500 to-teal-500 flex items-center justify-center">
                       <User className="w-5 h-5 text-white" />
                     </div>
                   )}
@@ -246,7 +246,7 @@ export default function AIAssistantPage() {
 
               {isLoading && (
                 <div className="flex gap-3 justify-start">
-                  <div className="flex-shrink-0 w-8 h-8 rounded-full bg-gradient-to-br from-purple-500 to-blue-500 flex items-center justify-center">
+                  <div className="shrink-0 w-8 h-8 rounded-full bg-gradient-to-br from-purple-500 to-blue-500 flex items-center justify-center">
                     <Bot className="w-5 h-5 text-white" />
                   </div>
                   <div className="bg-gray-700/50 border border-gray-600/30 rounded-2xl p-4 flex items-center gap-2">
@@ -292,7 +292,7 @@ export default function AIAssistantPage() {
                 <button
                   type="submit"
                   disabled={!inputMessage.trim() || isLoading}
-                  className="px-6 py-3 bg-linear-to-r from-purple-600 to-blue-600 hover:from-purple-700 hover:to-blue-700 text-white rounded-xl flex items-center gap-2 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+                  className="px-6 py-3 bg-gradient-to-r from-purple-600 to-blue-600 hover:from-purple-700 hover:to-blue-700 text-white rounded-xl flex items-center gap-2 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
                 >
                   {isLoading ? (
                     <Loader2 className="w-5 h-5 animate-spin" />

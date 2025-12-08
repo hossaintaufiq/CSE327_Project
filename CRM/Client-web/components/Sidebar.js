@@ -143,7 +143,7 @@ export default function Sidebar() {
       {/* Sidebar */}
       <aside
         className={`
-          fixed top-[60px] left-0 h-[calc(100vh-60px)] w-64 bg-linear-to-b from-gray-900 to-gray-800 text-white z-20
+          fixed top-[60px] left-0 h-[calc(100vh-60px)] w-64 bg-gradient-to-b from-gray-900 to-gray-800 text-white z-20
           transform transition-transform duration-300 ease-in-out overflow-hidden
           lg:translate-x-0
           ${isMobileMenuOpen ? "translate-x-0" : "-translate-x-full"}

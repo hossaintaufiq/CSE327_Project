@@ -143,7 +143,7 @@ export function VoiceAIAssistant() {
         
         <button
           onClick={() => setIsMinimized(false)}
-          className="relative w-16 h-16 rounded-full bg-linear-to-r from-purple-600 to-indigo-600 text-white shadow-lg hover:shadow-2xl transition-all duration-300 flex items-center justify-center group hover:scale-110"
+          className="relative w-16 h-16 rounded-full bg-gradient-to-r from-purple-600 to-indigo-600 text-white shadow-lg hover:shadow-2xl transition-all duration-300 flex items-center justify-center group hover:scale-110"
         >
           <RippleEffect isActive={isListening} />
           
@@ -189,8 +189,8 @@ export function VoiceAIAssistant() {
         {/* Header with enhanced gradient animation */}
         <div className={`relative p-4 text-white overflow-hidden ${
           isListening 
-            ? 'bg-linear-to-r from-red-500 to-pink-500' 
-            : 'bg-linear-to-r from-purple-600 to-indigo-600'
+            ? 'bg-gradient-to-r from-red-500 to-pink-500' 
+            : 'bg-gradient-to-r from-purple-600 to-indigo-600'
         } transition-all duration-500`}>
           {/* Animated background particles */}
           <div className="absolute inset-0 overflow-hidden">
@@ -267,7 +267,7 @@ export function VoiceAIAssistant() {
         {isExpanded && (
           <div 
             ref={conversationRef}
-            className="h-72 overflow-y-auto p-4 space-y-4 bg-linear-to-b from-gray-50 to-white scroll-smooth"
+            className="h-72 overflow-y-auto p-4 space-y-4 bg-gradient-to-b from-gray-50 to-white scroll-smooth"
           >
             {conversationHistory.length === 0 ? (
               <div className="h-full flex flex-col items-center justify-center text-gray-500 animate-fadeIn">
@@ -300,7 +300,7 @@ export function VoiceAIAssistant() {
                   <div
                     className={`max-w-[85%] rounded-2xl p-3 shadow-sm transition-all duration-200 hover:shadow-md ${
                       msg.role === 'user'
-                        ? 'bg-linear-to-br from-purple-600 to-indigo-600 text-white rounded-br-md'
+                        ? 'bg-gradient-to-br from-purple-600 to-indigo-600 text-white rounded-br-md'
                         : 'bg-white border border-gray-100 text-gray-800 rounded-bl-md'
                     }`}
                   >
@@ -333,7 +333,7 @@ export function VoiceAIAssistant() {
 
         {/* Current Transcript with enhanced styling */}
         {fullTranscript && (
-          <div className="px-4 py-3 bg-linear-to-r from-purple-50 to-indigo-50 border-t border-purple-100">
+          <div className="px-4 py-3 bg-gradient-to-r from-purple-50 to-indigo-50 border-t border-purple-100">
             <div className="flex items-start gap-2">
               <div className="mt-0.5">
                 <SoundWave isActive={isListening} color="purple" />
@@ -385,8 +385,8 @@ export function VoiceAIAssistant() {
                 className={`
                   relative w-16 h-16 rounded-full flex items-center justify-center transition-all duration-300 transform
                   ${isListening 
-                    ? 'bg-linear-to-br from-red-500 to-pink-500 scale-110 shadow-lg shadow-red-200' 
-                    : 'bg-linear-to-br from-purple-600 to-indigo-600 hover:scale-105 shadow-lg shadow-purple-200'
+                    ? 'bg-gradient-to-br from-red-500 to-pink-500 scale-110 shadow-lg shadow-red-200' 
+                    : 'bg-gradient-to-br from-purple-600 to-indigo-600 hover:scale-105 shadow-lg shadow-purple-200'
                   }
                   ${isProcessing ? 'opacity-60 cursor-not-allowed scale-100' : 'hover:shadow-xl'}
                   text-white

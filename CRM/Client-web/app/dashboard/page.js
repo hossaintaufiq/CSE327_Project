@@ -1058,7 +1058,7 @@ function ClientDashboard({ user, stats, recentOrders, recentActivity, error, onR
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-8">
             <button
               onClick={() => router.push('/conversations/new')}
-              className="flex items-center gap-4 p-4 bg-linear-to-r from-blue-600 to-blue-700 rounded-xl hover:from-blue-700 hover:to-blue-800 transition-all group"
+              className="flex items-center gap-4 p-4 bg-gradient-to-r from-blue-600 to-blue-700 rounded-xl hover:from-blue-700 hover:to-blue-800 transition-all group"
             >
               <div className="p-3 bg-white/10 rounded-lg group-hover:bg-white/20">
                 <MessageSquare className="w-6 h-6 text-white" />
@@ -1071,7 +1071,7 @@ function ClientDashboard({ user, stats, recentOrders, recentActivity, error, onR
             
             <button
               onClick={() => router.push('/companies')}
-              className="flex items-center gap-4 p-4 bg-linear-to-r from-purple-600 to-purple-700 rounded-xl hover:from-purple-700 hover:to-purple-800 transition-all group"
+              className="flex items-center gap-4 p-4 bg-gradient-to-r from-purple-600 to-purple-700 rounded-xl hover:from-purple-700 hover:to-purple-800 transition-all group"
             >
               <div className="p-3 bg-white/10 rounded-lg group-hover:bg-white/20">
                 <Briefcase className="w-6 h-6 text-white" />
@@ -1084,7 +1084,7 @@ function ClientDashboard({ user, stats, recentOrders, recentActivity, error, onR
             
             <button
               onClick={() => router.push('/orders')}
-              className="flex items-center gap-4 p-4 bg-linear-to-r from-green-600 to-green-700 rounded-xl hover:from-green-700 hover:to-green-800 transition-all group"
+              className="flex items-center gap-4 p-4 bg-gradient-to-r from-green-600 to-green-700 rounded-xl hover:from-green-700 hover:to-green-800 transition-all group"
             >
               <div className="p-3 bg-white/10 rounded-lg group-hover:bg-white/20">
                 <ShoppingCart className="w-6 h-6 text-white" />
@@ -1217,7 +1217,7 @@ function ClientDashboard({ user, stats, recentOrders, recentActivity, error, onR
                     onClick={() => router.push(`/companies/${company._id}`)}
                     className="bg-gray-700/50 rounded-lg p-4 hover:bg-gray-700 cursor-pointer transition-colors flex items-center gap-4"
                   >
-                    <div className="w-12 h-12 bg-linear-to-br from-blue-500 to-purple-600 rounded-lg flex items-center justify-center text-white font-bold text-lg shrink-0">
+                    <div className="w-12 h-12 bg-gradient-to-br from-blue-500 to-purple-600 rounded-lg flex items-center justify-center text-white font-bold text-lg shrink-0">
                       {company.name?.charAt(0) || "C"}
                     </div>
                     <div className="flex-1 min-w-0">
