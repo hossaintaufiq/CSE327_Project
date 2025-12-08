@@ -3,9 +3,12 @@ import crypto from 'crypto';
 import { User } from '../models/User.js';
 import { ChatRoom } from '../models/ChatRoom.js';
 import { ChatMessage } from '../models/ChatMessage.js';
+import * as geminiService from './geminiService.js';
+import * as mcpServer from './mcpServer.js';
 
 let bot = null;
 const pendingVerifications = new Map(); // Store pending verifications
+const userSessions = new Map(); // Store user session data for context
 
 /**
  * Initialize Telegram Bot using grammY
@@ -85,21 +88,27 @@ const setupBotHandlers = () => {
         `👋 Welcome to CRM Prime Bot!\n\n` +
         `This bot allows you to:\n` +
         `• Receive notifications from your CRM\n` +
-        `• Chat with your assigned leads/clients\n` +
-        `• View your tasks and updates\n\n` +
-        `To get started, please link your CRM account:\n` +
+        `• Chat with AI Assistant (Gemini + MCP)\n` +
+        `• Manage tasks, clients, orders\n` +
+        `• View analytics and insights\n\n` +
+        `To get started, link your CRM account:\n` +
         `1. Log in to your CRM dashboard\n` +
         `2. Go to Settings > Integrations\n` +
         `3. Click "Connect Telegram"\n` +
-        `4. Enter the code shown there, or use the link provided`,
+        `4. Enter the code or use the link provided`,
         { reply_markup: keyboard }
       );
     }
   });
 
-  // Help command
+  // Help command - role-specific help
   bot.command('help', async (ctx) => {
     await sendHelpMessage(ctx);
+  });
+
+  // Menu command - show role-specific menu
+  bot.command('menu', async (ctx) => {
+    await showRoleBasedMenu(ctx);
   });
 
   // Status command
@@ -110,6 +119,41 @@ const setupBotHandlers = () => {
   // Tasks command
   bot.command('tasks', async (ctx) => {
     await handleTasksCommand(ctx);
+  });
+
+  // Clients command (Admin/Employee/Manager)
+  bot.command('clients', async (ctx) => {
+    await handleClientsCommand(ctx);
+  });
+
+  // Orders command
+  bot.command('orders', async (ctx) => {
+    await handleOrdersCommand(ctx);
+  });
+
+  // Pipeline command (Admin/Manager)
+  bot.command('pipeline', async (ctx) => {
+    await handlePipelineCommand(ctx);
+  });
+
+  // Stats command (Admin/Manager)
+  bot.command('stats', async (ctx) => {
+    await handleStatsCommand(ctx);
+  });
+
+  // Projects command (Admin/Employee/Manager)
+  bot.command('projects', async (ctx) => {
+    await handleProjectsCommand(ctx);
+  });
+
+  // Conversations command (for clients)
+  bot.command('conversations', async (ctx) => {
+    await handleConversationsCommand(ctx);
+  });
+
+  // Quick actions
+  bot.command('quick', async (ctx) => {
+    await showQuickActions(ctx);
   });
 
   // Unlink command
@@ -137,7 +181,59 @@ const setupBotHandlers = () => {
     await sendHelpMessage(ctx);
   });
 
-  // Handle regular messages (potential chat messages)
+  // Handle all other callback queries for quick actions and menu items
+  bot.on('callback_query', async (ctx) => {
+    const action = ctx.callbackQuery.data;
+    await ctx.answerCallbackQuery();
+
+    const actionMap = {
+      'qa_today_tasks': 'Show me tasks due today',
+      'qa_pipeline': 'Show me the sales pipeline status',
+      'qa_new_leads': 'Show me leads from the last 7 days',
+      'qa_pending_orders': 'Show me pending orders',
+      'qa_team_stats': 'Show me team performance statistics',
+      'qa_my_tasks': 'Show me my tasks',
+      'qa_my_clients': 'Show me my assigned clients',
+      'qa_my_orders': 'Show me my orders',
+      'qa_today': 'Show me my activities for today',
+      'qa_conversations': 'Show me my conversations',
+      'qa_support': 'I need help',
+      'cmd_stats': 'Show me company statistics',
+      'cmd_pipeline': 'Show me the sales pipeline',
+      'cmd_clients': 'Show me clients',
+      'cmd_orders': 'Show me orders',
+      'cmd_tasks': 'Show me my tasks',
+      'cmd_projects': 'Show me projects',
+      'cmd_conversations': 'Show me my conversations',
+      'cmd_ai_help': 'Tell me what you can help me with',
+    };
+
+    const query = actionMap[action];
+    if (query) {
+      const chatId = ctx.chat.id;
+      const { user, companyId, error } = await getUserInfo(chatId);
+
+      if (error) {
+        await ctx.reply(`❌ ${error}`);
+        return;
+      }
+
+      try {
+        await ctx.replyWithChatAction('typing');
+        const response = await geminiService.generateWithTools(
+          query,
+          companyId.toString(),
+          user._id.toString()
+        );
+        await ctx.reply(response, { parse_mode: 'Markdown' });
+      } catch (error) {
+        console.error('Error handling quick action:', error);
+        await ctx.reply(`❌ Failed to process your request.`);
+      }
+    }
+  });
+
+  // Handle regular messages (AI conversation or chat)
   bot.on('message:text', async (ctx) => {
     if (ctx.message.text?.startsWith('/')) return; // Ignore commands
     await handleIncomingMessage(ctx);
@@ -146,25 +242,6 @@ const setupBotHandlers = () => {
   // Handle voice messages - process with AI
   bot.on('message:voice', async (ctx) => {
     await handleVoiceMessage(ctx);
-  });
-
-  // AI command - talk to the AI assistant
-  bot.command('ai', async (ctx) => {
-    const query = ctx.match?.trim();
-    if (!query) {
-      await ctx.reply(
-        `🤖 *AI Assistant*\n\n` +
-        `Send me a message after /ai to get help with your CRM.\n\n` +
-        `Examples:\n` +
-        `• /ai show my tasks\n` +
-        `• /ai what's the pipeline status?\n` +
-        `• /ai find clients from last week\n\n` +
-        `You can also send a voice message and I'll process it!`,
-        { parse_mode: 'Markdown' }
-      );
-      return;
-    }
-    await handleAIQuery(ctx, query);
   });
 
   // Error handler
@@ -328,51 +405,373 @@ const handleIncomingMessage = async (ctx) => {
 
   try {
     // Find user by Telegram chat ID
-    const user = await User.findOne({ telegramChatId: chatId.toString() });
+    const user = await User.findOne({ telegramChatId: chatId.toString() }).populate('companies.companyId');
     
     if (!user) {
       await ctx.reply(`Please link your account first using /start`);
       return;
     }
 
-    // Check if user has an active chat session
-    const activeRoom = await ChatRoom.findOne({
-      'participants.userId': user._id,
-      isActive: true,
-      'metadata.telegramActive': true,
-    }).sort({ lastActivity: -1 });
+    // Show typing indicator
+    await ctx.replyWithChatAction('typing');
 
-    if (activeRoom) {
-      // Add message to chat room
-      const chatMessage = new ChatMessage({
-        chatRoomId: activeRoom._id,
-        senderId: user._id,
-        senderType: 'user',
-        content: msg.text,
-        messageType: 'text',
-        metadata: {
-          source: 'telegram',
-          telegramMessageId: msg.message_id,
-        },
-      });
+    // Get user's company (default to first active company)
+    const companyId = user.companies?.find(c => c.isActive)?.companyId || user.companyId;
 
-      await chatMessage.save();
-
-      // Update room activity
-      activeRoom.lastMessage = chatMessage._id;
-      activeRoom.lastActivity = new Date();
-      await activeRoom.save();
-
-      await ctx.reply(`✓ Message sent`);
-    } else {
-      await ctx.reply(
-        `You don't have an active chat session.\n\n` +
-        `To start a chat, please use the CRM dashboard to open a conversation.`
-      );
+    if (!companyId) {
+      await ctx.reply(`❌ No active company found for your account.`);
+      return;
     }
+
+    // Process with Gemini + MCP
+    try {
+      const response = await geminiService.generateWithTools(
+        msg.text,
+        companyId.toString(),
+        user._id.toString()
+      );
+
+      await ctx.reply(response, { parse_mode: 'Markdown' });
+    } catch (aiError) {
+      console.error('AI processing error:', aiError);
+      await ctx.reply(`Sorry, I encountered an error processing your request.`);
+    }
+
   } catch (error) {
     console.error('Error handling incoming message:', error);
   }
+};
+
+/**
+ * Get user info and validate
+ */
+const getUserInfo = async (chatId) => {
+  const user = await User.findOne({ telegramChatId: chatId.toString() })
+    .populate('companies.companyId');
+  
+  if (!user) {
+    return { user: null, error: 'Please link your account first using /start' };
+  }
+
+  const activeCompany = user.companies?.find(c => c.isActive);
+  const companyId = activeCompany?.companyId || user.companyId;
+  const role = activeCompany?.role || 'client';
+
+  if (!companyId) {
+    return { user, error: 'No active company found for your account.' };
+  }
+
+  return { user, companyId, role, error: null };
+};
+
+/**
+ * Show role-based menu
+ */
+const showRoleBasedMenu = async (ctx) => {
+  const chatId = ctx.chat.id;
+  const { user, role, error } = await getUserInfo(chatId);
+
+  if (error) {
+    await ctx.reply(`❌ ${error}`);
+    return;
+  }
+
+  let menuText = `📋 *Your CRM Menu*\n\n`;
+  let keyboard = new InlineKeyboard();
+
+  if (role === 'company_admin' || role === 'manager') {
+    menuText += `*Admin/Manager Commands:*\n` +
+      `/stats - View company statistics\n` +
+      `/pipeline - Check sales pipeline\n` +
+      `/clients - Manage clients\n` +
+      `/orders - View orders\n` +
+      `/projects - Manage projects\n` +
+      `/tasks - View all tasks\n\n`;
+    
+    keyboard
+      .text('📊 Stats', 'cmd_stats').text('🎯 Pipeline', 'cmd_pipeline')
+      .row()
+      .text('👥 Clients', 'cmd_clients').text('📦 Orders', 'cmd_orders')
+      .row();
+  }
+
+  if (role === 'employee') {
+    menuText += `*Employee Commands:*\n` +
+      `/tasks - View your tasks\n` +
+      `/clients - View assigned clients\n` +
+      `/orders - View your orders\n` +
+      `/projects - View your projects\n\n`;
+    
+    keyboard
+      .text('✅ Tasks', 'cmd_tasks').text('👥 Clients', 'cmd_clients')
+      .row()
+      .text('📦 Orders', 'cmd_orders').text('📁 Projects', 'cmd_projects')
+      .row();
+  }
+
+  if (role === 'client') {
+    menuText += `*Client Commands:*\n` +
+      `/conversations - View your conversations\n` +
+      `/orders - View your orders\n` +
+      `/status - Account status\n\n`;
+    
+    keyboard
+      .text('💬 Conversations', 'cmd_conversations').text('📦 Orders', 'cmd_orders')
+      .row();
+  }
+
+  menuText += `*AI Assistant:*\n` +
+    `Just send me any message and I'll help you!\n` +
+    `Example: "Show me pending tasks" or "What's my sales this month?"`;
+
+  keyboard.text('🤖 AI Help', 'cmd_ai_help');
+
+  await ctx.reply(menuText, {
+    parse_mode: 'Markdown',
+    reply_markup: keyboard
+  });
+};
+
+/**
+ * Handle clients command
+ */
+const handleClientsCommand = async (ctx) => {
+  const chatId = ctx.chat.id;
+  const { user, companyId, role, error } = await getUserInfo(chatId);
+
+  if (error) {
+    await ctx.reply(`❌ ${error}`);
+    return;
+  }
+
+  try {
+    await ctx.replyWithChatAction('typing');
+
+    const query = role === 'employee' 
+      ? `Show me my assigned clients`
+      : `Show me recent clients`;
+
+    const response = await geminiService.generateWithTools(
+      query,
+      companyId.toString(),
+      user._id.toString()
+    );
+
+    await ctx.reply(response, { parse_mode: 'Markdown' });
+  } catch (error) {
+    console.error('Error handling clients command:', error);
+    await ctx.reply(`❌ Failed to fetch clients. Please try again.`);
+  }
+};
+
+/**
+ * Handle orders command
+ */
+const handleOrdersCommand = async (ctx) => {
+  const chatId = ctx.chat.id;
+  const { user, companyId, role, error } = await getUserInfo(chatId);
+
+  if (error) {
+    await ctx.reply(`❌ ${error}`);
+    return;
+  }
+
+  try {
+    await ctx.replyWithChatAction('typing');
+
+    const query = role === 'client'
+      ? `Show me my orders`
+      : `Show me pending orders`;
+
+    const response = await geminiService.generateWithTools(
+      query,
+      companyId.toString(),
+      user._id.toString()
+    );
+
+    await ctx.reply(response, { parse_mode: 'Markdown' });
+  } catch (error) {
+    console.error('Error handling orders command:', error);
+    await ctx.reply(`❌ Failed to fetch orders. Please try again.`);
+  }
+};
+
+/**
+ * Handle pipeline command (Admin/Manager only)
+ */
+const handlePipelineCommand = async (ctx) => {
+  const chatId = ctx.chat.id;
+  const { user, companyId, role, error } = await getUserInfo(chatId);
+
+  if (error) {
+    await ctx.reply(`❌ ${error}`);
+    return;
+  }
+
+  if (role !== 'company_admin' && role !== 'manager') {
+    await ctx.reply(`❌ This command is only available for administrators and managers.`);
+    return;
+  }
+
+  try {
+    await ctx.replyWithChatAction('typing');
+
+    const response = await geminiService.generateWithTools(
+      `Show me the sales pipeline status with statistics`,
+      companyId.toString(),
+      user._id.toString()
+    );
+
+    await ctx.reply(response, { parse_mode: 'Markdown' });
+  } catch (error) {
+    console.error('Error handling pipeline command:', error);
+    await ctx.reply(`❌ Failed to fetch pipeline data. Please try again.`);
+  }
+};
+
+/**
+ * Handle stats command (Admin/Manager only)
+ */
+const handleStatsCommand = async (ctx) => {
+  const chatId = ctx.chat.id;
+  const { user, companyId, role, error } = await getUserInfo(chatId);
+
+  if (error) {
+    await ctx.reply(`❌ ${error}`);
+    return;
+  }
+
+  if (role !== 'company_admin' && role !== 'manager') {
+    await ctx.reply(`❌ This command is only available for administrators and managers.`);
+    return;
+  }
+
+  try {
+    await ctx.replyWithChatAction('typing');
+
+    const response = await geminiService.generateWithTools(
+      `Analyze company performance and show me key statistics for this month`,
+      companyId.toString(),
+      user._id.toString()
+    );
+
+    await ctx.reply(response, { parse_mode: 'Markdown' });
+  } catch (error) {
+    console.error('Error handling stats command:', error);
+    await ctx.reply(`❌ Failed to fetch statistics. Please try again.`);
+  }
+};
+
+/**
+ * Handle projects command
+ */
+const handleProjectsCommand = async (ctx) => {
+  const chatId = ctx.chat.id;
+  const { user, companyId, role, error } = await getUserInfo(chatId);
+
+  if (error) {
+    await ctx.reply(`❌ ${error}`);
+    return;
+  }
+
+  try {
+    await ctx.replyWithChatAction('typing');
+
+    const query = role === 'employee'
+      ? `Show me projects I'm working on`
+      : `Show me active projects`;
+
+    const response = await geminiService.generateWithTools(
+      query,
+      companyId.toString(),
+      user._id.toString()
+    );
+
+    await ctx.reply(response, { parse_mode: 'Markdown' });
+  } catch (error) {
+    console.error('Error handling projects command:', error);
+    await ctx.reply(`❌ Failed to fetch projects. Please try again.`);
+  }
+};
+
+/**
+ * Handle conversations command (for clients)
+ */
+const handleConversationsCommand = async (ctx) => {
+  const chatId = ctx.chat.id;
+  const { user, companyId, role, error } = await getUserInfo(chatId);
+
+  if (error) {
+    await ctx.reply(`❌ ${error}`);
+    return;
+  }
+
+  try {
+    await ctx.replyWithChatAction('typing');
+
+    const query = role === 'client'
+      ? `Show me my conversations with the company`
+      : `Show me my assigned conversations`;
+
+    const response = await geminiService.generateWithTools(
+      query,
+      companyId.toString(),
+      user._id.toString()
+    );
+
+    await ctx.reply(response, { parse_mode: 'Markdown' });
+  } catch (error) {
+    console.error('Error handling conversations command:', error);
+    await ctx.reply(`❌ Failed to fetch conversations. Please try again.`);
+  }
+};
+
+/**
+ * Show quick actions based on role
+ */
+const showQuickActions = async (ctx) => {
+  const chatId = ctx.chat.id;
+  const { user, role, error } = await getUserInfo(chatId);
+
+  if (error) {
+    await ctx.reply(`❌ ${error}`);
+    return;
+  }
+
+  let keyboard = new InlineKeyboard();
+  let actionsText = `⚡ *Quick Actions*\n\nChoose an action:\n\n`;
+
+  if (role === 'company_admin' || role === 'manager') {
+    actionsText += `• View today's tasks\n• Check pipeline\n• See new leads\n• View pending orders\n• Team performance`;
+    keyboard
+      .text('📋 Today\'s Tasks', 'qa_today_tasks')
+      .text('🎯 Pipeline', 'qa_pipeline')
+      .row()
+      .text('🆕 New Leads', 'qa_new_leads')
+      .text('📦 Pending Orders', 'qa_pending_orders')
+      .row()
+      .text('👥 Team Stats', 'qa_team_stats');
+  } else if (role === 'employee') {
+    actionsText += `• View my tasks\n• My clients\n• My orders\n• Today's activities`;
+    keyboard
+      .text('✅ My Tasks', 'qa_my_tasks')
+      .text('👥 My Clients', 'qa_my_clients')
+      .row()
+      .text('📦 My Orders', 'qa_my_orders')
+      .text('📊 Today', 'qa_today');
+  } else if (role === 'client') {
+    actionsText += `• My orders\n• Conversations\n• Support`;
+    keyboard
+      .text('📦 My Orders', 'qa_my_orders')
+      .text('💬 Conversations', 'qa_conversations')
+      .row()
+      .text('❓ Support', 'qa_support');
+  }
+
+  await ctx.reply(actionsText, {
+    parse_mode: 'Markdown',
+    reply_markup: keyboard
+  });
 };
 
 /**
@@ -487,26 +886,54 @@ const handleUnlinkCommand = async (ctx) => {
  * Send help message
  */
 const sendHelpMessage = async (ctx) => {
-  await ctx.reply(
-    `❓ *CRM Prime Bot Help*\n\n` +
-    `*Commands:*\n` +
-    `/start - Start the bot and link your account\n` +
-    `/status - View your CRM status\n` +
-    `/tasks - View your pending tasks\n` +
-    `/ai <query> - Ask the AI assistant\n` +
-    `/unlink - Unlink your Telegram account\n` +
-    `/help - Show this help message\n\n` +
-    `*AI Features:*\n` +
-    `• Send a voice message to talk with AI\n` +
-    `• Use /ai followed by your question\n` +
-    `• Examples: "/ai show my tasks", "/ai pipeline status"\n\n` +
-    `*Other Features:*\n` +
-    `• Receive real-time notifications\n` +
-    `• Chat with leads and clients\n` +
-    `• View task updates\n\n` +
-    `For support, contact your CRM administrator.`,
-    { parse_mode: 'Markdown' }
-  );
+  const chatId = ctx.chat.id;
+  const { user, role } = await getUserInfo(chatId);
+
+  let helpText = `❓ *CRM Prime Bot Help*\n\n*Common Commands:*\n` +
+    `/start - Link your account\n` +
+    `/menu - Show role-based menu\n` +
+    `/status - View account status\n` +
+    `/help - Show this help\n` +
+    `/unlink - Unlink your account\n\n`;
+
+  if (user) {
+    helpText += `*Your Role: ${role}*\n\n`;
+
+    if (role === 'company_admin' || role === 'manager') {
+      helpText += `*Admin/Manager Commands:*\n` +
+        `/stats - Company statistics\n` +
+        `/pipeline - Sales pipeline\n` +
+        `/clients - Client management\n` +
+        `/orders - Order overview\n` +
+        `/projects - Project management\n` +
+        `/tasks - All tasks\n` +
+        `/quick - Quick actions\n\n`;
+    } else if (role === 'employee') {
+      helpText += `*Employee Commands:*\n` +
+        `/tasks - Your tasks\n` +
+        `/clients - Your clients\n` +
+        `/orders - Your orders\n` +
+        `/projects - Your projects\n` +
+        `/quick - Quick actions\n\n`;
+    } else if (role === 'client') {
+      helpText += `*Client Commands:*\n` +
+        `/conversations - Your conversations\n` +
+        `/orders - Your orders\n` +
+        `/quick - Quick actions\n\n`;
+    }
+  }
+
+  helpText += `*AI Assistant:*\n` +
+    `Just send me any message and I'll help!\n\n` +
+    `*Examples:*\n` +
+    `• "Show me pending tasks"\n` +
+    `• "What's my sales pipeline status?"\n` +
+    `• "List my clients"\n` +
+    `• "Create a task for follow-up"\n\n` +
+    `You can also send voice messages!\n\n` +
+    `For support, contact your CRM administrator.`;
+
+  await ctx.reply(helpText, { parse_mode: 'Markdown' });
 };
 
 /**
@@ -562,7 +989,7 @@ const handleAIQuery = async (ctx, query) => {
   
   try {
     // Check if user is linked
-    const user = await User.findOne({ telegramChatId: chatId.toString() });
+    const user = await User.findOne({ telegramChatId: chatId.toString() }).populate('companies.companyId');
     if (!user) {
       await ctx.reply(
         `Please link your account first using /start to use AI features.`
@@ -573,36 +1000,27 @@ const handleAIQuery = async (ctx, query) => {
     // Show typing indicator
     await ctx.replyWithChatAction('typing');
 
-    // Import voice AI service
-    const voiceAIService = await import('./voiceAIService.js');
-    
     // Get user's company
-    const companyId = user.companies?.[0]?.companyId || user.companyId;
+    const companyId = user.companies?.find(c => c.isActive)?.companyId || user.companyId;
     
     if (!companyId) {
       await ctx.reply(`❌ No company associated with your account.`);
       return;
     }
 
-    // Process the query
-    const result = await voiceAIService.processTelegramVoice({
-      text: query,
-      telegramUserId: ctx.from.id.toString(),
-      companyId: companyId.toString(),
-    });
+    // Process with Gemini + MCP
+    try {
+      const response = await geminiService.generateWithTools(
+        query,
+        companyId.toString(),
+        user._id.toString()
+      );
 
-    // Format response
-    let responseText = `🤖 *AI Assistant*\n\n${result.text}`;
-    
-    if (result.hasAction && result.action) {
-      responseText += `\n\n✅ _Action executed: ${result.action.tool}_`;
+      await ctx.reply(response, { parse_mode: 'Markdown' });
+    } catch (aiError) {
+      console.error('AI processing error:', aiError);
+      await ctx.reply(`Sorry, I encountered an error processing your request.`);
     }
-
-    if (result.error) {
-      responseText = `❌ *Error*\n\n${result.text}`;
-    }
-
-    await ctx.reply(responseText, { parse_mode: 'Markdown' });
 
   } catch (error) {
     console.error('Error handling AI query:', error);

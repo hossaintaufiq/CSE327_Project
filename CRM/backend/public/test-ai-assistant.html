@@ -1,0 +1,414 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>AI Assistant Test Page</title>
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
+      min-height: 100vh;
+      padding: 20px;
+      color: #fff;
+    }
+    .container {
+      max-width: 1200px;
+      margin: 0 auto;
+    }
+    h1 {
+      text-align: center;
+      margin-bottom: 10px;
+      font-size: 2.5rem;
+      background: linear-gradient(90deg, #00d9ff, #00ff88);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+    }
+    .back-link {
+      display: inline-block;
+      color: #00d9ff;
+      text-decoration: none;
+      margin-bottom: 20px;
+      padding: 10px 15px;
+      background: rgba(0, 217, 255, 0.1);
+      border-radius: 8px;
+    }
+    .back-link:hover {
+      background: rgba(0, 217, 255, 0.2);
+    }
+    .instructions {
+      background: rgba(255, 170, 0, 0.1);
+      border-left: 4px solid #ffaa00;
+      padding: 20px;
+      margin: 20px 0;
+      border-radius: 8px;
+    }
+    .instructions h3 {
+      color: #ffaa00;
+      margin-bottom: 10px;
+    }
+    .instructions ol {
+      margin-left: 20px;
+      line-height: 1.8;
+    }
+    .test-section {
+      background: rgba(255,255,255,0.05);
+      border: 1px solid rgba(255,255,255,0.1);
+      border-radius: 15px;
+      padding: 25px;
+      margin-bottom: 20px;
+    }
+    .test-section h2 {
+      margin-bottom: 15px;
+      color: #00ff88;
+    }
+    .input-group {
+      margin-bottom: 15px;
+    }
+    .input-group label {
+      display: block;
+      margin-bottom: 5px;
+      color: #aaa;
+    }
+    input, textarea, select {
+      width: 100%;
+      padding: 12px;
+      background: rgba(0,0,0,0.3);
+      border: 1px solid rgba(255,255,255,0.2);
+      border-radius: 8px;
+      color: #fff;
+      font-size: 14px;
+    }
+    textarea {
+      min-height: 100px;
+      resize: vertical;
+    }
+    .btn {
+      background: linear-gradient(90deg, #00d9ff, #00ff88);
+      border: none;
+      padding: 12px 24px;
+      border-radius: 8px;
+      color: #000;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.3s ease;
+    }
+    .btn:hover {
+      transform: scale(1.05);
+      box-shadow: 0 5px 15px rgba(0, 255, 136, 0.4);
+    }
+    .btn:disabled {
+      opacity: 0.5;
+      cursor: not-allowed;
+    }
+    .output {
+      margin-top: 15px;
+      padding: 15px;
+      background: rgba(0,0,0,0.3);
+      border-radius: 8px;
+      border: 1px solid rgba(255,255,255,0.1);
+      min-height: 100px;
+      white-space: pre-wrap;
+      font-family: 'Courier New', monospace;
+      font-size: 13px;
+      max-height: 400px;
+      overflow-y: auto;
+    }
+    .success {
+      border-color: #00ff88;
+      background: rgba(0, 255, 136, 0.05);
+    }
+    .error {
+      border-color: #ff4444;
+      background: rgba(255, 68, 68, 0.05);
+    }
+    .example-prompts {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+      margin: 15px 0;
+    }
+    .example-prompt {
+      background: rgba(0, 217, 255, 0.1);
+      border: 1px solid rgba(0, 217, 255, 0.3);
+      padding: 8px 12px;
+      border-radius: 6px;
+      cursor: pointer;
+      font-size: 13px;
+      transition: all 0.2s ease;
+    }
+    .example-prompt:hover {
+      background: rgba(0, 217, 255, 0.2);
+      transform: scale(1.05);
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <a href="test-index.html" class="back-link">← Back to Test Dashboard</a>
+    
+    <h1>🤖 AI Assistant Test Page</h1>
+
+    <div class="instructions">
+      <h3>📋 How to Test AI Assistant</h3>
+      <ol>
+        <li><strong>Basic AI Test:</strong> Enter a simple prompt and click "Test AI" to verify Gemini API is working</li>
+        <li><strong>MCP Tools Test:</strong> Use prompts that require data access (e.g., "show my tasks") to test MCP integration</li>
+        <li><strong>Context Test:</strong> Have a multi-turn conversation to test context awareness</li>
+        <li><strong>Error Handling:</strong> Test with invalid inputs to verify error handling</li>
+        <li><strong>Performance:</strong> Check response times for different types of queries</li>
+      </ol>
+      <p style="margin-top: 15px; color: #ffaa00;"><strong>Note:</strong> Gemini free tier has 20 requests/day limit. If you hit quota, wait for reset.</p>
+    </div>
+
+    <!-- Simple AI Test -->
+    <div class="test-section">
+      <h2>1. Simple AI Response Test</h2>
+      <p style="color: #aaa; margin-bottom: 15px;">Test basic Gemini AI without MCP tools</p>
+      
+      <div class="input-group">
+        <label for="simplePrompt">Test Prompt</label>
+        <input type="text" id="simplePrompt" value="Explain what a CRM system does in one sentence" placeholder="Enter your prompt">
+      </div>
+      
+      <div class="example-prompts">
+        <div class="example-prompt" onclick="document.getElementById('simplePrompt').value='What is artificial intelligence?'">What is AI?</div>
+        <div class="example-prompt" onclick="document.getElementById('simplePrompt').value='List 3 benefits of CRM systems'">CRM Benefits</div>
+        <div class="example-prompt" onclick="document.getElementById('simplePrompt').value='Explain REST APIs in simple terms'">Explain REST APIs</div>
+      </div>
+
+      <button class="btn" onclick="testSimpleAI()">Test AI</button>
+      <div class="output" id="simpleOutput">Click "Test AI" to see response...</div>
+    </div>
+
+    <!-- MCP-Powered AI Test -->
+    <div class="test-section">
+      <h2>2. AI with MCP Tools Test</h2>
+      <p style="color: #aaa; margin-bottom: 15px;">Test AI queries that require CRM data access via MCP tools</p>
+      
+      <div class="input-group">
+        <label for="mcpPrompt">Data Query Prompt</label>
+        <textarea id="mcpPrompt" placeholder="Enter a prompt that requires data access...">Show me my pending tasks</textarea>
+      </div>
+
+      <div class="input-group">
+        <label for="companyId">Company ID (required for MCP)</label>
+        <input type="text" id="companyId" placeholder="Enter your company ID">
+      </div>
+
+      <div class="input-group">
+        <label for="userId">User ID (required for MCP)</label>
+        <input type="text" id="userId" placeholder="Enter your user ID">
+      </div>
+      
+      <div class="example-prompts">
+        <div class="example-prompt" onclick="document.getElementById('mcpPrompt').value='Show me my tasks for today'">My Tasks</div>
+        <div class="example-prompt" onclick="document.getElementById('mcpPrompt').value='List all pending orders'">Pending Orders</div>
+        <div class="example-prompt" onclick="document.getElementById('mcpPrompt').value='Show me client statistics'">Client Stats</div>
+        <div class="example-prompt" onclick="document.getElementById('mcpPrompt').value='What is my sales pipeline status?'">Pipeline Status</div>
+        <div class="example-prompt" onclick="document.getElementById('mcpPrompt').value='Create a task to follow up with leads'">Create Task</div>
+      </div>
+
+      <button class="btn" onclick="testMCPAI()">Test AI with MCP</button>
+      <div class="output" id="mcpOutput">Configure IDs and click "Test AI with MCP"...</div>
+    </div>
+
+    <!-- Conversation Test -->
+    <div class="test-section">
+      <h2>3. Multi-Turn Conversation Test</h2>
+      <p style="color: #aaa; margin-bottom: 15px;">Test context-aware conversations</p>
+      
+      <div class="input-group">
+        <label for="conversationPrompt">Message</label>
+        <input type="text" id="conversationPrompt" placeholder="Enter message">
+      </div>
+
+      <div id="conversationHistory" style="margin-bottom: 15px; padding: 10px; background: rgba(0,0,0,0.2); border-radius: 8px; max-height: 200px; overflow-y: auto;">
+        <p style="color: #888;">Conversation history will appear here...</p>
+      </div>
+
+      <button class="btn" onclick="sendConversationMessage()">Send Message</button>
+      <button class="btn" onclick="clearConversation()" style="background: rgba(255,68,68,0.3); margin-left: 10px;">Clear History</button>
+      <div class="output" id="conversationOutput">Start a conversation...</div>
+    </div>
+
+    <!-- API Quota Status -->
+    <div class="test-section">
+      <h2>4. API Status & Quota</h2>
+      <button class="btn" onclick="checkAPIStatus()">Check API Status</button>
+      <div class="output" id="statusOutput">Click to check API status...</div>
+    </div>
+
+  </div>
+
+  <script>
+    let conversationHistory = [];
+
+    async function testSimpleAI() {
+      const prompt = document.getElementById('simplePrompt').value;
+      const output = document.getElementById('simpleOutput');
+      
+      if (!prompt) {
+        output.textContent = 'Error: Please enter a prompt';
+        output.className = 'output error';
+        return;
+      }
+
+      output.textContent = 'Processing... (may take 2-5 seconds)';
+      output.className = 'output';
+
+      try {
+        const response = await fetch('http://localhost:5000/api/ai/test', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ prompt })
+        });
+
+        const data = await response.json();
+        
+        if (data.success) {
+          output.textContent = `✓ Success!\n\nResponse:\n${data.response}\n\nResponse Time: ${data.responseTime || 'N/A'}`;
+          output.className = 'output success';
+        } else {
+          output.textContent = `✗ Error:\n${data.error || 'Unknown error'}`;
+          output.className = 'output error';
+        }
+      } catch (error) {
+        output.textContent = `✗ Request Failed:\n${error.message}`;
+        output.className = 'output error';
+      }
+    }
+
+    async function testMCPAI() {
+      const prompt = document.getElementById('mcpPrompt').value;
+      const companyId = document.getElementById('companyId').value;
+      const userId = document.getElementById('userId').value;
+      const output = document.getElementById('mcpOutput');
+      
+      if (!prompt || !companyId || !userId) {
+        output.textContent = 'Error: Please fill in all fields (prompt, company ID, user ID)';
+        output.className = 'output error';
+        return;
+      }
+
+      output.textContent = 'Processing with MCP tools... (may take 3-7 seconds)';
+      output.className = 'output';
+
+      try {
+        const response = await fetch('http://localhost:5000/api/ai/process-request', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            prompt,
+            companyId,
+            userId,
+            conversationHistory: []
+          })
+        });
+
+        const data = await response.json();
+        
+        if (data.success || response.ok) {
+          const result = data.response || data.message || JSON.stringify(data, null, 2);
+          output.textContent = `✓ Success!\n\nAI Response:\n${result}\n\nMCP Tools Used: ${data.toolsUsed || 'N/A'}`;
+          output.className = 'output success';
+        } else {
+          output.textContent = `✗ Error:\n${data.error || data.message || 'Unknown error'}`;
+          output.className = 'output error';
+        }
+      } catch (error) {
+        output.textContent = `✗ Request Failed:\n${error.message}`;
+        output.className = 'output error';
+      }
+    }
+
+    async function sendConversationMessage() {
+      const prompt = document.getElementById('conversationPrompt').value;
+      const output = document.getElementById('conversationOutput');
+      const historyDiv = document.getElementById('conversationHistory');
+      
+      if (!prompt) {
+        output.textContent = 'Error: Please enter a message';
+        output.className = 'output error';
+        return;
+      }
+
+      // Add user message to history
+      conversationHistory.push({ role: 'user', content: prompt });
+      updateHistoryDisplay();
+
+      output.textContent = 'AI is thinking...';
+      output.className = 'output';
+
+      try {
+        const response = await fetch('http://localhost:5000/api/ai/test', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            prompt,
+            history: conversationHistory
+          })
+        });
+
+        const data = await response.json();
+        
+        if (data.success) {
+          conversationHistory.push({ role: 'assistant', content: data.response });
+          updateHistoryDisplay();
+          output.textContent = `AI: ${data.response}`;
+          output.className = 'output success';
+          document.getElementById('conversationPrompt').value = '';
+        } else {
+          output.textContent = `Error: ${data.error}`;
+          output.className = 'output error';
+        }
+      } catch (error) {
+        output.textContent = `Request Failed: ${error.message}`;
+        output.className = 'output error';
+      }
+    }
+
+    function updateHistoryDisplay() {
+      const historyDiv = document.getElementById('conversationHistory');
+      if (conversationHistory.length === 0) {
+        historyDiv.innerHTML = '<p style="color: #888;">Conversation history will appear here...</p>';
+      } else {
+        historyDiv.innerHTML = conversationHistory.map(msg => 
+          `<p style="margin: 5px 0; color: ${msg.role === 'user' ? '#00d9ff' : '#00ff88'};">
+            <strong>${msg.role === 'user' ? 'You' : 'AI'}:</strong> ${msg.content}
+          </p>`
+        ).join('');
+      }
+    }
+
+    function clearConversation() {
+      conversationHistory = [];
+      updateHistoryDisplay();
+      document.getElementById('conversationOutput').textContent = 'Conversation cleared.';
+      document.getElementById('conversationOutput').className = 'output';
+    }
+
+    async function checkAPIStatus() {
+      const output = document.getElementById('statusOutput');
+      output.textContent = 'Checking API status...';
+      output.className = 'output';
+
+      try {
+        const response = await fetch('http://localhost:5000/api/health');
+        const data = await response.json();
+        
+        output.textContent = `✓ API Status:\n${JSON.stringify(data, null, 2)}`;
+        output.className = 'output success';
+      } catch (error) {
+        output.textContent = `✗ API Offline:\n${error.message}`;
+        output.className = 'output error';
+      }
+    }
+  </script>
+</body>
+</html>

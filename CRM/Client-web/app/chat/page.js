@@ -136,7 +136,11 @@ function ChatPage() {
 
   const loadChatRooms = async () => {
     try {
-      const response = await chatApi.getChatRooms();
+      const companyId = localStorage.getItem("companyId");
+      const params = {};
+      if (companyId) params.companyId = companyId;
+      
+      const response = await chatApi.getChatRooms(params);
       if (response.success) {
         setChatRooms(response.data.chatRooms);
       }
@@ -566,26 +570,32 @@ function ChatPage() {
                 onScroll={handleScroll}
                 className="flex-1 overflow-y-auto p-4 space-y-4"
               >
-                {messages.map((message) => (
+                {messages.map((message) => {
+                  const isSystem = message.senderType === 'system';
+                  const isAI = message.senderType === 'ai';
+                  const senderName = isSystem ? 'System' : (isAI ? 'AI Assistant' : (message.sender?.name || 'Unknown'));
+                  const avatarChar = isSystem ? 'S' : (isAI ? 'AI' : (message.sender?.name?.charAt(0).toUpperCase() || '?'));
+                  
+                  return (
                   <div key={message.id} className="flex space-x-3">
-                    <div className="w-8 h-8 bg-gray-600 rounded-full flex items-center justify-center shrink-0">
+                    <div className={`w-8 h-8 rounded-full flex items-center justify-center shrink-0 ${isSystem ? 'bg-red-900' : (isAI ? 'bg-blue-600' : 'bg-gray-600')}`}>
                       <span className="text-sm font-medium">
-                        {message.sender?.name?.charAt(0).toUpperCase() || '?'}
+                        {avatarChar}
                       </span>
                     </div>
                     <div className="flex-1">
                       <div className="flex items-center space-x-2 mb-1">
-                        <span className="font-medium text-white">{message.sender?.name || 'Unknown'}</span>
+                        <span className="font-medium text-white">{senderName}</span>
                         <span className="text-xs text-gray-500">
                           {new Date(message.createdAt).toLocaleTimeString()}
                         </span>
                       </div>
-                      <div className="bg-gray-700 rounded-lg p-3 max-w-md">
+                      <div className={`rounded-lg p-3 max-w-md ${isSystem ? 'bg-red-900/50 border border-red-700' : 'bg-gray-700'}`}>
                         <p className="text-gray-200">{message.content}</p>
                       </div>
                     </div>
                   </div>
-                ))}
+                )})}
                 
                 {/* Typing Indicator */}
                 {isTyping && (

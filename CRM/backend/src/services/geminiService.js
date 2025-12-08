@@ -9,22 +9,27 @@
  */
 
 import { GoogleGenerativeAI } from '@google/generative-ai';
+import * as mcpServer from './mcpServer.js';
 
-// Initialize Gemini AI
-const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY || '');
-
-// Model configuration - using the latest available model
-const MODEL_NAME = process.env.GEMINI_MODEL || 'gemini-2.5-flash';
+let genAI = null;
 
 /**
  * Get configured Gemini model
+ * @param {Object} [options] - Model options
  * @returns {GenerativeModel} Configured model instance
  */
-function getModel() {
+function getModel(options = {}) {
   if (!process.env.GEMINI_API_KEY) {
     throw new Error('GEMINI_API_KEY is not configured');
   }
-  return genAI.getGenerativeModel({ model: MODEL_NAME });
+  
+  if (!genAI) {
+    genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
+  }
+
+  const modelName = process.env.GEMINI_MODEL || 'gemini-2.5-flash';
+  console.log(`Using Gemini model: ${modelName}`);
+  return genAI.getGenerativeModel({ model: modelName, ...options });
 }
 
 /**
@@ -41,6 +46,12 @@ export async function generateText(prompt, options = {}) {
     return response.text();
   } catch (error) {
     console.error('Gemini generateText error:', error);
+    if (error.message?.includes('403') || error.status === 403) {
+      console.error('SUGGESTION: Check if the Google Generative AI API is enabled in your Google Cloud Console for this API key.');
+    }
+    if (error.message?.includes('429') || error.status === 429) {
+      console.error('SUGGESTION: You have exceeded your API quota. Please upgrade your plan or wait for the quota to reset.');
+    }
     throw new Error(`AI generation failed: ${error.message}`);
   }
 }
@@ -91,6 +102,111 @@ Only respond with valid JSON array, no additional text.`;
   } catch (error) {
     console.error('Error parsing task suggestions:', error);
     return [];
+  }
+}
+
+/**
+ * Generate content with MCP tools enabled
+ * @param {string} prompt - User prompt
+ * @param {string} companyId - Company context
+ * @param {string} userId - User context
+ * @returns {Promise<string>} AI response
+ */
+export async function generateWithTools(prompt, companyId, userId) {
+  try {
+    console.log('[generateWithTools] Starting...');
+    
+    // Convert MCP tools to Gemini function declarations
+    const tools = Object.values(mcpServer.TOOL_DEFINITIONS).map(tool => ({
+      name: tool.name,
+      description: tool.description,
+      parameters: tool.inputSchema,
+    }));
+
+    console.log(`[generateWithTools] Configured ${tools.length} MCP tools`);
+
+    const model = getModel({
+      tools: [{ functionDeclarations: tools }],
+    });
+
+    const chat = model.startChat();
+    const result = await chat.sendMessage(prompt);
+    const response = await result.response;
+    
+    // Check if there are function calls
+    let functionCalls;
+    try {
+      functionCalls = response.functionCalls();
+    } catch (e) {
+      // No function calls - return text directly
+      console.log('[generateWithTools] No function calls, returning text response');
+      return response.text();
+    }
+
+    if (functionCalls && functionCalls.length > 0) {
+      console.log(`[generateWithTools] Processing ${functionCalls.length} function calls`);
+      const functionResponses = [];
+      
+      for (const call of functionCalls) {
+        const toolName = call.name;
+        const args = call.args;
+        
+        console.log(`[generateWithTools] Executing tool: ${toolName}`, args);
+        
+        // Add user context to params
+        const params = { ...args, userId };
+        
+        try {
+          const toolResult = await mcpServer.executeTool(toolName, params, companyId);
+          
+          functionResponses.push({
+            functionResponse: {
+              name: toolName,
+              response: { result: toolResult }
+            }
+          });
+          console.log(`[generateWithTools] Tool ${toolName} executed successfully`);
+        } catch (err) {
+          console.error(`[generateWithTools] Tool execution failed: ${toolName}`, err.message);
+          functionResponses.push({
+            functionResponse: {
+              name: toolName,
+              response: { error: err.message }
+            }
+          });
+        }
+      }
+      
+      // Send results back to model
+      console.log('[generateWithTools] Sending function results back to model');
+      const finalResult = await chat.sendMessage(functionResponses);
+      return finalResult.response.text();
+    }
+
+    return response.text();
+  } catch (error) {
+    console.error('[generateWithTools] Error:', error.message || error);
+    
+    // Check for specific API errors
+    if (error.message?.includes('403') || error.status === 403) {
+      throw new Error('Gemini API access denied. Please check your API key configuration.');
+    }
+    if (error.message?.includes('429') || error.status === 429 || error.message?.includes('quota')) {
+      const rateLimitError = new Error('API rate limit exceeded. Please try again later.');
+      rateLimitError.status = 429;
+      throw rateLimitError;
+    }
+    if (error.message?.includes('GEMINI_API_KEY')) {
+      throw error; // Re-throw config errors
+    }
+    
+    // For other errors, try fallback to simple text generation
+    console.log('[generateWithTools] Attempting fallback to simple generation');
+    try {
+      return await generateText(prompt);
+    } catch (fallbackError) {
+      throw new Error(`AI generation failed: ${error.message || 'Unknown error'}`);
+    }
   }
 }
 

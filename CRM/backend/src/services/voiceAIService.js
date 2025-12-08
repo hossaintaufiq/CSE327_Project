@@ -12,8 +12,15 @@
 import { GoogleGenerativeAI } from '@google/generative-ai';
 import * as mcpServer from './mcpServer.js';
 
-// Initialize Gemini
-const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY || '');
+// Initialize Gemini lazily
+let genAI = null;
+
+function getGenAI() {
+  if (!genAI) {
+    genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY || '');
+  }
+  return genAI;
+}
 
 // Conversation history per user session
 const conversationHistory = new Map();
@@ -82,7 +89,7 @@ export async function processVoiceInput({ text, userId, companyId, sessionId }) 
     ];
 
     // Get Gemini response
-    const model = genAI.getGenerativeModel({ model: process.env.GEMINI_MODEL || 'gemini-2.5-flash' });
+    const model = getGenAI().getGenerativeModel({ model: process.env.GEMINI_MODEL || 'gemini-2.5-flash' });
     const chat = model.startChat({
       history: messages.slice(0, -1),
       generationConfig: {

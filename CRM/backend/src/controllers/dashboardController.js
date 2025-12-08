@@ -6,6 +6,7 @@ import { Client } from '../models/Client.js';
 import { Order } from '../models/Order.js';
 import { Project } from '../models/Project.js';
 import { Task } from '../models/Task.js';
+import { Conversation } from '../models/Conversation.js';
 
 /**
  * Get dashboard statistics for a company (role-based)
@@ -14,7 +15,18 @@ export const getDashboardStats = async (req, res) => {
   try {
     const companyId = req.companyId;
     const user = req.user;
-    const userRole = req.companyRole || 'employee'; // Default to employee if not set
+    const userRole = req.companyRole;
+    
+    console.log(`[getDashboardStats] User: ${user._id}, Role: ${userRole}, CompanyId: ${companyId}`);
+
+    // Validate companyId for all roles
+    if (!companyId) {
+      console.error('[getDashboardStats] Missing companyId');
+      return res.status(400).json({ 
+        success: false,
+        message: 'Company ID is required' 
+      });
+    }
 
     // Route to role-specific dashboard
     if (userRole === 'employee') {
@@ -28,8 +40,12 @@ export const getDashboardStats = async (req, res) => {
       return getCompanyAdminDashboard(req, res);
     }
   } catch (error) {
-    console.error('Error fetching dashboard stats:', error);
-    res.status(500).json({ message: 'Error fetching dashboard statistics', error: error.message });
+    console.error('[getDashboardStats] Error:', error);
+    res.status(500).json({ 
+      success: false,
+      message: 'Error fetching dashboard statistics', 
+      error: error.message 
+    });
   }
 };
 
@@ -370,6 +386,16 @@ const getEmployeeDashboard = async (req, res) => {
     const now = new Date();
     const thirtyDaysAgo = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000);
 
+    console.log(`[getEmployeeDashboard] User: ${userId}, CompanyId: ${companyId}`);
+
+    // Get assigned conversations (messages/chats)
+    const assignedConversations = await Conversation.countDocuments({
+      companyId,
+      assignedRepresentative: userId,
+      isActive: true,
+    });
+    console.log(`[getEmployeeDashboard] Assigned conversations: ${assignedConversations}`);
+
     // Get assigned leads
     const assignedLeads = await Client.countDocuments({
       companyId,
@@ -522,6 +548,7 @@ const getEmployeeDashboard = async (req, res) => {
           assignedTasks,
           activeTasks,
           unreadMessages,
+          assignedConversations,
         },
         recentActivity,
       },
@@ -723,6 +750,15 @@ const getClientDashboard = async (req, res) => {
     const userEmail = req.user.email;
     const now = new Date();
     const thirtyDaysAgo = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000);
+    
+    console.log(`[getClientDashboard] User: ${userId}, Email: ${userEmail}, Company: ${companyId}`);
+    
+    if (!companyId) {
+      return res.status(400).json({
+        success: false,
+        message: 'Company ID is required for client dashboard',
+      });
+    }
 
     // Find Client records that match the user's email
     const clientRecords = await Client.find({
@@ -810,7 +846,22 @@ const getClientDashboard = async (req, res) => {
     });
   } catch (error) {
     console.error('Error fetching client dashboard stats:', error);
-    res.status(500).json({ message: 'Error fetching dashboard statistics', error: error.message });
+    // Return empty but valid response instead of crashing
+    return res.status(200).json({
+      success: true,
+      data: {
+        role: 'client',
+        stats: {
+          totalOrders: 0,
+          pendingOrders: 0,
+          completedOrders: 0,
+          totalSpent: 0,
+          unreadMessages: 0,
+        },
+        recentOrders: [],
+        recentActivity: [],
+      },
+    });
   }
 };
 

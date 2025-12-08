@@ -1,0 +1,260 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Authentication Test Page</title>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
+      min-height: 100vh;
+      padding: 20px;
+      color: #fff;
+    }
+    .container { max-width: 1200px; margin: 0 auto; }
+    h1 {
+      text-align: center;
+      margin-bottom: 10px;
+      font-size: 2.5rem;
+      background: linear-gradient(90deg, #00d9ff, #00ff88);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+    }
+    .back-link {
+      display: inline-block;
+      color: #00d9ff;
+      text-decoration: none;
+      margin-bottom: 20px;
+      padding: 10px 15px;
+      background: rgba(0, 217, 255, 0.1);
+      border-radius: 8px;
+    }
+    .instructions {
+      background: rgba(255, 170, 0, 0.1);
+      border-left: 4px solid #ffaa00;
+      padding: 20px;
+      margin: 20px 0;
+      border-radius: 8px;
+    }
+    .test-section {
+      background: rgba(255,255,255,0.05);
+      border: 1px solid rgba(255,255,255,0.1);
+      border-radius: 15px;
+      padding: 25px;
+      margin-bottom: 20px;
+    }
+    .test-section h2 { margin-bottom: 15px; color: #00ff88; }
+    .input-group { margin-bottom: 15px; }
+    .input-group label { display: block; margin-bottom: 5px; color: #aaa; }
+    input, select {
+      width: 100%;
+      padding: 12px;
+      background: rgba(0,0,0,0.3);
+      border: 1px solid rgba(255,255,255,0.2);
+      border-radius: 8px;
+      color: #fff;
+      font-size: 14px;
+    }
+    .btn {
+      background: linear-gradient(90deg, #00d9ff, #00ff88);
+      border: none;
+      padding: 12px 24px;
+      border-radius: 8px;
+      color: #000;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.3s ease;
+    }
+    .btn:hover { transform: scale(1.05); }
+    .output {
+      margin-top: 15px;
+      padding: 15px;
+      background: rgba(0,0,0,0.3);
+      border-radius: 8px;
+      border: 1px solid rgba(255,255,255,0.1);
+      min-height: 80px;
+      white-space: pre-wrap;
+      font-family: 'Courier New', monospace;
+      font-size: 13px;
+      max-height: 300px;
+      overflow-y: auto;
+    }
+    .success { border-color: #00ff88; background: rgba(0, 255, 136, 0.05); }
+    .error { border-color: #ff4444; background: rgba(255, 68, 68, 0.05); }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <a href="test-index.html" class="back-link">← Back to Test Dashboard</a>
+    <h1>🔐 Authentication Test Page</h1>
+
+    <div class="instructions">
+      <h3>📋 How to Test Authentication</h3>
+      <ol>
+        <li><strong>Login Test:</strong> Enter credentials and test Firebase authentication</li>
+        <li><strong>Token Validation:</strong> Verify JWT tokens are generated correctly</li>
+        <li><strong>Protected Routes:</strong> Test access control with and without tokens</li>
+        <li><strong>Role-Based Access:</strong> Verify different user roles have appropriate permissions</li>
+      </ol>
+    </div>
+
+    <div class="test-section">
+      <h2>1. Login Test</h2>
+      <div class="input-group">
+        <label for="email">Email</label>
+        <input type="email" id="email" placeholder="Enter email">
+      </div>
+      <div class="input-group">
+        <label for="password">Password</label>
+        <input type="password" id="password" placeholder="Enter password">
+      </div>
+      <button class="btn" onclick="testLogin()">Test Login</button>
+      <div class="output" id="loginOutput">Enter credentials and test...</div>
+    </div>
+
+    <div class="test-section">
+      <h2>2. Token Validation Test</h2>
+      <div class="input-group">
+        <label for="token">Firebase ID Token</label>
+        <input type="text" id="token" placeholder="Paste your Firebase ID token here">
+      </div>
+      <button class="btn" onclick="testToken()">Validate Token</button>
+      <div class="output" id="tokenOutput">Paste token and validate...</div>
+    </div>
+
+    <div class="test-section">
+      <h2>3. Protected Route Test</h2>
+      <div class="input-group">
+        <label for="protectedRoute">Select Route</label>
+        <select id="protectedRoute">
+          <option value="/api/auth/me">Get Current User (/api/auth/me)</option>
+          <option value="/api/conversations/my-conversations">My Conversations</option>
+          <option value="/api/clients">Clients List</option>
+          <option value="/api/tasks">Tasks List</option>
+        </select>
+      </div>
+      <button class="btn" onclick="testProtectedRoute()">Test Route</button>
+      <div class="output" id="routeOutput">Select route and test...</div>
+    </div>
+
+  </div>
+
+  <script>
+    async function testLogin() {
+      const email = document.getElementById('email').value;
+      const password = document.getElementById('password').value;
+      const output = document.getElementById('loginOutput');
+      
+      if (!email || !password) {
+        output.textContent = 'Error: Please enter both email and password';
+        output.className = 'output error';
+        return;
+      }
+
+      output.textContent = 'Authenticating...';
+      output.className = 'output';
+
+      try {
+        const response = await fetch('http://localhost:5000/api/auth/login', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ email, password })
+        });
+
+        const data = await response.json();
+        
+        if (response.ok) {
+          output.textContent = `✓ Login Successful!\n\n${JSON.stringify(data, null, 2)}`;
+          output.className = 'output success';
+          if (data.token) {
+            document.getElementById('token').value = data.token;
+          }
+        } else {
+          output.textContent = `✗ Login Failed:\n${data.error || data.message}`;
+          output.className = 'output error';
+        }
+      } catch (error) {
+        output.textContent = `✗ Request Failed:\n${error.message}`;
+        output.className = 'output error';
+      }
+    }
+
+    async function testToken() {
+      const token = document.getElementById('token').value;
+      const output = document.getElementById('tokenOutput');
+      
+      if (!token) {
+        output.textContent = 'Error: Please enter a token';
+        output.className = 'output error';
+        return;
+      }
+
+      output.textContent = 'Validating token...';
+      output.className = 'output';
+
+      try {
+        const response = await fetch('http://localhost:5000/api/auth/verify-token', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${token}`
+          }
+        });
+
+        const data = await response.json();
+        
+        if (response.ok) {
+          output.textContent = `✓ Token Valid!\n\n${JSON.stringify(data, null, 2)}`;
+          output.className = 'output success';
+        } else {
+          output.textContent = `✗ Token Invalid:\n${data.error || data.message}`;
+          output.className = 'output error';
+        }
+      } catch (error) {
+        output.textContent = `✗ Validation Failed:\n${error.message}`;
+        output.className = 'output error';
+      }
+    }
+
+    async function testProtectedRoute() {
+      const route = document.getElementById('protectedRoute').value;
+      const token = document.getElementById('token').value;
+      const output = document.getElementById('routeOutput');
+      
+      if (!token) {
+        output.textContent = 'Error: Please login first to get a token';
+        output.className = 'output error';
+        return;
+      }
+
+      output.textContent = `Testing ${route}...`;
+      output.className = 'output';
+
+      try {
+        const response = await fetch(`http://localhost:5000${route}`, {
+          method: 'GET',
+          headers: {
+            'Authorization': `Bearer ${token}`
+          }
+        });
+
+        const data = await response.json();
+        
+        if (response.ok) {
+          output.textContent = `✓ Access Granted!\n\n${JSON.stringify(data, null, 2)}`;
+          output.className = 'output success';
+        } else {
+          output.textContent = `✗ Access Denied:\n${data.error || data.message}`;
+          output.className = 'output error';
+        }
+      } catch (error) {
+        output.textContent = `✗ Request Failed:\n${error.message}`;
+        output.className = 'output error';
+      }
+    }
+  </script>
+</body>
+</html>

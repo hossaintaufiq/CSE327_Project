@@ -6,16 +6,27 @@ export const verifyCompanyAccess = async (req, res, next) => {
     
     // Super Admin has access to all companies
     if (user.globalRole === 'super_admin') {
-      req.companyId = req.headers['x-company-id'] || null;
+      req.companyId = req.headers['x-company-id'] || req.query.companyId || null;
       req.companyRole = 'super_admin';
       return next();
     }
 
-    // Get requested company ID from header
-    const requestedCompanyId = req.headers['x-company-id'];
+    // Clients can access with company context without membership check
+    if (user.globalRole === 'client') {
+      const clientCompanyId = req.headers['x-company-id'] || req.query.companyId;
+      if (!clientCompanyId) {
+        return res.status(400).json({ message: 'X-Company-Id header or companyId query param is required' });
+      }
+      req.companyId = clientCompanyId;
+      req.companyRole = 'client';
+      return next();
+    }
+
+    // Get requested company ID from header or query
+    const requestedCompanyId = req.headers['x-company-id'] || req.query.companyId;
     
     if (!requestedCompanyId) {
-      return res.status(400).json({ message: 'X-Company-Id header is required' });
+      return res.status(400).json({ message: 'X-Company-Id header or companyId query param is required' });
     }
 
     // Check if user has any companies

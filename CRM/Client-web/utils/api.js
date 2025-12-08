@@ -63,53 +63,77 @@ export default apiClient;
 apiClient.interceptors.response.use(
   (response) => response,
   async (error) => {
-    // Only auto-logout on 401 if:
-    // 1. It's an actual authentication failure (not a missing header or expired token that can be refreshed)
-    // 2. The current page isn't already the login page
-    if (error.response?.status === 401) {
+    const originalRequest = error.config;
+
+    // If 401 and token expired, try to refresh token and retry
+    if (error.response?.status === 401 && !originalRequest._retry) {
+      const errorMessage = error.response?.data?.message || '';
+      
+      // Check if token is expired
+      if (errorMessage.includes('expired') || errorMessage.includes('Expired')) {
+        originalRequest._retry = true;
+        
+        try {
+          console.log('Token expired, attempting refresh...');
+          const { auth } = await import('@/lib/firebase');
+          const user = auth.currentUser;
+          
+          if (user) {
+            const newToken = await user.getIdToken(true);
+            localStorage.setItem('idToken', newToken);
+            
+            // Update auth store
+            try {
+              const { default: useAuthStore } = await import('@/store/authStore');
+              useAuthStore.getState().setIdToken(newToken);
+            } catch (e) {
+              console.error('Could not update auth store:', e);
+            }
+            
+            // Retry original request with new token
+            originalRequest.headers.Authorization = `Bearer ${newToken}`;
+            return apiClient(originalRequest);
+          }
+        } catch (refreshError) {
+          console.error('Token refresh failed:', refreshError);
+          // Fall through to logout
+        }
+      }
+      
+      // If we get here, it's a real auth failure
       const currentPath = typeof window !== 'undefined' ? window.location.pathname : '';
       
-      // Don't auto-redirect if already on login page or if the error is from a background request
+      // Don't auto-redirect if already on login page
       if (currentPath === '/login' || currentPath === '/signup') {
         return Promise.reject(error);
       }
-      
-      // Check if this is a token refresh scenario or a real auth failure
-      const errorMessage = error.response?.data?.message || '';
-      
-      // Only logout on definitive auth failures
-      if (errorMessage.includes('Invalid token') || 
-          errorMessage.includes('Token expired') ||
-          errorMessage.includes('No token provided')) {
-        console.log("401 error detected - clearing auth and redirecting to login");
 
-        // Clear authentication data
-        localStorage.removeItem('idToken');
-        localStorage.removeItem('user');
-        localStorage.removeItem('companyId');
+      console.log('Authentication failed - clearing auth and redirecting to login');
 
-        // Clear auth store
-        try {
-          const { default: useAuthStore } = await import('@/store/authStore');
-          useAuthStore.getState().logout();
-        } catch (e) {
-          // Store not available
-        }
+      // Clear authentication data
+      localStorage.removeItem('idToken');
+      localStorage.removeItem('user');
+      localStorage.removeItem('companyId');
 
-        // Clear notification store
-        try {
-          const { default: useNotificationStore } = await import('@/store/notificationStore');
-          useNotificationStore.getState().clearNotifications();
-        } catch (e) {
-          // Store not available
-        }
+      // Clear auth store
+      try {
+        const { default: useAuthStore } = await import('@/store/authStore');
+        useAuthStore.getState().logout();
+      } catch (e) {
+        // Store not available
+      }
 
-        // Redirect to login if in browser
-        if (typeof window !== 'undefined') {
-          window.location.href = '/login';
-        }
-      } else {
-        console.log("401 error (non-auth):", errorMessage);
+      // Clear notification store
+      try {
+        const { default: useNotificationStore } = await import('@/store/notificationStore');
+        useNotificationStore.getState().clearNotifications();
+      } catch (e) {
+        // Store not available
+      }
+
+      // Redirect to login if in browser
+      if (typeof window !== 'undefined') {
+        window.location.href = '/login';
       }
     }
 

@@ -15,11 +15,15 @@ export const getMyConversations = async (req, res, next) => {
   try {
     const { status, companyId, type, limit, offset } = req.query;
     
+    console.log(`[getMyConversations] User: ${req.user._id}, Query:`, req.query);
+
     const { conversations, total } = await conversationService.getClientConversations(
       req.user._id,
       { status, companyId, type, limit: parseInt(limit) || 50, offset: parseInt(offset) || 0 }
     );
     
+    console.log(`[getMyConversations] Found ${total} conversations`);
+
     return successResponse(res, { conversations, total });
   } catch (error) {
     next(error);
@@ -33,6 +37,14 @@ export const getCompanyConversations = async (req, res, next) => {
   try {
     const { status, assignedTo, type, limit, offset } = req.query;
     
+    console.log('[getCompanyConversations] Request details:', {
+      companyId: req.companyId,
+      userId: req.user._id,
+      userEmail: req.user.email,
+      companyRole: req.companyRole,
+      queryParams: { status, assignedTo, type, limit, offset }
+    });
+    
     const { conversations, total } = await conversationService.getCompanyConversations(
       req.companyId,
       { 
@@ -45,6 +57,8 @@ export const getCompanyConversations = async (req, res, next) => {
         offset: parseInt(offset) || 0 
       }
     );
+    
+    console.log(`[getCompanyConversations] Returning ${conversations.length} of ${total} total conversations`);
     
     return successResponse(res, { conversations, total });
   } catch (error) {
@@ -196,7 +210,27 @@ Keep your response concise (2-3 sentences max unless detailed explanation needed
       } catch (aiError) {
         console.error('AI response error:', aiError.message);
         console.error('AI error stack:', aiError.stack);
-        // Don't fail the request if AI fails, just log it
+        
+        // Fallback for rate limits or other errors
+        let fallbackMessage = "I apologize, but I'm having trouble processing your request right now. A human representative will be with you shortly.";
+        
+        if (aiError.message?.includes('429') || aiError.message?.includes('Quota')) {
+          fallbackMessage = "I'm currently experiencing high traffic. Please try again in a minute, or wait for a human representative.";
+        }
+
+        try {
+          const { conversation: updatedConv } = await conversationService.sendMessage({
+            conversationId,
+            senderId: null,
+            senderType: 'system', // Use system type to distinguish
+            content: fallbackMessage,
+            messageType: 'system',
+            metadata: { error: true, originalError: aiError.message }
+          });
+          conversation = updatedConv;
+        } catch (fallbackError) {
+          console.error('Failed to send fallback message:', fallbackError);
+        }
       }
     } else {
       console.log('Skipping AI response:', { isClient, aiHandled: existingConv?.aiHandled, status: existingConv?.status });
@@ -235,7 +269,12 @@ export const assignRepresentative = async (req, res, next) => {
     const { conversationId } = req.params;
     const { representativeId } = req.body;
     
+    console.log('[assignRepresentative] Params:', req.params);
+    console.log('[assignRepresentative] Body:', req.body);
+    console.log('[assignRepresentative] ConversationId:', conversationId, 'RepresentativeId:', representativeId);
+    
     if (!representativeId) {
+      console.error('[assignRepresentative] Validation failed: representativeId is missing');
       return errorResponse(res, 'VALIDATION_ERROR', 'Representative ID is required', 400);
     }
     
@@ -358,7 +397,11 @@ export const getMyOrders = async (req, res, next) => {
  */
 export const getConversationStats = async (req, res, next) => {
   try {
-    const stats = await conversationService.getConversationStats(req.companyId);
+    const stats = await conversationService.getConversationStats(
+      req.companyId,
+      req.companyRole,
+      req.user._id
+    );
     return successResponse(res, { stats });
   } catch (error) {
     next(error);

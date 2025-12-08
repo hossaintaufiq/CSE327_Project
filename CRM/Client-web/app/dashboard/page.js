@@ -161,7 +161,9 @@ export default function DashboardPage() {
     try {
       setLoading(true);
       setError("");
-      const response = await apiClient.get("/dashboard/stats");
+      const response = await apiClient.get("/dashboard/stats", {
+        params: { companyId }, // fallback in case header missing
+      });
       if (response?.data?.success === true) {
         setDashboardRole(response.data.data.role || activeCompanyRole);
         setStats(response.data.data.stats || {});
@@ -616,6 +618,8 @@ export default function DashboardPage() {
 
 // Employee Dashboard Component
 function EmployeeDashboard({ user, stats, recentActivity, error, onRefresh, loading, formatCurrency, formatTimeAgo, getActivityIcon, getActivityColor }) {
+  const router = useRouter();
+  
   return (
     <div className="min-h-screen bg-gray-900">
       <Sidebar />
@@ -654,6 +658,22 @@ function EmployeeDashboard({ user, stats, recentActivity, error, onRefresh, load
 
           {/* KPI Cards */}
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6 mb-8">
+            <div className="bg-gray-800 rounded-xl border border-gray-700 p-6">
+              <div className="flex items-center justify-between mb-4">
+                <div className="p-3 bg-purple-500/20 rounded-lg">
+                  <MessageSquare className="w-6 h-6 text-purple-400" />
+                </div>
+              </div>
+              <h3 className="text-sm font-medium text-gray-400 mb-1">My Conversations</h3>
+              <p className="text-3xl font-bold text-white">{stats?.assignedConversations || 0}</p>
+              <button 
+                onClick={() => router.push('/conversations')}
+                className="mt-2 text-purple-400 hover:text-purple-300 text-sm flex items-center gap-1"
+              >
+                View all <ArrowRight className="w-4 h-4" />
+              </button>
+            </div>
+            
             <div className="bg-gray-800 rounded-xl border border-gray-700 p-6">
               <div className="flex items-center justify-between mb-4">
                 <div className="p-3 bg-blue-500/20 rounded-lg">
@@ -893,19 +913,33 @@ function ClientDashboard({ user, stats, recentOrders, recentActivity, error, onR
       setLoadingExtra(true);
       setClientError("");
       // Load companies and recent conversations for client
+      const companyId = typeof window !== 'undefined' ? localStorage.getItem('companyId') : null;
+
+      console.log('[ClientDashboard] Loading data, companyId:', companyId);
+
       const [companiesRes, conversationsRes] = await Promise.all([
-        apiClient.get("/conversations/client-companies").catch((err) => {
-          console.error("Error loading companies:", err);
-          return { data: { data: [] } };
+        apiClient.get("/conversations/my-companies").catch((err) => {
+          console.error("[ClientDashboard] Error loading companies:", err.response?.data || err.message);
+          return { data: { data: { companies: [] } } };
         }),
-        apiClient.get("/conversations?limit=5").catch((err) => {
-          console.error("Error loading conversations:", err);
-          return { data: { data: [] } };
+        apiClient.get("/conversations/my-conversations", {
+          params: { limit: 5, companyId },
+        }).catch((err) => {
+          console.error("[ClientDashboard] Error loading conversations:", err.response?.data || err.message);
+          return { data: { data: { conversations: [] } } };
         })
       ]);
       
-      setCompanies(companiesRes.data?.data || []);
-      setConversations(conversationsRes.data?.data || []);
+      console.log('[ClientDashboard] Companies response:', companiesRes.data);
+      console.log('[ClientDashboard] Conversations response:', conversationsRes.data);
+      
+      const companiesList = companiesRes.data?.data?.companies || [];
+      const conversationsList = conversationsRes.data?.data?.conversations || [];
+      
+      console.log('[ClientDashboard] Extracted', companiesList.length, 'companies and', conversationsList.length, 'conversations');
+      
+      setCompanies(companiesList);
+      setConversations(conversationsList);
     } catch (err) {
       console.error("Error loading client data:", err);
       let errorMsg = "Failed to load some dashboard data.";
@@ -926,10 +960,11 @@ function ClientDashboard({ user, stats, recentOrders, recentActivity, error, onR
 
   const getConversationStatusColor = (status) => {
     switch (status) {
-      case "ai_handling": return "bg-blue-500/20 text-blue-400";
-      case "waiting_representative": return "bg-yellow-500/20 text-yellow-400";
-      case "representative_assigned": return "bg-green-500/20 text-green-400";
+      case "active": return "bg-blue-500/20 text-blue-400";
+      case "pending_representative": return "bg-yellow-500/20 text-yellow-400";
+      case "with_representative": return "bg-green-500/20 text-green-400";
       case "resolved": return "bg-gray-500/20 text-gray-400";
+      case "closed": return "bg-gray-600/20 text-gray-500";
       default: return "bg-gray-500/20 text-gray-400";
     }
   };
@@ -1023,7 +1058,7 @@ function ClientDashboard({ user, stats, recentOrders, recentActivity, error, onR
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-8">
             <button
               onClick={() => router.push('/conversations/new')}
-              className="flex items-center gap-4 p-4 bg-gradient-to-r from-blue-600 to-blue-700 rounded-xl hover:from-blue-700 hover:to-blue-800 transition-all group"
+              className="flex items-center gap-4 p-4 bg-linear-to-r from-blue-600 to-blue-700 rounded-xl hover:from-blue-700 hover:to-blue-800 transition-all group"
             >
               <div className="p-3 bg-white/10 rounded-lg group-hover:bg-white/20">
                 <MessageSquare className="w-6 h-6 text-white" />
@@ -1036,7 +1071,7 @@ function ClientDashboard({ user, stats, recentOrders, recentActivity, error, onR
             
             <button
               onClick={() => router.push('/companies')}
-              className="flex items-center gap-4 p-4 bg-gradient-to-r from-purple-600 to-purple-700 rounded-xl hover:from-purple-700 hover:to-purple-800 transition-all group"
+              className="flex items-center gap-4 p-4 bg-linear-to-r from-purple-600 to-purple-700 rounded-xl hover:from-purple-700 hover:to-purple-800 transition-all group"
             >
               <div className="p-3 bg-white/10 rounded-lg group-hover:bg-white/20">
                 <Briefcase className="w-6 h-6 text-white" />
@@ -1049,7 +1084,7 @@ function ClientDashboard({ user, stats, recentOrders, recentActivity, error, onR
             
             <button
               onClick={() => router.push('/orders')}
-              className="flex items-center gap-4 p-4 bg-gradient-to-r from-green-600 to-green-700 rounded-xl hover:from-green-700 hover:to-green-800 transition-all group"
+              className="flex items-center gap-4 p-4 bg-linear-to-r from-green-600 to-green-700 rounded-xl hover:from-green-700 hover:to-green-800 transition-all group"
             >
               <div className="p-3 bg-white/10 rounded-lg group-hover:bg-white/20">
                 <ShoppingCart className="w-6 h-6 text-white" />
@@ -1098,8 +1133,8 @@ function ClientDashboard({ user, stats, recentOrders, recentActivity, error, onR
                     >
                       <div className="flex justify-between items-start">
                         <div>
-                          <p className="text-white font-medium">{conv.subject || "Conversation"}</p>
-                          <p className="text-gray-400 text-sm mt-1">{conv.company?.name}</p>
+                          <p className="text-white font-medium">{conv.title || "Conversation"}</p>
+                          <p className="text-gray-400 text-sm mt-1">{conv.companyId?.name}</p>
                         </div>
                         <div className="text-right">
                           <span className={`text-xs px-2 py-1 rounded-full ${getConversationStatusColor(conv.status)}`}>
@@ -1182,7 +1217,7 @@ function ClientDashboard({ user, stats, recentOrders, recentActivity, error, onR
                     onClick={() => router.push(`/companies/${company._id}`)}
                     className="bg-gray-700/50 rounded-lg p-4 hover:bg-gray-700 cursor-pointer transition-colors flex items-center gap-4"
                   >
-                    <div className="w-12 h-12 bg-gradient-to-br from-blue-500 to-purple-600 rounded-lg flex items-center justify-center text-white font-bold text-lg shrink-0">
+                    <div className="w-12 h-12 bg-linear-to-br from-blue-500 to-purple-600 rounded-lg flex items-center justify-center text-white font-bold text-lg shrink-0">
                       {company.name?.charAt(0) || "C"}
                     </div>
                     <div className="flex-1 min-w-0">

@@ -46,6 +46,16 @@ router.get('/my-orders', getMyOrders);
 // Start a new conversation with a company
 router.post('/start', startConversation);
 
+// ============ COMPANY ROUTES (require company context) ============
+
+// Get all conversations for the company
+router.get('/company/list', verifyCompanyAccess, checkRole(['company_admin', 'manager', 'employee']), getCompanyConversations);
+
+// Get conversation statistics (employees need access to see their assigned conversation count)
+router.get('/company/stats', verifyCompanyAccess, checkRole(['company_admin', 'manager', 'employee']), getConversationStats);
+
+// ============ SPECIFIC CONVERSATION ROUTES ============
+
 // Get a specific conversation
 router.get('/:conversationId', getConversation);
 
@@ -61,15 +71,7 @@ router.post('/:conversationId/resolve', resolveConversation);
 // Rate a resolved conversation
 router.post('/:conversationId/rate', rateConversation);
 
-// ============ COMPANY ROUTES (require company context) ============
-
-// Get all conversations for the company
-router.get('/company/list', verifyCompanyAccess, checkRole(['company_admin', 'manager', 'employee']), getCompanyConversations);
-
 // Assign representative to conversation
 router.post('/:conversationId/assign', verifyCompanyAccess, checkRole(['company_admin', 'manager']), assignRepresentative);
-
-// Get conversation statistics
-router.get('/company/stats', verifyCompanyAccess, checkRole(['company_admin', 'manager']), getConversationStats);
 
 export default router;

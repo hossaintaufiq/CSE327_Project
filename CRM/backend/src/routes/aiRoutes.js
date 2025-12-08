@@ -18,6 +18,7 @@ import {
   generateProjectDescription,
   suggestResponses,
   getCompanyInsights,
+  processAIRequest,
 } from '../controllers/aiController.js';
 
 const router = express.Router();
@@ -55,5 +56,8 @@ router.post('/suggest-responses', suggestResponses);
 
 // Get company dashboard insights and recommendations
 router.get('/company/insights', getCompanyInsights);
+
+// Process AI request with MCP tools (for AI assistant chat)
+router.post('/process-request', processAIRequest);
 
 export default router;

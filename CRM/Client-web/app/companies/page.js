@@ -64,7 +64,7 @@ export default function CompaniesPage() {
       setLoading(true);
       // Fetch companies the client has interacted with
       const [companiesRes, statsRes] = await Promise.all([
-        api.get("/conversations/client-companies"),
+        api.get("/conversations/my-companies"),
         api.get("/conversations/stats")
       ]);
       
@@ -297,7 +297,7 @@ export default function CompaniesPage() {
                   {/* Company Header */}
                   <div className="p-6 border-b border-gray-700">
                     <div className="flex items-start gap-4">
-                      <div className="w-14 h-14 bg-gradient-to-br from-blue-500 to-purple-600 rounded-xl flex items-center justify-center text-white font-bold text-xl">
+                      <div className="w-14 h-14 bg-linear-to-br from-blue-500 to-purple-600 rounded-xl flex items-center justify-center text-white font-bold text-xl">
                         {company.name?.charAt(0) || "C"}
                       </div>
                       <div className="flex-1 min-w-0">
@@ -370,7 +370,7 @@ export default function CompaniesPage() {
                     key={company._id}
                     className="p-4 hover:bg-gray-700/50 transition-colors flex items-center gap-4"
                   >
-                    <div className="w-12 h-12 bg-gradient-to-br from-blue-500 to-purple-600 rounded-xl flex items-center justify-center text-white font-bold text-lg shrink-0">
+                    <div className="w-12 h-12 bg-linear-to-br from-blue-500 to-purple-600 rounded-xl flex items-center justify-center text-white font-bold text-lg shrink-0">
                       {company.name?.charAt(0) || "C"}
                     </div>
                     

@@ -73,7 +73,7 @@ export default function OrdersPage() {
       // Get client orders and companies
       const [ordersRes, companiesRes] = await Promise.all([
         apiClient.get("/orders/my-orders"),
-        apiClient.get("/conversations/client-companies").catch(() => ({ data: { data: [] } }))
+        apiClient.get("/conversations/my-companies").catch(() => ({ data: { data: [] } }))
       ]);
       
       if (ordersRes.data.success) {

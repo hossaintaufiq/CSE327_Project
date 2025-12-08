@@ -2,6 +2,7 @@
  * AI Controller
  * 
  * Handles AI-powered endpoints using Gemini service.
+ * Last updated: December 9, 2025
  */
 
 import * as geminiService from '../services/geminiService.js';
@@ -422,6 +423,83 @@ export const getCompanyInsights = async (req, res, next) => {
   }
 };
 
+/**
+ * Process AI request with MCP tools
+ * This endpoint allows admins/employees to interact with AI using natural language
+ * and leverages MCP tools to perform CRM operations
+ */
+export const processAIRequest = async (req, res, next) => {
+  try {
+    const { prompt, conversationHistory = [] } = req.body;
+    const companyId = req.companyId;
+    const userId = req.user._id;
+
+    if (!prompt) {
+      return errorResponse(res, 'VALIDATION_ERROR', 'Prompt is required', 400);
+    }
+
+    // Check if Gemini is configured
+    if (!process.env.GEMINI_API_KEY || process.env.GEMINI_API_KEY.trim() === '') {
+      return errorResponse(
+        res,
+        'CONFIG_ERROR',
+        'AI service is not configured. Please contact your administrator.',
+        503
+      );
+    }
+
+    console.log(`[AI Request] User: ${userId}, Company: ${companyId}`);
+    console.log(`[AI Request] Prompt: ${prompt.substring(0, 100)}...`);
+
+    // Use Gemini with MCP tools for intelligent CRM operations
+    const response = await geminiService.generateWithTools(prompt, companyId, userId);
+
+    console.log(`[AI Request] Response generated successfully`);
+
+    return successResponse(res, { 
+      response,
+      timestamp: new Date().toISOString(),
+    });
+  } catch (error) {
+    console.error('[AI Request] Error:', error.message || error);
+    console.error('[AI Request] Stack:', error.stack);
+    
+    // Extract retry delay from error message if available
+    let retryMessage = '';
+    const retryMatch = error.message?.match(/retry in ([\d.]+)s/i);
+    if (retryMatch) {
+      const seconds = Math.ceil(parseFloat(retryMatch[1]));
+      retryMessage = ` Please wait ${seconds} seconds and try again.`;
+    }
+    
+    // Handle specific error types
+    if (error.status === 429 || error.message?.includes('429') || error.message?.includes('rate limit') || error.message?.includes('quota')) {
+      return errorResponse(
+        res,
+        'RATE_LIMIT',
+        `You have exceeded the Gemini API free tier limit (20 requests/day).${retryMessage || ' Please wait a moment and try again, or upgrade your API plan.'}`,
+        429
+      );
+    }
+    
+    if (error.message?.includes('GEMINI_API_KEY')) {
+      return errorResponse(
+        res,
+        'CONFIG_ERROR',
+        'AI service is not properly configured.',
+        503
+      );
+    }
+
+    return errorResponse(
+      res,
+      'AI_ERROR',
+      `AI processing failed: ${error.message || 'Unknown error'}`,
+      500
+    );
+  }
+};
+
 export default {
   checkHealth,
   generateText,
@@ -433,4 +511,5 @@ export default {
   generateProjectDescription,
   suggestResponses,
   getCompanyInsights,
+  processAIRequest,
 };

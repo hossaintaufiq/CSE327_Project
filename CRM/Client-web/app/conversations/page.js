@@ -39,9 +39,9 @@ const conversationTypes = {
 };
 
 const statusColors = {
-  ai_handling: "bg-blue-500/20 text-blue-400",
-  waiting_representative: "bg-yellow-500/20 text-yellow-400",
-  representative_assigned: "bg-green-500/20 text-green-400",
+  active: "bg-blue-500/20 text-blue-400",
+  pending_representative: "bg-yellow-500/20 text-yellow-400",
+  with_representative: "bg-green-500/20 text-green-400",
   resolved: "bg-gray-500/20 text-gray-400",
   closed: "bg-gray-500/20 text-gray-500",
 };
@@ -49,7 +49,7 @@ const statusColors = {
 export default function ConversationsPage() {
   const router = useRouter();
   const searchParams = useSearchParams();
-  const { user, activeCompanyRole } = useAuthStore();
+  const { user, activeCompanyRole, activeCompanyId } = useAuthStore();
   
   const [conversations, setConversations] = useState([]);
   const [selectedConversation, setSelectedConversation] = useState(null);
@@ -79,7 +79,7 @@ export default function ConversationsPage() {
     }
     
     fetchConversations();
-  }, [mounted]);
+  }, [mounted, activeCompanyId, activeCompanyRole]);
 
   useEffect(() => {
     scrollToBottom();
@@ -92,8 +92,30 @@ export default function ConversationsPage() {
   const fetchConversations = async () => {
     try {
       setLoading(true);
-      const res = await api.get("/conversations/my-conversations");
+      
+      const companyId = activeCompanyId || (typeof window !== 'undefined' ? localStorage.getItem('companyId') : null);
+      let endpoint = "/conversations/my-conversations";
+      const config = {};
+
+      console.log('[fetchConversations] User role:', activeCompanyRole, 'CompanyId:', companyId);
+
+      // If user is an employee/admin of the active company, fetch company conversations
+      if (activeCompanyRole && ['employee', 'manager', 'company_admin'].includes(activeCompanyRole)) {
+        endpoint = "/conversations/company/list";
+        console.log('[fetchConversations] Using company endpoint:', endpoint);
+      } else {
+        console.log('[fetchConversations] Using client endpoint:', endpoint);
+      }
+
+      if (companyId) {
+        config.params = { companyId };
+      }
+
+      console.log('[fetchConversations] Fetching from:', endpoint, 'with config:', config);
+      const res = await api.get(endpoint, config);
+      console.log('[fetchConversations] Response:', res.data);
       const conversationsList = res.data.data?.conversations || [];
+      console.log('[fetchConversations] Extracted', conversationsList.length, 'conversations');
       setConversations(conversationsList);
       
       // If conversation ID in URL, select it
@@ -111,10 +133,10 @@ export default function ConversationsPage() {
       const mockConversations = [
         {
           _id: "1",
-          company: { _id: "c1", name: "TechCorp Solutions" },
-          conversationType: "inquiry",
-          subject: "Product Information Request",
-          status: "ai_handling",
+          companyId: { _id: "c1", name: "TechCorp Solutions" },
+          type: "inquiry",
+          title: "Product Information Request",
+          status: "active",
           messages: [
             { _id: "m1", content: "Hi, I'd like to know more about your enterprise software solutions.", senderType: "client", createdAt: new Date(Date.now() - 3600000).toISOString() },
             { _id: "m2", content: "Hello! I'd be happy to help you learn about our enterprise solutions. We offer a comprehensive suite including CRM, ERP, and custom development services. What specific area are you most interested in?", senderType: "ai", createdAt: new Date(Date.now() - 3500000).toISOString() },
@@ -124,11 +146,11 @@ export default function ConversationsPage() {
         },
         {
           _id: "2",
-          company: { _id: "c2", name: "Global Supplies Inc" },
-          conversationType: "order",
-          subject: "Order #12345 Status",
-          status: "representative_assigned",
-          representative: { name: "John Smith" },
+          companyId: { _id: "c2", name: "Global Supplies Inc" },
+          type: "order",
+          title: "Order #12345 Status",
+          status: "with_representative",
+          assignedRepresentative: { name: "John Smith" },
           messages: [
             { _id: "m3", content: "I placed an order last week but haven't received any updates.", senderType: "client", createdAt: new Date(Date.now() - 172800000).toISOString() },
             { _id: "m4", content: "I apologize for the delay. Let me check the status of your order.", senderType: "ai", createdAt: new Date(Date.now() - 172700000).toISOString() },
@@ -140,9 +162,9 @@ export default function ConversationsPage() {
         },
         {
           _id: "3",
-          company: { _id: "c1", name: "TechCorp Solutions" },
-          conversationType: "complaint",
-          subject: "Software Bug Report",
+          companyId: { _id: "c1", name: "TechCorp Solutions" },
+          type: "complaint",
+          title: "Software Bug Report",
           status: "resolved",
           messages: [
             { _id: "m7", content: "There's a bug in the latest update.", senderType: "client", createdAt: new Date(Date.now() - 604800000).toISOString() },
@@ -240,9 +262,9 @@ export default function ConversationsPage() {
   };
 
   const filteredConversations = conversations.filter(conv => {
-    const matchesSearch = conv.subject?.toLowerCase().includes(searchQuery.toLowerCase()) ||
-                          conv.company?.name?.toLowerCase().includes(searchQuery.toLowerCase());
-    const matchesType = filterType === "all" || conv.conversationType === filterType;
+    const matchesSearch = conv.title?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+                          conv.companyId?.name?.toLowerCase().includes(searchQuery.toLowerCase());
+    const matchesType = filterType === "all" || conv.type === filterType;
     const matchesStatus = filterStatus === "all" || conv.status === filterStatus;
     return matchesSearch && matchesType && matchesStatus;
   });
@@ -339,10 +361,11 @@ export default function ConversationsPage() {
                   className="flex-1 px-3 py-1.5 text-sm bg-gray-700 border border-gray-600 rounded-lg text-white"
                 >
                   <option value="all">All Status</option>
-                  <option value="ai_handling">AI Handling</option>
-                  <option value="waiting_representative">Waiting</option>
-                  <option value="representative_assigned">Assigned</option>
+                  <option value="active">Active (AI)</option>
+                  <option value="pending_representative">Needs Rep</option>
+                  <option value="with_representative">With Rep</option>
                   <option value="resolved">Resolved</option>
+                  <option value="closed">Closed</option>
                 </select>
               </div>
             </div>
@@ -366,7 +389,7 @@ export default function ConversationsPage() {
                 </div>
               ) : (
                 filteredConversations.map((conv) => {
-                  const TypeIcon = conversationTypes[conv.conversationType]?.icon || MessageSquare;
+                  const TypeIcon = conversationTypes[conv.type]?.icon || MessageSquare;
                   const lastMessage = conv.messages?.[conv.messages.length - 1];
                   
                   return (
@@ -379,10 +402,10 @@ export default function ConversationsPage() {
                     >
                       <div className="flex items-start gap-3">
                         <div className={`p-2 rounded-lg ${
-                          conversationTypes[conv.conversationType]?.color === "blue" ? "bg-blue-500/20 text-blue-400" :
-                          conversationTypes[conv.conversationType]?.color === "green" ? "bg-green-500/20 text-green-400" :
-                          conversationTypes[conv.conversationType]?.color === "red" ? "bg-red-500/20 text-red-400" :
-                          conversationTypes[conv.conversationType]?.color === "purple" ? "bg-purple-500/20 text-purple-400" :
+                          conversationTypes[conv.type]?.color === "blue" ? "bg-blue-500/20 text-blue-400" :
+                          conversationTypes[conv.type]?.color === "green" ? "bg-green-500/20 text-green-400" :
+                          conversationTypes[conv.type]?.color === "red" ? "bg-red-500/20 text-red-400" :
+                          conversationTypes[conv.type]?.color === "purple" ? "bg-purple-500/20 text-purple-400" :
                           "bg-gray-500/20 text-gray-400"
                         }`}>
                           <TypeIcon className="w-5 h-5" />
@@ -390,10 +413,10 @@ export default function ConversationsPage() {
                         
                         <div className="flex-1 min-w-0">
                           <div className="flex items-center justify-between mb-1">
-                            <h3 className="font-medium text-white truncate">{conv.subject}</h3>
+                            <h3 className="font-medium text-white truncate">{conv.title}</h3>
                             <span className="text-xs text-gray-500">{formatTime(conv.lastActivity)}</span>
                           </div>
-                          <p className="text-sm text-gray-400 truncate">{conv.company?.name}</p>
+                          <p className="text-sm text-gray-400 truncate">{conv.companyId?.name}</p>
                           {lastMessage && (
                             <p className="text-sm text-gray-500 truncate mt-1">
                               {lastMessage.senderType === "client" ? "You: " : ""}
@@ -429,10 +452,10 @@ export default function ConversationsPage() {
                   </button>
                   
                   <div className="flex-1">
-                    <h3 className="font-semibold text-white">{selectedConversation.subject}</h3>
+                    <h3 className="font-semibold text-white">{selectedConversation.title}</h3>
                     <div className="flex items-center gap-2 text-sm text-gray-400">
                       <Building2 className="w-4 h-4" />
-                      <span>{selectedConversation.company?.name}</span>
+                      <span>{selectedConversation.companyId?.name}</span>
                       <span className={`px-2 py-0.5 text-xs rounded-full ${statusColors[selectedConversation.status]}`}>
                         {selectedConversation.status?.replace(/_/g, " ")}
                       </span>
@@ -440,7 +463,7 @@ export default function ConversationsPage() {
                   </div>
 
                   <div className="flex items-center gap-2">
-                    {selectedConversation.status === "ai_handling" && (
+                    {selectedConversation.status === "active" && (
                       <button
                         onClick={handleRequestRepresentative}
                         className="px-3 py-1.5 text-sm bg-purple-500/20 text-purple-400 rounded-lg hover:bg-purple-500/30 transition-colors"
@@ -482,7 +505,7 @@ export default function ConversationsPage() {
                             {!isClient && (
                               <p className="text-xs text-gray-500 mb-1 ml-1">
                                 {message.senderType === "ai" ? "AI Assistant" :
-                                 message.senderType === "representative" ? selectedConversation.representative?.name || "Representative" :
+                                 message.senderType === "representative" ? selectedConversation.assignedRepresentative?.name || "Representative" :
                                  "System"}
                               </p>
                             )}

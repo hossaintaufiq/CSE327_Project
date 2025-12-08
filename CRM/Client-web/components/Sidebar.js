@@ -25,6 +25,7 @@ import {
   Send,
   List,
   Package,
+  Sparkles,
 } from "lucide-react";
 import useAuthStore from "@/store/authStore";
 
@@ -52,6 +53,7 @@ export default function Sidebar() {
     // For Company Admin and Manager
     if (activeCompanyRole === "company_admin" || activeCompanyRole === "manager") {
       companyMenuItems.push(
+        { icon: Sparkles, label: "AI Assistant", href: "/dashboard/ai-assistant" },
         { icon: Kanban, label: "Pipeline", href: "/pipeline" },
         { icon: UserCheck, label: "Leads", href: "/clients" },
         { icon: ShoppingCart, label: "Sales", href: "/orders" },
@@ -75,6 +77,7 @@ export default function Sidebar() {
     // For Employee
     else if (activeCompanyRole === "employee") {
       companyMenuItems.push(
+        { icon: Sparkles, label: "AI Assistant", href: "/dashboard/ai-assistant" },
         { icon: UserCheck, label: "My Leads", href: "/clients" },
         { icon: ShoppingCart, label: "My Sales", href: "/orders" },
         { icon: CheckSquare, label: "Tasks", href: "/dashboard/tasks" },

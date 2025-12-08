@@ -86,7 +86,14 @@ export default function AdminConversationsPage() {
     }
     
     // Check if user has required role for this page
-    if (!["company_admin", "manager", "employee"].includes(activeCompanyRole)) {
+    // This is the ADMIN conversation management page - only for admins and managers
+    // Employees should use /conversations instead
+    if (activeCompanyRole === "employee") {
+      router.push("/conversations");
+      return;
+    }
+    
+    if (!["company_admin", "manager"].includes(activeCompanyRole)) {
       router.push("/dashboard");
       return;
     }
@@ -115,10 +122,22 @@ export default function AdminConversationsPage() {
       setConversations(conversationsRes.data?.data?.conversations || []);
       setStats(statsRes.data?.data?.stats || {});
       
-      // Filter to only employees/managers who can handle conversations
+      // Log raw members data
+      console.log('[loadData] Raw members data:', employeesRes.data?.data?.members);
+      
+      // Filter to only employees and managers (NOT company_admin) who can handle conversations
       const assignable = (employeesRes.data?.data?.members || []).filter(
-        m => ["company_admin", "manager", "employee"].includes(m.role)
-      );
+        m => m.isActive && ["manager", "employee"].includes(m.role)
+      ).map(m => {
+        const mapped = {
+          ...m,
+          _id: m.userId || m._id // Backend returns userId, map it to _id for consistency
+        };
+        console.log('[loadData] Mapped member:', { original: m.userId, mapped: mapped._id, name: m.name });
+        return mapped;
+      });
+      
+      console.log('[loadData] Loaded', assignable.length, 'assignable employees:', assignable.map(e => ({ id: e._id, name: e.name, role: e.role })));
       setEmployees(assignable);
     } catch (err) {
       console.error("Error loading data:", err);
@@ -169,18 +188,26 @@ export default function AdminConversationsPage() {
 
   const handleAssignRepresentative = async (conversationId, representativeId) => {
     try {
-      await api.post(`/conversations/${conversationId}/assign`, { representativeId });
+      console.log('[Assignment] Conversation ID:', conversationId);
+      console.log('[Assignment] Representative ID:', representativeId);
+      console.log('[Assignment] Representative ID type:', typeof representativeId);
+      console.log('[Assignment] Assigning conversation', conversationId, 'to representative', representativeId);
+      
+      if (!representativeId) {
+        alert('Error: Representative ID is missing');
+        return;
+      }
+      
+      const response = await api.post(`/conversations/${conversationId}/assign`, { representativeId });
+      console.log('[Assignment] Success:', response.data);
+      
+      // Reload data to get updated conversation
       await loadData();
       setShowAssignModal(false);
       setAssigningConversation(null);
     } catch (err) {
-      console.error("Error assigning representative:", err);
-      // Demo: update locally
-      setConversations(prev => prev.map(c => 
-        c._id === conversationId 
-          ? { ...c, status: "with_representative", assignedRepresentative: employees.find(e => e._id === representativeId) }
-          : c
-      ));
+      console.error("[Assignment] Error assigning representative:", err.response?.data || err.message);
+      alert(`Failed to assign representative: ${err.response?.data?.message || err.message}`);
       setShowAssignModal(false);
       setAssigningConversation(null);
     }
@@ -408,7 +435,7 @@ export default function AdminConversationsPage() {
                     >
                       <div className="flex items-start gap-4">
                         {/* Client Avatar */}
-                        <div className="w-12 h-12 bg-gradient-to-br from-blue-500 to-purple-600 rounded-full flex items-center justify-center text-white font-bold text-lg shrink-0">
+                        <div className="w-12 h-12 bg-linear-to-br from-blue-500 to-purple-600 rounded-full flex items-center justify-center text-white font-bold text-lg shrink-0">
                           {conv.clientUserId?.name?.charAt(0) || "?"}
                         </div>
                         
@@ -495,21 +522,28 @@ export default function AdminConversationsPage() {
             </p>
             
             <div className="space-y-2 max-h-64 overflow-y-auto">
-              {employees.map((emp) => (
-                <button
-                  key={emp._id}
-                  onClick={() => handleAssignRepresentative(assigningConversation._id, emp._id)}
-                  className="w-full flex items-center gap-3 p-3 bg-gray-700 rounded-lg hover:bg-gray-600 transition-colors"
-                >
-                  <div className="w-10 h-10 bg-gradient-to-br from-green-500 to-blue-600 rounded-full flex items-center justify-center text-white font-bold">
-                    {emp.name?.charAt(0) || "?"}
-                  </div>
-                  <div className="text-left">
-                    <p className="text-white font-medium">{emp.name}</p>
-                    <p className="text-gray-400 text-sm">{emp.role}</p>
-                  </div>
-                </button>
-              ))}
+              {employees.length === 0 ? (
+                <p className="text-gray-400 text-center py-4">No employees available to assign</p>
+              ) : (
+                employees.map((emp) => (
+                  <button
+                    key={emp._id}
+                    onClick={() => {
+                      console.log('[Modal] Clicked employee:', emp.name, 'ID:', emp._id);
+                      handleAssignRepresentative(assigningConversation._id, emp._id);
+                    }}
+                    className="w-full flex items-center gap-3 p-3 bg-gray-700 rounded-lg hover:bg-gray-600 transition-colors"
+                  >
+                    <div className="w-10 h-10 bg-linear-to-br from-green-500 to-blue-600 rounded-full flex items-center justify-center text-white font-bold">
+                      {emp.name?.charAt(0) || "?"}
+                    </div>
+                    <div className="text-left">
+                      <p className="text-white font-medium">{emp.name}</p>
+                      <p className="text-gray-400 text-sm">{emp.role}</p>
+                    </div>
+                  </button>
+                ))
+              )}
             </div>
             
             <button

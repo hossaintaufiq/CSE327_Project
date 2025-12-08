@@ -1,0 +1,306 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>CRM Test Suite - Dashboard</title>
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, sans-serif;
+      background: linear-gradient(135deg, #0f0c29 0%, #302b63 50%, #24243e 100%);
+      min-height: 100vh;
+      padding: 40px 20px;
+      color: #fff;
+    }
+    .container {
+      max-width: 1400px;
+      margin: 0 auto;
+    }
+    h1 {
+      text-align: center;
+      margin-bottom: 20px;
+      font-size: 3rem;
+      background: linear-gradient(90deg, #00d9ff, #00ff88, #ff00ff);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+    }
+    .subtitle {
+      text-align: center;
+      color: #aaa;
+      margin-bottom: 50px;
+      font-size: 1.2rem;
+    }
+    .test-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(350px, 1fr));
+      gap: 25px;
+      margin-bottom: 40px;
+    }
+    .test-card {
+      background: rgba(255,255,255,0.05);
+      border: 1px solid rgba(255,255,255,0.1);
+      border-radius: 15px;
+      padding: 30px;
+      transition: all 0.3s ease;
+      cursor: pointer;
+      position: relative;
+      overflow: hidden;
+    }
+    .test-card::before {
+      content: '';
+      position: absolute;
+      top: 0;
+      left: 0;
+      right: 0;
+      height: 4px;
+      background: linear-gradient(90deg, #00d9ff, #00ff88);
+      transform: scaleX(0);
+      transition: transform 0.3s ease;
+    }
+    .test-card:hover {
+      transform: translateY(-5px);
+      box-shadow: 0 10px 30px rgba(0, 217, 255, 0.3);
+      border-color: rgba(0, 217, 255, 0.5);
+    }
+    .test-card:hover::before {
+      transform: scaleX(1);
+    }
+    .test-icon {
+      font-size: 3rem;
+      margin-bottom: 15px;
+      display: block;
+    }
+    .test-card h2 {
+      font-size: 1.5rem;
+      margin-bottom: 15px;
+      color: #00d9ff;
+    }
+    .test-card p {
+      color: #bbb;
+      line-height: 1.6;
+      margin-bottom: 15px;
+    }
+    .test-link {
+      display: inline-block;
+      background: linear-gradient(90deg, #00d9ff, #00ff88);
+      color: #000;
+      padding: 10px 20px;
+      border-radius: 8px;
+      text-decoration: none;
+      font-weight: 600;
+      transition: all 0.3s ease;
+      margin-top: 10px;
+    }
+    .test-link:hover {
+      transform: scale(1.05);
+      box-shadow: 0 5px 15px rgba(0, 255, 136, 0.4);
+    }
+    .features {
+      list-style: none;
+      margin: 15px 0;
+      padding-left: 0;
+    }
+    .features li {
+      padding: 8px 0;
+      color: #ccc;
+      position: relative;
+      padding-left: 25px;
+    }
+    .features li::before {
+      content: '✓';
+      position: absolute;
+      left: 0;
+      color: #00ff88;
+      font-weight: bold;
+    }
+    .status-badge {
+      display: inline-block;
+      padding: 5px 12px;
+      border-radius: 20px;
+      font-size: 0.85rem;
+      font-weight: 600;
+      margin-top: 10px;
+    }
+    .status-ready {
+      background: rgba(0, 255, 136, 0.2);
+      color: #00ff88;
+      border: 1px solid #00ff88;
+    }
+    .status-beta {
+      background: rgba(255, 170, 0, 0.2);
+      color: #ffaa00;
+      border: 1px solid #ffaa00;
+    }
+    .footer {
+      text-align: center;
+      margin-top: 60px;
+      padding-top: 30px;
+      border-top: 1px solid rgba(255,255,255,0.1);
+      color: #888;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1>🧪 CRM Test Suite Dashboard</h1>
+    <p class="subtitle">Comprehensive testing tools for all CRM features</p>
+
+    <div class="test-grid">
+      <!-- MCP Server Test -->
+      <div class="test-card" onclick="window.location.href='mcp-test.html'">
+        <span class="test-icon">🔧</span>
+        <h2>MCP Server Tests</h2>
+        <p>Test Model Context Protocol server integration with 28+ tools for CRM operations.</p>
+        <ul class="features">
+          <li>Client Management Tools</li>
+          <li>Order Processing Tools</li>
+          <li>Task Management Tools</li>
+          <li>Analytics & Reporting</li>
+          <li>Real-time Tool Execution</li>
+        </ul>
+        <span class="status-badge status-ready">✓ Ready</span>
+        <a href="mcp-test.html" class="test-link">Open Test Page →</a>
+      </div>
+
+      <!-- AI Assistant Test -->
+      <div class="test-card" onclick="window.location.href='test-ai-assistant.html'">
+        <span class="test-icon">🤖</span>
+        <h2>AI Assistant Tests</h2>
+        <p>Test Google Gemini AI integration with natural language processing and MCP tools.</p>
+        <ul class="features">
+          <li>Gemini 2.5 Flash Model</li>
+          <li>Natural Language Queries</li>
+          <li>Function Calling</li>
+          <li>Context-Aware Responses</li>
+          <li>Multi-turn Conversations</li>
+        </ul>
+        <span class="status-badge status-ready">✓ Ready</span>
+        <a href="test-ai-assistant.html" class="test-link">Open Test Page →</a>
+      </div>
+
+      <!-- Authentication Test -->
+      <div class="test-card" onclick="window.location.href='test-auth.html'">
+        <span class="test-icon">🔐</span>
+        <h2>Authentication Tests</h2>
+        <p>Test Firebase authentication, JWT tokens, and role-based access control.</p>
+        <ul class="features">
+          <li>Firebase Auth Login</li>
+          <li>JWT Token Validation</li>
+          <li>Role-Based Access</li>
+          <li>Company Access Control</li>
+          <li>Session Management</li>
+        </ul>
+        <span class="status-badge status-ready">✓ Ready</span>
+        <a href="test-auth.html" class="test-link">Open Test Page →</a>
+      </div>
+
+      <!-- Conversation Test -->
+      <div class="test-card" onclick="window.location.href='test-conversations.html'">
+        <span class="test-icon">💬</span>
+        <h2>Conversation Tests</h2>
+        <p>Test real-time chat, Socket.io integration, and AI-powered responses.</p>
+        <ul class="features">
+          <li>Socket.io Real-time Chat</li>
+          <li>AI Chat Responses</li>
+          <li>Message History</li>
+          <li>Lead/Client Conversations</li>
+          <li>Notification System</li>
+        </ul>
+        <span class="status-badge status-ready">✓ Ready</span>
+        <a href="test-conversations.html" class="test-link">Open Test Page →</a>
+      </div>
+
+      <!-- Database Test -->
+      <div class="test-card" onclick="window.location.href='test-database.html'">
+        <span class="test-icon">🗄️</span>
+        <h2>Database Tests</h2>
+        <p>Test MongoDB connections, CRUD operations, and data integrity.</p>
+        <ul class="features">
+          <li>MongoDB Connection</li>
+          <li>CRUD Operations</li>
+          <li>Schema Validation</li>
+          <li>Index Performance</li>
+          <li>Data Aggregation</li>
+        </ul>
+        <span class="status-badge status-ready">✓ Ready</span>
+        <a href="test-database.html" class="test-link">Open Test Page →</a>
+      </div>
+
+      <!-- API Endpoints Test -->
+      <div class="test-card" onclick="window.location.href='test-api.html'">
+        <span class="test-icon">🔗</span>
+        <h2>API Endpoint Tests</h2>
+        <p>Test all REST API endpoints, request/response validation, and error handling.</p>
+        <ul class="features">
+          <li>All API Routes</li>
+          <li>Request Validation</li>
+          <li>Response Format</li>
+          <li>Error Handling</li>
+          <li>Rate Limiting</li>
+        </ul>
+        <span class="status-badge status-ready">✓ Ready</span>
+        <a href="test-api.html" class="test-link">Open Test Page →</a>
+      </div>
+
+      <!-- Telegram Bot Test -->
+      <div class="test-card" onclick="window.location.href='test-telegram.html'">
+        <span class="test-icon">📱</span>
+        <h2>Telegram Bot Tests</h2>
+        <p>Test Telegram bot integration, commands, and AI-powered responses.</p>
+        <ul class="features">
+          <li>Bot Commands</li>
+          <li>Role-Based Menus</li>
+          <li>AI Integration</li>
+          <li>Notifications</li>
+          <li>Account Linking</li>
+        </ul>
+        <span class="status-badge status-ready">✓ Ready</span>
+        <a href="test-telegram.html" class="test-link">Open Test Page →</a>
+      </div>
+
+      <!-- Performance Test -->
+      <div class="test-card" onclick="window.location.href='test-performance.html'">
+        <span class="test-icon">⚡</span>
+        <h2>Performance Tests</h2>
+        <p>Test system performance, load handling, and response times.</p>
+        <ul class="features">
+          <li>Response Time Metrics</li>
+          <li>Load Testing</li>
+          <li>Memory Usage</li>
+          <li>API Rate Limits</li>
+          <li>Concurrent Users</li>
+        </ul>
+        <span class="status-badge status-ready">✓ Ready</span>
+        <a href="test-performance.html" class="test-link">Open Test Page →</a>
+      </div>
+
+      <!-- Integration Test -->
+      <div class="test-card" onclick="window.location.href='test-integration.html'">
+        <span class="test-icon">🔄</span>
+        <h2>Integration Tests</h2>
+        <p>Test end-to-end workflows and system integrations.</p>
+        <ul class="features">
+          <li>Full User Workflows</li>
+          <li>Service Integration</li>
+          <li>Third-party APIs</li>
+          <li>Data Flow Testing</li>
+          <li>System Health Check</li>
+        </ul>
+        <span class="status-badge status-ready">✓ Ready</span>
+        <a href="test-integration.html" class="test-link">Open Test Page →</a>
+      </div>
+    </div>
+
+    <div class="footer">
+      <p>CRM Prime Test Suite v2.0 | All tests are independent and can be run in any order</p>
+      <p style="margin-top: 10px; color: #666;">Backend: <a href="http://localhost:5000" style="color: #00d9ff;">http://localhost:5000</a> | Frontend: <a href="http://localhost:3000" style="color: #00ff88;">http://localhost:3000</a></p>
+    </div>
+  </div>
+</body>
+</html>
