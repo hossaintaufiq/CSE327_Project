@@ -28,6 +28,7 @@ import AudioCallModal from "@/components/AudioCallModal";
 import IncomingCallNotification from "@/components/IncomingCallNotification";
 import useAuthStore from "@/store/authStore";
 import api from "@/utils/api";
+import { useTwilioDevice } from "@/hooks/useTwilioDevice";
 
 const conversationTypes = {
   inquiry: { label: "Inquiry", icon: HelpCircle, color: "blue" },
@@ -70,6 +71,25 @@ export default function ConversationDetailPage() {
   const [incomingCall, setIncomingCall] = useState(null);
   const messagesEndRef = useRef(null);
   const socketRef = useRef(null);
+  const incomingCallRef = useRef(null);
+
+  // Persistent Twilio Device registration to receive calls
+  const { device: twilioDevice, isRegistered: deviceRegistered } = useTwilioDevice(
+    conversationId,
+    (call) => {
+      // Store the call object for when user accepts
+      incomingCallRef.current = call;
+      // Show incoming call notification
+      // Extract caller info from call parameters if available
+      setIncomingCall({
+        call: call,
+        caller: {
+          name: "Incoming Call",
+          email: ""
+        }
+      });
+    }
+  );
 
   // Handle hydration
   useEffect(() => {
@@ -103,6 +123,7 @@ export default function ConversationDetailPage() {
 
       // Listen for incoming calls
       socketRef.current.on('call:incoming', (data) => {
+        console.log('[Socket.io] Incoming call received:', data);
         setIncomingCall(data);
       });
 
@@ -282,13 +303,13 @@ export default function ConversationDetailPage() {
   };
 
   const handleAcceptCall = () => {
-    if (incomingCall) {
-      setCallToken(incomingCall.token);
-      setCallRoomName(incomingCall.roomName);
-      setCallIdentity(incomingCall.identity);
-      setTargetIdentity(incomingCall.targetIdentity);
-      setIsIncomingCall(true);
+    if (incomingCall && incomingCallRef.current) {
+      // Accept the call that's already ringing
+      incomingCallRef.current.accept();
+      
+      // Open modal to show call UI
       setShowVideoCall(true);
+      setIsIncomingCall(true);
       setIncomingCall(null);
     }
   };
@@ -678,6 +699,7 @@ export default function ConversationDetailPage() {
         identity={callIdentity}
         targetIdentity={targetIdentity}
         isIncoming={isIncomingCall}
+        incomingCall={incomingCallRef.current}
         conversationId={conversationId}
       />
     </div>

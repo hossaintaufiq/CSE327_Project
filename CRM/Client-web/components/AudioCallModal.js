@@ -4,7 +4,7 @@ import { useEffect, useRef, useState } from "react";
 import { Device } from "@twilio/voice-sdk";
 import { X, Mic, MicOff, PhoneOff, Phone } from "lucide-react";
 
-export default function AudioCallModal({ isOpen, onClose, callToken, roomName, identity, targetIdentity, conversationId, isIncoming = false }) {
+export default function AudioCallModal({ isOpen, onClose, callToken, roomName, identity, targetIdentity, conversationId, isIncoming = false, incomingCall = null }) {
   const deviceRef = useRef(null);
   const callRef = useRef(null);
   const [isAudioMuted, setIsAudioMuted] = useState(false);
@@ -12,8 +12,51 @@ export default function AudioCallModal({ isOpen, onClose, callToken, roomName, i
   const [callDuration, setCallDuration] = useState(0);
   const [remoteParticipant, setRemoteParticipant] = useState(null);
 
+  // Function to set up call event listeners
+  const setupCallEventListeners = (call) => {
+    call.on("accept", () => {
+      console.log("Call accepted/connected");
+      setCallState("connected");
+    });
+
+    call.on("disconnect", () => {
+      console.log("Call disconnected");
+      setCallState("disconnected");
+      onClose();
+    });
+
+    call.on("cancel", () => {
+      console.log("Call cancelled");
+      setCallState("disconnected");
+      onClose();
+    });
+
+    call.on("reject", () => {
+      console.log("Call rejected");
+      setCallState("disconnected");
+      onClose();
+    });
+
+    call.on("error", (error) => {
+      console.error("Call error:", error);
+      setCallState("error");
+    });
+  };
+
   useEffect(() => {
-    if (!isOpen || !callToken || !identity) return;
+    if (!isOpen) return;
+
+    // If we have an incoming call object, use it directly
+    if (incomingCall) {
+      console.log('[AudioCallModal] Using existing incoming call');
+      callRef.current = incomingCall;
+      setCallState("connected");
+      setupCallEventListeners(incomingCall);
+      return;
+    }
+
+    // Otherwise, initialize new outgoing call
+    if (!callToken || !identity) return;
 
     const initializeCall = async () => {
       try {
@@ -73,7 +116,7 @@ export default function AudioCallModal({ isOpen, onClose, callToken, roomName, i
         deviceRef.current = null;
       }
     };
-  }, [isOpen, callToken, identity]);
+  }, [isOpen, callToken, identity, incomingCall]);
 
   const makeOutgoingCall = async (device) => {
     try {
@@ -90,69 +133,12 @@ export default function AudioCallModal({ isOpen, onClose, callToken, roomName, i
       console.log("Call object created:", call);
 
       // Set up call event listeners
-      call.on("accept", (conn) => {
-        console.log("Call accepted");
-        setCallState("connected");
-      });
-
-      call.on("disconnect", (conn) => {
-        console.log("Call disconnected");
-        setCallState("disconnected");
-        onClose();
-      });
-
-      call.on("cancel", () => {
-        console.log("Call cancelled");
-        setCallState("disconnected");
-        onClose();
-      });
-
-      call.on("reject", () => {
-        console.log("Call rejected");
-        setCallState("disconnected");
-        onClose();
-      });
-
-      call.on("error", (error) => {
-        console.error("Call error:", error);
-        setCallState("error");
-      });
+      setupCallEventListeners(call);
 
     } catch (error) {
       console.error("Error making outgoing call:", error);
       setCallState("error");
     }
-  };
-
-  const handleIncomingCall = (call) => {
-    callRef.current = call;
-
-    // Set up call event listeners first
-    call.on("accept", (conn) => {
-      console.log("Incoming call accepted");
-      setCallState("connected");
-      setRemoteParticipant({ name: "Participant" });
-    });
-
-    call.on("disconnect", (conn) => {
-      console.log("Call disconnected");
-      setCallState("disconnected");
-      onClose();
-    });
-
-    call.on("cancel", () => {
-      console.log("Call cancelled");
-      setCallState("disconnected");
-      onClose();
-    });
-
-    call.on("error", (error) => {
-      console.error("Call error:", error);
-      setCallState("error");
-    });
-
-    // Accept the incoming call
-    call.accept();
   };
 
   const toggleAudio = () => {
