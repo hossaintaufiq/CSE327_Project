@@ -117,7 +117,6 @@ export default function OrdersPage() {
       if (response?.data?.success === true) {
         const loadedClients = response.data.data.clients || [];
         setClients(loadedClients);
-        console.log("Clients loaded:", loadedClients.length, loadedClients);
         if (showError && loadedClients.length === 0) {
           const roleMessage = activeCompanyRole === 'employee' 
             ? "No clients assigned to you. Please contact your manager."

@@ -202,25 +202,13 @@ export const login = async (req, res) => {
     const admin = getFirebaseAdmin();
     const decodedToken = await admin.auth().verifyIdToken(idToken);
     
-    console.log('🔍 LOGIN DEBUG:', {
-      email: decodedToken.email,
-      uid: decodedToken.uid,
-    });
-    
     // Get or create user in database
     let user = await User.findOne({ firebaseUid: decodedToken.uid });
     
     // Check if this is the super admin email (only hossainahmmed22@gmail.com)
     const isSuperAdmin = isSuperAdminEmail(decodedToken.email);
     
-    console.log('🔍 SUPER ADMIN CHECK:', {
-      email: decodedToken.email,
-      isSuperAdmin,
-      existingUserRole: user?.globalRole,
-    });
-    
     if (!user) {
-      console.log('📝 Creating new user with role:', isSuperAdmin ? 'super_admin' : 'user');
       user = await User.create({
         firebaseUid: decodedToken.uid,
         email: decodedToken.email,
@@ -228,23 +216,17 @@ export const login = async (req, res) => {
         globalRole: isSuperAdmin ? 'super_admin' : 'user',
         companies: [],
       });
-      console.log('✅ User created with role:', user.globalRole);
     } else {
-      console.log('📝 Existing user found. Current role:', user.globalRole);
       // Update super admin status if email matches (in case user was created before super admin check)
       // Only allow super admin for the specific email
       if (isSuperAdmin && user.globalRole !== 'super_admin') {
-        console.log('🔄 Updating user role to super_admin');
         user.globalRole = 'super_admin';
         await user.save();
-        console.log('✅ User role updated to:', user.globalRole);
       } else if (!isSuperAdmin && user.globalRole === 'super_admin') {
         // Security: Remove super admin role if email doesn't match
         console.warn(`⚠️ Security: Removing super_admin role from ${decodedToken.email} - not authorized email`);
         user.globalRole = 'user';
         await user.save();
-      } else {
-        console.log('ℹ️ No role change needed. Current role:', user.globalRole);
       }
       // Update user info if changed
       if (decodedToken.name && decodedToken.name !== user.name) {
@@ -255,7 +237,6 @@ export const login = async (req, res) => {
     
     // Refresh user from database to ensure we have latest data
     user = await User.findById(user._id);
-    console.log('📤 Sending user data with role:', user.globalRole);
 
     // Populate companies
     await user.populate('companies.companyId');

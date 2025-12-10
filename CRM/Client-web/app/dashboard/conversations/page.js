@@ -122,22 +122,14 @@ export default function AdminConversationsPage() {
       setConversations(conversationsRes.data?.data?.conversations || []);
       setStats(statsRes.data?.data?.stats || {});
       
-      // Log raw members data
-      console.log('[loadData] Raw members data:', employeesRes.data?.data?.members);
-      
       // Filter to only employees and managers (NOT company_admin) who can handle conversations
       const assignable = (employeesRes.data?.data?.members || []).filter(
         m => m.isActive && ["manager", "employee"].includes(m.role)
-      ).map(m => {
-        const mapped = {
-          ...m,
-          _id: m.userId || m._id // Backend returns userId, map it to _id for consistency
-        };
-        console.log('[loadData] Mapped member:', { original: m.userId, mapped: mapped._id, name: m.name });
-        return mapped;
-      });
+      ).map(m => ({
+        ...m,
+        _id: m.userId || m._id // Backend returns userId, map it to _id for consistency
+      }));
       
-      console.log('[loadData] Loaded', assignable.length, 'assignable employees:', assignable.map(e => ({ id: e._id, name: e.name, role: e.role })));
       setEmployees(assignable);
     } catch (err) {
       console.error("Error loading data:", err);
@@ -188,18 +180,12 @@ export default function AdminConversationsPage() {
 
   const handleAssignRepresentative = async (conversationId, representativeId) => {
     try {
-      console.log('[Assignment] Conversation ID:', conversationId);
-      console.log('[Assignment] Representative ID:', representativeId);
-      console.log('[Assignment] Representative ID type:', typeof representativeId);
-      console.log('[Assignment] Assigning conversation', conversationId, 'to representative', representativeId);
-      
       if (!representativeId) {
         alert('Error: Representative ID is missing');
         return;
       }
       
       const response = await api.post(`/conversations/${conversationId}/assign`, { representativeId });
-      console.log('[Assignment] Success:', response.data);
       
       // Reload data to get updated conversation
       await loadData();
@@ -529,7 +515,6 @@ export default function AdminConversationsPage() {
                   <button
                     key={emp._id}
                     onClick={() => {
-                      console.log('[Modal] Clicked employee:', emp.name, 'ID:', emp._id);
                       handleAssignRepresentative(assigningConversation._id, emp._id);
                     }}
                     className="w-full flex items-center gap-3 p-3 bg-gray-700 rounded-lg hover:bg-gray-600 transition-colors"

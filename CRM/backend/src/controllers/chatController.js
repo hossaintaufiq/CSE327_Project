@@ -10,8 +10,6 @@ export const getChatRooms = async (req, res) => {
     const { companyId } = req;
     const { type, status = 'active' } = req.query;
 
-    console.log(`[getChatRooms] User: ${user._id}, Company: ${companyId}, Role: ${req.companyRole}`);
-
     let query = {
       companyId,
       isActive: status === 'active',
@@ -25,8 +23,6 @@ export const getChatRooms = async (req, res) => {
     // Filter rooms where user is a participant
     query['participants.userId'] = user._id;
 
-    console.log(`[getChatRooms] Query:`, JSON.stringify(query));
-
     const chatRooms = await ChatRoom.find(query)
       .populate('participants.userId', 'name email avatar')
       .populate('leadId', 'name email company')
@@ -34,8 +30,6 @@ export const getChatRooms = async (req, res) => {
       .populate('lastMessage')
       .populate('metadata.assignedTo', 'name email')
       .sort({ lastActivity: -1 });
-
-    console.log(`[getChatRooms] Found ${chatRooms.length} rooms`);
 
     res.json({
       success: true,

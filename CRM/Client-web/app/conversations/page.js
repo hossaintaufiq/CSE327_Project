@@ -89,25 +89,17 @@ export default function ConversationsPage() {
       let endpoint = "/conversations/my-conversations";
       const config = {};
 
-      console.log('[fetchConversations] User role:', activeCompanyRole, 'CompanyId:', companyId);
-
       // If user is an employee/admin of the active company, fetch company conversations
       if (activeCompanyRole && ['employee', 'manager', 'company_admin'].includes(activeCompanyRole)) {
         endpoint = "/conversations/company/list";
-        console.log('[fetchConversations] Using company endpoint:', endpoint);
-      } else {
-        console.log('[fetchConversations] Using client endpoint:', endpoint);
       }
 
       if (companyId) {
         config.params = { companyId };
       }
 
-      console.log('[fetchConversations] Fetching from:', endpoint, 'with config:', config);
       const res = await api.get(endpoint, config);
-      console.log('[fetchConversations] Response:', res.data);
       const conversationsList = res.data.data?.conversations || [];
-      console.log('[fetchConversations] Extracted', conversationsList.length, 'conversations');
       setConversations(conversationsList);
       
       // If conversation ID in URL, select it
@@ -192,7 +184,6 @@ export default function ConversationsPage() {
 
       // Listen for incoming calls
       socketRef.current.on('call:incoming', (data) => {
-        console.log('[Socket] Incoming call:', data);
         setIncomingCall(data);
       });
 
@@ -301,22 +292,13 @@ export default function ConversationsPage() {
 
     try {
       const token = localStorage.getItem('idToken');
-      const storedUser = localStorage.getItem('user');
-      console.log('[handleStartCall] Auth check:', {
-        hasToken: !!token,
-        hasUser: !!storedUser,
-        userId: user?.firebaseUid,
-        conversationId: selectedConversation._id
-      });
       
       if (!token) {
         alert('You are not logged in. Please refresh the page and log in again.');
         return;
       }
       
-      console.log('[handleStartCall] Starting audio call for conversation:', selectedConversation._id);
       const res = await api.post(`/audio-calls/${selectedConversation._id}/create`);
-      console.log('[handleStartCall] Call created successfully:', res.data);
       
       if (res.data?.success) {
         setCallToken(res.data.data.token);

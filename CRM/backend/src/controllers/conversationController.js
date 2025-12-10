@@ -14,15 +14,11 @@ import { successResponse, errorResponse, notFoundResponse } from '../utils/respo
 export const getMyConversations = async (req, res, next) => {
   try {
     const { status, companyId, type, limit, offset } = req.query;
-    
-    console.log(`[getMyConversations] User: ${req.user._id}, Query:`, req.query);
 
     const { conversations, total } = await conversationService.getClientConversations(
       req.user._id,
       { status, companyId, type, limit: parseInt(limit) || 50, offset: parseInt(offset) || 0 }
     );
-    
-    console.log(`[getMyConversations] Found ${total} conversations`);
 
     return successResponse(res, { conversations, total });
   } catch (error) {
@@ -37,14 +33,6 @@ export const getCompanyConversations = async (req, res, next) => {
   try {
     const { status, assignedTo, type, limit, offset } = req.query;
     
-    console.log('[getCompanyConversations] Request details:', {
-      companyId: req.companyId,
-      userId: req.user._id,
-      userEmail: req.user.email,
-      companyRole: req.companyRole,
-      queryParams: { status, assignedTo, type, limit, offset }
-    });
-    
     const { conversations, total } = await conversationService.getCompanyConversations(
       req.companyId,
       { 
@@ -57,8 +45,6 @@ export const getCompanyConversations = async (req, res, next) => {
         offset: parseInt(offset) || 0 
       }
     );
-    
-    console.log(`[getCompanyConversations] Returning ${conversations.length} of ${total} total conversations`);
     
     return successResponse(res, { conversations, total });
   } catch (error) {
@@ -173,8 +159,6 @@ export const sendMessage = async (req, res, next) => {
     // If client message and conversation is AI-handled, generate AI response
     if (isClient && existingConv.aiHandled && existingConv.status === 'active') {
       try {
-        console.log('Generating AI response for conversation:', conversationId);
-        
         // Build conversation context
         const recentMessages = existingConv.messages.slice(-5).map(m => 
           `${m.senderType}: ${m.content}`
@@ -189,12 +173,8 @@ client: ${content.trim()}
 
 Respond helpfully and professionally. If you cannot fully help with their request, suggest they can request a human representative.
 Keep your response concise (2-3 sentences max unless detailed explanation needed).`;
-
-        console.log('AI prompt:', aiPrompt.substring(0, 200) + '...');
         
         const aiResponse = await geminiService.generateText(aiPrompt);
-        
-        console.log('AI response generated:', aiResponse.substring(0, 100) + '...');
         
         // Save AI response
         const { conversation: updatedConv } = await conversationService.sendMessage({
@@ -234,11 +214,9 @@ Keep your response concise (2-3 sentences max unless detailed explanation needed
           console.error('Failed to send fallback message:', fallbackError);
         }
       }
-    } else {
-      console.log('Skipping AI response:', { isClient, aiHandled: existingConv?.aiHandled, status: existingConv?.status });
-    }
-    
-    return successResponse(res, { conversation, message });
+      } else {
+        // AI not needed or already handled
+      }    return successResponse(res, { conversation, message });
   } catch (error) {
     next(error);
   }
@@ -270,10 +248,6 @@ export const assignRepresentative = async (req, res, next) => {
   try {
     const { conversationId } = req.params;
     const { representativeId } = req.body;
-    
-    console.log('[assignRepresentative] Params:', req.params);
-    console.log('[assignRepresentative] Body:', req.body);
-    console.log('[assignRepresentative] ConversationId:', conversationId, 'RepresentativeId:', representativeId);
     
     if (!representativeId) {
       console.error('[assignRepresentative] Validation failed: representativeId is missing');

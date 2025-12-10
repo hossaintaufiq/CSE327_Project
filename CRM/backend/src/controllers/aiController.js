@@ -387,9 +387,7 @@ export const getCompanyInsights = async (req, res, next) => {
     }
     
     // Generate AI insights
-    console.log('[AI Insights] Starting insight generation for company:', companyId);
     const insights = await geminiService.generateCompanyInsights(companyData);
-    console.log('[AI Insights] Successfully generated insights');
     
     return successResponse(res, { 
       insights,
@@ -448,13 +446,8 @@ export const processAIRequest = async (req, res, next) => {
       );
     }
 
-    console.log(`[AI Request] User: ${userId}, Company: ${companyId}`);
-    console.log(`[AI Request] Prompt: ${prompt.substring(0, 100)}...`);
-
     // Use Gemini with MCP tools for intelligent CRM operations
     const response = await geminiService.generateWithTools(prompt, companyId, userId);
-
-    console.log(`[AI Request] Response generated successfully`);
 
     return successResponse(res, { 
       response,

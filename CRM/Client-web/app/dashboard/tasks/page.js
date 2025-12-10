@@ -87,7 +87,6 @@ export default function TasksPage() {
       
       // Handle authentication errors
       if (error.response?.status === 401) {
-        console.log("Authentication error - redirecting to login");
         // Clear auth data
         const { default: useAuthStore } = await import("@/store/authStore");
         useAuthStore.getState().logout();

@@ -20,8 +20,6 @@ export async function getClientConversations(clientUserId, { status, companyId, 
   if (status) query.status = status;
   if (companyId) query.companyId = companyId;
   if (type) query.type = type;
-  
-  console.log('[getClientConversations] Query:', JSON.stringify(query));
 
   const conversations = await Conversation.find(query)
     .populate('companyId', 'name domain')
@@ -51,30 +49,15 @@ export async function getClientConversations(clientUserId, { status, companyId, 
 export async function getCompanyConversations(companyId, { status, assignedTo, type, userId, role, limit = 50, offset = 0 }) {
   const query = { companyId, isActive: true };
   
-  console.log(`[getCompanyConversations] CompanyId: ${companyId}, Role: ${role}, UserId: ${userId}, UserIdType: ${typeof userId}`);
-  
-  // DEBUG: Check all conversations for this company
-  const allConversations = await Conversation.find({ companyId, isActive: true })
-    .select('_id clientUserId assignedRepresentative status')
-    .lean();
-  console.log(`[getCompanyConversations] DEBUG: Found ${allConversations.length} total conversations for company ${companyId}:`);
-  allConversations.forEach(c => {
-    console.log(`  - ${c._id}: assignedRepresentative=${c.assignedRepresentative}, status=${c.status}`);
-  });
-  
   // Employees: only see conversations assigned to them
   if (role === 'employee' && userId) {
-    // MongoDB string IDs are automatically converted, but being explicit helps with debugging
     query.assignedRepresentative = userId.toString();
-    console.log(`[getCompanyConversations] Employee filter: assignedRepresentative = ${userId} (${typeof query.assignedRepresentative})`);
   } else if (assignedTo) {
     query.assignedRepresentative = assignedTo;
   }
   
   if (status) query.status = status;
   if (type) query.type = type;
-  
-  console.log('[getCompanyConversations] MongoDB query:', JSON.stringify(query, null, 2));
   
   const conversations = await Conversation.find(query)
     .populate('clientUserId', 'name email phone avatar')
@@ -84,24 +67,7 @@ export async function getCompanyConversations(companyId, { status, assignedTo, t
     .limit(limit)
     .lean();
   
-  console.log(`[getCompanyConversations] Found ${conversations.length} conversations`);
-  
-  // Log assignment details for debugging
-  if (conversations.length > 0) {
-    console.log('[getCompanyConversations] Conversation details:');
-    conversations.forEach(conv => {
-      console.log(`  - Conversation ${conv._id}:`);
-      console.log(`    Status: ${conv.status}`);
-      console.log(`    Client: ${conv.clientUserId?.name || 'N/A'}`);
-      console.log(`    Assigned to: ${conv.assignedRepresentative ? `${conv.assignedRepresentative.name} (${conv.assignedRepresentative._id})` : 'Unassigned'}`);
-    });
-  } else {
-    console.log('[getCompanyConversations] No conversations found matching query');
-  }
-  
   const total = await Conversation.countDocuments(query);
-  
-  console.log(`[getCompanyConversations] Total count: ${total}`);
   
   return { conversations, total };
 }
@@ -338,16 +304,12 @@ export async function escalateConversation(conversationId, reason, representativ
  * Assign representative to conversation
  */
 export async function assignRepresentative(conversationId, representativeId, assignedBy) {
-  console.log(`[assignRepresentative] ConversationId: ${conversationId}, RepresentativeId: ${representativeId}, AssignedBy: ${assignedBy}`);
-  
   const conversation = await Conversation.findById(conversationId);
   
   if (!conversation) {
     console.error(`[assignRepresentative] Conversation not found: ${conversationId}`);
     throw new Error('Conversation not found');
   }
-  
-  console.log(`[assignRepresentative] Before: assignedRepresentative=${conversation.assignedRepresentative}, status=${conversation.status}`);
   
   conversation.assignedRepresentative = representativeId;
   conversation.status = 'with_representative';
@@ -361,8 +323,6 @@ export async function assignRepresentative(conversationId, representativeId, ass
   
   await conversation.save();
   
-  console.log(`[assignRepresentative] After save: assignedRepresentative=${conversation.assignedRepresentative}, status=${conversation.status}`);
-  
   // Notify representative
   await createNotification({
     userId: representativeId,
@@ -375,8 +335,6 @@ export async function assignRepresentative(conversationId, representativeId, ass
   
   // Populate the conversation before returning
   await conversation.populate('assignedRepresentative', 'name email');
-  
-  console.log(`[assignRepresentative] Returning conversation with assignedRepresentative:`, conversation.assignedRepresentative);
   
   return conversation;
 }
@@ -509,7 +467,6 @@ export async function getConversationStats(companyId, role, userId) {
   // Employees only see stats for their assigned conversations
   if (role === 'employee' && userId) {
     matchStage.assignedRepresentative = new mongoose.Types.ObjectId(userId);
-    console.log(`[getConversationStats] Employee filter: assignedRepresentative = ${userId}`);
   }
   
   const stats = await Conversation.aggregate([
@@ -542,7 +499,6 @@ export async function getConversationStats(companyId, role, userId) {
     avgSatisfaction: null,
   };
   
-  console.log(`[getConversationStats] CompanyId: ${companyId}, Role: ${role}, Stats:`, result);
   return result;
 }
 

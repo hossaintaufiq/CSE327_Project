@@ -100,7 +100,6 @@ export default function ConversationDetailPage() {
 
       // Listen for incoming calls
       socketRef.current.on('call:incoming', (data) => {
-        console.log('[Socket] Incoming call:', data);
         setIncomingCall(data);
       });
 
@@ -239,13 +238,6 @@ export default function ConversationDetailPage() {
 
     try {
       const token = localStorage.getItem('idToken');
-      const storedUser = localStorage.getItem('user');
-      console.log('[handleStartCall] Auth check:', {
-        hasToken: !!token,
-        hasUser: !!storedUser,
-        userId: user?.firebaseUid,
-        conversationId
-      });
       
       if (!token) {
         alert('You are not logged in. Please refresh the page and log in again.');

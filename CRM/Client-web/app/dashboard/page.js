@@ -915,8 +915,6 @@ function ClientDashboard({ user, stats, recentOrders, recentActivity, error, onR
       // Load companies and recent conversations for client
       const companyId = typeof window !== 'undefined' ? localStorage.getItem('companyId') : null;
 
-      console.log('[ClientDashboard] Loading data, companyId:', companyId);
-
       const [companiesRes, conversationsRes] = await Promise.all([
         apiClient.get("/conversations/my-companies").catch((err) => {
           console.error("[ClientDashboard] Error loading companies:", err.response?.data || err.message);
@@ -930,13 +928,8 @@ function ClientDashboard({ user, stats, recentOrders, recentActivity, error, onR
         })
       ]);
       
-      console.log('[ClientDashboard] Companies response:', companiesRes.data);
-      console.log('[ClientDashboard] Conversations response:', conversationsRes.data);
-      
       const companiesList = companiesRes.data?.data?.companies || [];
       const conversationsList = conversationsRes.data?.data?.conversations || [];
-      
-      console.log('[ClientDashboard] Extracted', companiesList.length, 'companies and', conversationsList.length, 'conversations');
       
       setCompanies(companiesList);
       setConversations(conversationsList);

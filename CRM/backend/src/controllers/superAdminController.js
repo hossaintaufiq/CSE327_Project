@@ -6,39 +6,26 @@ export const fixSuperAdmin = async (req, res) => {
   try {
     const superAdminEmail = SUPER_ADMIN_EMAIL;
     
-    console.log('🔧 FIX SUPER ADMIN: Looking for user with email:', superAdminEmail);
-    
     // Find user by email (case-insensitive)
     const user = await User.findOne({ 
       email: { $regex: new RegExp(`^${superAdminEmail}$`, 'i') }
     });
     
     if (!user) {
-      console.log('❌ User not found');
       return res.status(404).json({ 
         success: false,
         message: 'Super admin user not found. Please sign up first.' 
       });
     }
 
-    console.log('📝 Found user:', {
-      id: user._id,
-      email: user.email,
-      currentRole: user.globalRole,
-    });
-
     // Update to super admin using direct MongoDB update to bypass hooks if needed
-    const result = await User.updateOne(
+    await User.updateOne(
       { _id: user._id },
       { $set: { globalRole: 'super_admin' } }
     );
 
-    console.log('✅ Update result:', result);
-
     // Fetch updated user
     const updatedUser = await User.findById(user._id);
-
-    console.log('✅ Updated user role:', updatedUser.globalRole);
 
     res.json({
       success: true,

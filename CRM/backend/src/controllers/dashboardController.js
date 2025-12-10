@@ -16,8 +16,6 @@ export const getDashboardStats = async (req, res) => {
     const companyId = req.companyId;
     const user = req.user;
     const userRole = req.companyRole;
-    
-    console.log(`[getDashboardStats] User: ${user._id}, Role: ${userRole}, CompanyId: ${companyId}`);
 
     // Validate companyId for all roles
     if (!companyId) {
@@ -386,15 +384,12 @@ const getEmployeeDashboard = async (req, res) => {
     const now = new Date();
     const thirtyDaysAgo = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000);
 
-    console.log(`[getEmployeeDashboard] User: ${userId}, CompanyId: ${companyId}`);
-
     // Get assigned conversations (messages/chats)
     const assignedConversations = await Conversation.countDocuments({
       companyId,
       assignedRepresentative: userId,
       isActive: true,
     });
-    console.log(`[getEmployeeDashboard] Assigned conversations: ${assignedConversations}`);
 
     // Get assigned leads
     const assignedLeads = await Client.countDocuments({
@@ -750,8 +745,6 @@ const getClientDashboard = async (req, res) => {
     const userEmail = req.user.email;
     const now = new Date();
     const thirtyDaysAgo = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000);
-    
-    console.log(`[getClientDashboard] User: ${userId}, Email: ${userEmail}, Company: ${companyId}`);
     
     if (!companyId) {
       return res.status(400).json({
