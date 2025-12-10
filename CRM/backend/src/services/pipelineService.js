@@ -433,8 +433,15 @@ export async function getPipelineSummary(companyId, pipelineType) {
   const pipeline = getPipelineConfig(pipelineType);
   const Model = getModel(pipelineType);
 
+  // Build match query - include isActive filter only if the field exists in schema
+  const matchQuery = { companyId: new mongoose.Types.ObjectId(companyId) };
+  const schema = Model.schema.obj;
+  if (schema.isActive !== undefined) {
+    matchQuery.isActive = true;
+  }
+
   const aggregation = await Model.aggregate([
-    { $match: { companyId: new mongoose.Types.ObjectId(companyId), isActive: true } },
+    { $match: matchQuery },
     { $group: { _id: `$${pipeline.statusField}`, count: { $sum: 1 } } },
   ]);
 
@@ -472,11 +479,16 @@ export async function getEntitiesInStage({ companyId, pipelineType, stage, limit
     throw error;
   }
 
+  // Build query - include isActive filter only if the field exists in schema
   const query = {
     companyId,
     [pipeline.statusField]: stage,
-    isActive: true,
   };
+  
+  const schema = Model.schema.obj;
+  if (schema.isActive !== undefined) {
+    query.isActive = true;
+  }
 
   const entities = await Model.find(query)
     .sort({ updatedAt: -1 })

@@ -53,7 +53,7 @@ const orderSchema = new mongoose.Schema(
     },
     status: {
       type: String,
-      enum: ['pending', 'confirmed', 'processing', 'shipped', 'delivered', 'cancelled', 'refunded'],
+      enum: ['pending', 'approved', 'processing', 'shipped', 'delivered', 'completed', 'cancelled'],
       default: 'pending',
     },
     // Assigned company employee to handle this order
