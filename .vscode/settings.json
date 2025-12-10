@@ -1,3 +1,9 @@
 {
-    "java.configuration.updateBuildConfiguration": "interactive"
+    "java.configuration.updateBuildConfiguration": "interactive",
+    "github.copilot.chat.terminalChatLocation": "terminal",
+    "github.copilot.chat.runCommand.enabled": true,
+    "github.copilot.terminal.suggestCommands": "on",
+    "github.copilot.terminal.executeCommands": "allow",
+    "terminal.integrated.suggest.enabled": true,
+    "terminal.integrated.suggest.quickSuggestions": true
 }
