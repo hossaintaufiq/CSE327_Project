@@ -70,10 +70,10 @@ export default function AudioCallModal({ isOpen, onClose, callToken, roomName, i
     };
   }, [isOpen, callToken, identity]);
 
-  const makeOutgoingCall = (device) => {
+  const makeOutgoingCall = async (device) => {
     try {
       // Make a call to the other participant
-      const call = device.connect({
+      const call = await device.connect({
         params: {
           To: roomName, // Use room name as destination
           Identity: identity
@@ -81,14 +81,15 @@ export default function AudioCallModal({ isOpen, onClose, callToken, roomName, i
       });
 
       callRef.current = call;
+      console.log("Call object created:", call);
 
       // Set up call event listeners
-      call.on("accept", (connection) => {
+      call.on("accept", (conn) => {
         console.log("Call accepted");
         setCallState("connected");
       });
 
-      call.on("disconnect", () => {
+      call.on("disconnect", (conn) => {
         console.log("Call disconnected");
         setCallState("disconnected");
         onClose();
@@ -111,11 +112,6 @@ export default function AudioCallModal({ isOpen, onClose, callToken, roomName, i
         setCallState("error");
       });
 
-      // Monitor volume for visual feedback
-      call.on("volume", (inputVolume, outputVolume) => {
-        // Could use this for audio wave visualization
-      });
-
     } catch (error) {
       console.error("Error making outgoing call:", error);
       setCallState("error");
@@ -125,17 +121,14 @@ export default function AudioCallModal({ isOpen, onClose, callToken, roomName, i
   const handleIncomingCall = (call) => {
     callRef.current = call;
 
-    // Accept the incoming call
-    call.accept();
-
-    // Set up call event listeners
-    call.on("accept", () => {
+    // Set up call event listeners first
+    call.on("accept", (conn) => {
       console.log("Incoming call accepted");
       setCallState("connected");
       setRemoteParticipant({ name: "Participant" });
     });
 
-    call.on("disconnect", () => {
+    call.on("disconnect", (conn) => {
       console.log("Call disconnected");
       setCallState("disconnected");
       onClose();
@@ -151,6 +144,9 @@ export default function AudioCallModal({ isOpen, onClose, callToken, roomName, i
       console.error("Call error:", error);
       setCallState("error");
     });
+
+    // Accept the incoming call
+    call.accept();
   };
 
   const toggleAudio = () => {

@@ -353,9 +353,7 @@ export default function ConversationsPage() {
       setCallIdentity(incomingCall.identity);
       setShowVideoCall(true);
       setIncomingCall(null);
-    }
-  };
-      setIncomingCall(null);
+      
       // Also select the conversation if not already selected
       if (incomingCall.conversationId !== selectedConversation?._id) {
         const conv = conversations.find(c => c._id === incomingCall.conversationId);

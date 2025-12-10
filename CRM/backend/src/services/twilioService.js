@@ -157,10 +157,16 @@ export const generateVoiceToken = (identity) => {
     accountSid,
     apiKeySid,
     apiKeySecret,
-    { identity }
+    { 
+      identity,
+      ttl: 3600 // Token valid for 1 hour
+    }
   );
 
   token.addGrant(voiceGrant);
+  
+  console.log(`[Twilio] Generated voice token for identity: ${identity}`);
+  
   return token.toJwt();
 };
 

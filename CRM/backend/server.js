@@ -36,6 +36,7 @@ import voiceChatRoutes from './src/routes/voiceChatRoutes.js';
 import voiceAIRoutes from './src/routes/voiceAIRoutes.js';
 import conversationRoutes from './src/routes/conversationRoutes.js';
 import audioCallRoutes from './src/routes/audioCallRoutes.js';
+import twilioVoiceRoutes from './src/routes/twilioVoiceRoutes.js';
 
 // Import services
 import { initTwilioClient } from './src/services/twilioService.js';
@@ -110,6 +111,7 @@ app.use('/api/voice-chat', voiceChatRoutes);
 app.use('/api/voice-ai', voiceAIRoutes);
 app.use('/api/conversations', conversationRoutes);
 app.use('/api/audio-calls', audioCallRoutes);
+app.use('/twiml', twilioVoiceRoutes); // TwiML endpoints for Twilio webhooks
 
 // 404 handler
 app.use((req, res) => {
