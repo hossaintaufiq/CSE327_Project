@@ -490,12 +490,57 @@ export async function getEntitiesInStage({ companyId, pipelineType, stage, limit
     query.isActive = true;
   }
 
-  const entities = await Model.find(query)
+  // Build query with appropriate population based on pipeline type
+  let queryBuilder = Model.find(query)
     .sort({ updatedAt: -1 })
-    .limit(limit)
-    .lean();
+    .limit(limit);
 
-  return entities;
+  // Populate referenced fields for better display
+  switch (pipelineType) {
+    case 'lead':
+      queryBuilder = queryBuilder.populate('assignedTo', 'name email');
+      break;
+    case 'order':
+      queryBuilder = queryBuilder
+        .populate('clientUserId', 'name email')
+        .populate('assignedTo', 'name email');
+      break;
+    case 'project':
+      queryBuilder = queryBuilder
+        .populate('assignedTo', 'name email')
+        .populate('members.userId', 'name email');
+      break;
+    case 'task':
+      queryBuilder = queryBuilder
+        .populate('assignedTo', 'name email')
+        .populate('createdBy', 'name email')
+        .populate('projectId', 'name');
+      break;
+  }
+
+  const entities = await queryBuilder.lean();
+
+  // Add computed fields for frontend display
+  const enrichedEntities = entities.map(entity => {
+    const enriched = { ...entity };
+    
+    switch (pipelineType) {
+      case 'order':
+        enriched.clientName = entity.clientUserId?.name || 'Unknown Client';
+        break;
+      case 'project':
+        enriched.assigneeName = entity.assignedTo?.name;
+        break;
+      case 'task':
+        enriched.assigneeName = entity.assignedTo?.name;
+        enriched.projectName = entity.projectId?.name;
+        break;
+    }
+    
+    return enriched;
+  });
+
+  return enrichedEntities;
 }
 
 export default {
