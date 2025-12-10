@@ -9,8 +9,8 @@ export const metadata = {
 
 export default function RootLayout({ children }) {
   return (
-    <html lang="en" className="dark">
-      <body style={{ margin: 0, padding: 0, minHeight: "100vh", display: "flex", flexDirection: "column" }}>
+    <html lang="en" className="dark" suppressHydrationWarning>
+      <body style={{ margin: 0, padding: 0, minHeight: "100vh", display: "flex", flexDirection: "column" }} suppressHydrationWarning>
         <Navbar/>
         <main style={{ flex: 1 }}>{children}</main>
         <ConditionalFooter/>
