@@ -18,7 +18,8 @@ router.post('/voice', (req, res) => {
   // Create a dial verb to connect two participants
   const dial = response.dial({
     callerId: process.env.TWILIO_PHONE_NUMBER,
-    timeout: 30,
+    timeout: 60, // Wait up to 60 seconds for answer
+    answerOnBridge: true, // Only connect when other party answers
     record: 'do-not-record'
   });
   

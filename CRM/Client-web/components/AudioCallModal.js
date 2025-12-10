@@ -4,7 +4,7 @@ import { useEffect, useRef, useState } from "react";
 import { Device } from "@twilio/voice-sdk";
 import { X, Mic, MicOff, PhoneOff, Phone } from "lucide-react";
 
-export default function AudioCallModal({ isOpen, onClose, callToken, roomName, identity, conversationId }) {
+export default function AudioCallModal({ isOpen, onClose, callToken, roomName, identity, conversationId, isIncoming = false }) {
   const deviceRef = useRef(null);
   const callRef = useRef(null);
   const [isAudioMuted, setIsAudioMuted] = useState(false);
@@ -31,8 +31,13 @@ export default function AudioCallModal({ isOpen, onClose, callToken, roomName, i
         // Set up device event listeners
         device.on("registered", () => {
           console.log("Twilio Device registered");
-          // Start outgoing call or wait for incoming
-          makeOutgoingCall(device);
+          // Only make outgoing call if we initiated it
+          if (!isIncoming) {
+            makeOutgoingCall(device);
+          } else {
+            console.log("Waiting for incoming call...");
+            setCallState("waiting");
+          }
         });
 
         device.on("error", (error) => {
@@ -41,7 +46,7 @@ export default function AudioCallModal({ isOpen, onClose, callToken, roomName, i
         });
 
         device.on("incoming", (call) => {
-          console.log("Incoming call received");
+          console.log("Incoming call received in modal");
           handleIncomingCall(call);
         });
 

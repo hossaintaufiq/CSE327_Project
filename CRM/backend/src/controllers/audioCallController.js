@@ -110,13 +110,21 @@ export const createCallRoom = async (req, res) => {
     // Notify the other participant via Socket.IO
     const caller = isClient ? conversation.clientUserId : conversation.assignedRepresentative;
     const recipient = isClient ? conversation.assignedRepresentative : conversation.clientUserId;
+    const recipientIdentity = isClient ? repIdentity : clientIdentity;
+    const recipientToken = isClient ? repToken : clientToken;
     
     if (recipient?.firebaseUid) {
-      console.log('[createCallRoom] Notifying recipient:', recipient.email);
+      console.log('[createCallRoom] Notifying recipient:', {
+        email: recipient.email,
+        firebaseUid: recipient.firebaseUid,
+        identity: recipientIdentity
+      });
+      
       emitToUser(recipient.firebaseUid, 'call:incoming', {
         conversationId: conversation._id,
-        token: isClient ? repToken : clientToken,
+        token: recipientToken,
         roomName: roomName,
+        identity: recipientIdentity,
         caller: {
           name: caller.name,
           email: caller.email
@@ -127,6 +135,8 @@ export const createCallRoom = async (req, res) => {
           type: conversation.type
         }
       });
+    } else {
+      console.log('[createCallRoom] No recipient to notify');
     }
 
     res.json({

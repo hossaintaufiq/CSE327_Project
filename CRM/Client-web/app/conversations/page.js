@@ -69,6 +69,7 @@ export default function ConversationsPage() {
   const [callToken, setCallToken] = useState(null);
   const [callRoomName, setCallRoomName] = useState(null);
   const [callIdentity, setCallIdentity] = useState(null);
+  const [isIncomingCall, setIsIncomingCall] = useState(false);
   const [incomingCall, setIncomingCall] = useState(null);
   const messagesEndRef = useRef(null);
   const socketRef = useRef(null);
@@ -305,6 +306,7 @@ export default function ConversationsPage() {
         setCallToken(res.data.data.token);
         setCallRoomName(res.data.data.room.name);
         setCallIdentity(res.data.data.identity);
+        setIsIncomingCall(false);
         setShowVideoCall(true);
       }
     } catch (error) {
@@ -351,6 +353,7 @@ export default function ConversationsPage() {
       setCallToken(incomingCall.token);
       setCallRoomName(incomingCall.roomName);
       setCallIdentity(incomingCall.identity);
+      setIsIncomingCall(true);
       setShowVideoCall(true);
       setIncomingCall(null);
       
@@ -737,6 +740,7 @@ export default function ConversationsPage() {
         callToken={callToken}
         roomName={callRoomName}
         identity={callIdentity}
+        isIncoming={isIncomingCall}
         conversationId={selectedConversation?._id}
       />
     </div>
