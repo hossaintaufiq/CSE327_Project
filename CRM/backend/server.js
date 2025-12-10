@@ -1,5 +1,5 @@
-import dotenv from 'dotenv';
-dotenv.config();
+// Load environment variables FIRST before any other imports
+import './src/config/env.js';
 
 import express from 'express';
 import { createServer } from 'http';
@@ -35,6 +35,7 @@ import pipelineRoutes from './src/routes/pipelineRoutes.js';
 import voiceChatRoutes from './src/routes/voiceChatRoutes.js';
 import voiceAIRoutes from './src/routes/voiceAIRoutes.js';
 import conversationRoutes from './src/routes/conversationRoutes.js';
+import audioCallRoutes from './src/routes/audioCallRoutes.js';
 
 // Import services
 import { initTwilioClient } from './src/services/twilioService.js';
@@ -108,6 +109,7 @@ app.use('/api/pipeline', pipelineRoutes);
 app.use('/api/voice-chat', voiceChatRoutes);
 app.use('/api/voice-ai', voiceAIRoutes);
 app.use('/api/conversations', conversationRoutes);
+app.use('/api/audio-calls', audioCallRoutes);
 
 // 404 handler
 app.use((req, res) => {

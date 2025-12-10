@@ -165,6 +165,7 @@ export default function ProjectsPage() {
         name: formData.name.trim(),
         budget: formData.budget ? parseFloat(formData.budget) : 0,
         members: formData.members || [],
+        assignedTo: formData.assignedTo && formData.assignedTo.trim() ? formData.assignedTo : undefined,
       };
 
       let response;

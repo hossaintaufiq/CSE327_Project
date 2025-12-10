@@ -211,11 +211,13 @@ Keep your response concise (2-3 sentences max unless detailed explanation needed
         console.error('AI response error:', aiError.message);
         console.error('AI error stack:', aiError.stack);
         
-        // Fallback for rate limits or other errors
+        // Fallback for rate limits, service overload, or other errors
         let fallbackMessage = "I apologize, but I'm having trouble processing your request right now. A human representative will be with you shortly.";
         
         if (aiError.message?.includes('429') || aiError.message?.includes('Quota')) {
           fallbackMessage = "I'm currently experiencing high traffic. Please try again in a minute, or wait for a human representative.";
+        } else if (aiError.message?.includes('503') || aiError.message?.includes('overloaded')) {
+          fallbackMessage = "AI assistant is temporarily busy due to high demand. Please try again in a moment, or request a human representative for immediate assistance.";
         }
 
         try {

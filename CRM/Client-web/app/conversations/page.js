@@ -25,8 +25,11 @@ import {
   XCircle,
   Loader2,
 } from "lucide-react";
+import { io } from "socket.io-client";
 import Navbar from "@/components/Navbar";
 import Sidebar from "@/components/Sidebar";
+import AudioCallModal from "@/components/AudioCallModal";
+import IncomingCallNotification from "@/components/IncomingCallNotification";
 import useAuthStore from "@/store/authStore";
 import api from "@/utils/api";
 
@@ -62,7 +65,12 @@ export default function ConversationsPage() {
   const [filterType, setFilterType] = useState("all");
   const [filterStatus, setFilterStatus] = useState("all");
   const [showNewConversation, setShowNewConversation] = useState(false);
+  const [showVideoCall, setShowVideoCall] = useState(false);
+  const [callToken, setCallToken] = useState(null);
+  const [callRoomUrl, setCallRoomUrl] = useState(null);
+  const [incomingCall, setIncomingCall] = useState(null);
   const messagesEndRef = useRef(null);
+  const socketRef = useRef(null);
 
   // Handle hydration
   useEffect(() => {
@@ -79,7 +87,31 @@ export default function ConversationsPage() {
     }
     
     fetchConversations();
-  }, [mounted, activeCompanyId, activeCompanyRole]);
+
+    // Initialize Socket.IO for incoming call notifications
+    if (user?.firebaseUid) {
+      const socketUrl = process.env.NEXT_PUBLIC_API_URL?.replace('/api', '') || 'http://localhost:5000';
+      socketRef.current = io(socketUrl, {
+        auth: {
+          userId: user.firebaseUid,
+          token: localStorage.getItem('idToken')
+        }
+      });
+
+      // Listen for incoming calls
+      socketRef.current.on('call:incoming', (data) => {
+        console.log('[Socket] Incoming call:', data);
+        setIncomingCall(data);
+      });
+
+      // Cleanup on unmount
+      return () => {
+        if (socketRef.current) {
+          socketRef.current.disconnect();
+        }
+      };
+    }
+  }, [mounted, activeCompanyId, activeCompanyRole, user?.firebaseUid, router]);
 
   useEffect(() => {
     scrollToBottom();
@@ -258,6 +290,107 @@ export default function ConversationsPage() {
         senderType: "system",
         createdAt: new Date().toISOString(),
       }]);
+    }
+  };
+
+  const handleStartCall = async () => {
+    if (!selectedConversation) return;
+
+    // Check if AI is active (no representative assigned)
+    if (selectedConversation.status === 'active' && !selectedConversation.assignedRepresentative) {
+      alert('Audio calls are only available when talking with a representative. Please request a human representative first.');
+      return;
+    }
+
+    try {
+      const token = localStorage.getItem('idToken');
+      const storedUser = localStorage.getItem('user');
+      console.log('[handleStartCall] Auth check:', {
+        hasToken: !!token,
+        hasUser: !!storedUser,
+        userId: user?.firebaseUid,
+        conversationId: selectedConversation._id
+      });
+      
+      if (!token) {
+        alert('You are not logged in. Please refresh the page and log in again.');
+        return;
+      }
+      
+      console.log('[handleStartCall] Starting audio call for conversation:', selectedConversation._id);
+      const res = await api.post(`/audio-calls/${selectedConversation._id}/create`);
+      console.log('[handleStartCall] Call created successfully:', res.data);
+      
+      if (res.data?.success) {
+        setCallToken(res.data.data.token);
+        setCallRoomUrl(res.data.data.room.url);
+        setShowVideoCall(true);
+      }
+    } catch (error) {
+      console.error('[handleStartCall] Error:', error.response?.status, error.response?.data?.message || error.message);
+      
+      // Handle specific error cases with user-friendly messages
+      const errorData = error.response?.data;
+      const status = error.response?.status;
+      
+      let errorMessage = 'Failed to start audio call';
+      
+      if (status === 503 && errorData?.error === 'service-not-configured') {
+        errorMessage = 'Audio/Video calls require payment setup. This feature will be available after upgrading your account.';
+      } else if (status === 503) {
+        errorMessage = 'Call service is temporarily unavailable. Please try again later.';
+      } else if (status === 401) {
+        errorMessage = 'Authentication error. Please refresh the page and log in again.';
+      } else if (status === 403) {
+        errorMessage = 'You do not have permission to start this call.';
+      } else if (errorData?.message) {
+        errorMessage = errorData.message;
+      }
+      }
+      
+      alert(errorMessage);
+      
+      // Don't let the error propagate to avoid redirect
+      return;
+    }
+  };
+
+  const handleCloseCall = async () => {
+    if (selectedConversation) {
+      try {
+        await api.post(`/audio-calls/${selectedConversation._id}/end`);
+      } catch (error) {
+        console.error('Error ending call:', error);
+      }
+    }
+    setShowVideoCall(false);
+    setCallToken(null);
+    setCallRoomUrl(null);
+  };
+
+  const handleAcceptCall = () => {
+    if (incomingCall) {
+      setCallToken(incomingCall.token);
+      setCallRoomUrl(incomingCall.roomUrl);
+      setShowVideoCall(true);
+      setIncomingCall(null);
+      // Also select the conversation if not already selected
+      if (incomingCall.conversationId !== selectedConversation?._id) {
+        const conv = conversations.find(c => c._id === incomingCall.conversationId);
+        if (conv) {
+          setSelectedConversation(conv);
+        }
+      }
+    }
+  };
+
+  const handleRejectCall = () => {
+    setIncomingCall(null);
+    // Optionally notify the caller that the call was rejected
+    if (socketRef.current && incomingCall) {
+      socketRef.current.emit('call:rejected', {
+        conversationId: incomingCall.conversationId
+      });
     }
   };
 
@@ -463,7 +596,7 @@ export default function ConversationsPage() {
                   </div>
 
                   <div className="flex items-center gap-2">
-                    {selectedConversation.status === "active" && (
+                    {selectedConversation.status === "active" && !selectedConversation.assignedRepresentative && (
                       <button
                         onClick={handleRequestRepresentative}
                         className="px-3 py-1.5 text-sm bg-purple-500/20 text-purple-400 rounded-lg hover:bg-purple-500/30 transition-colors"
@@ -471,9 +604,16 @@ export default function ConversationsPage() {
                         Talk to Human
                       </button>
                     )}
-                    <button className="p-2 hover:bg-gray-700 rounded-lg">
-                      <Phone className="w-5 h-5 text-gray-400" />
-                    </button>
+                    {/* Show call button only when representative is assigned */}
+                    {selectedConversation.assignedRepresentative && selectedConversation.status !== 'resolved' && selectedConversation.status !== 'closed' && (
+                      <button 
+                        onClick={handleStartCall}
+                        className="p-2 hover:bg-gray-700 rounded-lg group"
+                        title="Start audio call with representative"
+                      >
+                        <Phone className="w-5 h-5 text-gray-400 group-hover:text-green-400" />
+                      </button>
+                    )}
                     <button className="p-2 hover:bg-gray-700 rounded-lg">
                       <MoreVertical className="w-5 h-5 text-gray-400" />
                     </button>
@@ -599,6 +739,25 @@ export default function ConversationsPage() {
           </div>
         </div>
       </main>
+
+      {/* Incoming Call Notification */}
+      {incomingCall && (
+        <IncomingCallNotification
+          caller={incomingCall.caller}
+          conversationTitle={incomingCall.conversation?.title}
+          onAccept={handleAcceptCall}
+          onReject={handleRejectCall}
+        />
+      )}
+
+      {/* Audio Call Modal */}
+      <AudioCallModal
+        isOpen={showVideoCall}
+        onClose={handleCloseCall}
+        callToken={callToken}
+        roomUrl={callRoomUrl}
+        conversationId={selectedConversation?._id}
+      />
     </div>
   );
 }

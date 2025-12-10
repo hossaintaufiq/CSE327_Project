@@ -103,8 +103,9 @@ apiClient.interceptors.response.use(
       // If we get here, it's a real auth failure
       const currentPath = typeof window !== 'undefined' ? window.location.pathname : '';
       
-      // Don't auto-redirect if already on login page
-      if (currentPath === '/login' || currentPath === '/signup') {
+      // Don't auto-redirect if already on login page or conversations page (for debugging)
+      if (currentPath === '/login' || currentPath === '/signup' || currentPath === '/conversations') {
+        console.error('[API] Auth error but not redirecting due to current path:', currentPath);
         return Promise.reject(error);
       }
 

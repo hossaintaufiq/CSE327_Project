@@ -89,7 +89,7 @@ export async function processVoiceInput({ text, userId, companyId, sessionId }) 
     ];
 
     // Get Gemini response
-    const model = getGenAI().getGenerativeModel({ model: process.env.GEMINI_MODEL || 'gemini-2.5-flash' });
+    const model = getGenAI().getGenerativeModel({ model: process.env.GEMINI_MODEL || 'gemini-2.5-flash-lite' });
     const chat = model.startChat({
       history: messages.slice(0, -1),
       generationConfig: {

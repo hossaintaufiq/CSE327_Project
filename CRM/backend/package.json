@@ -19,6 +19,7 @@
   "dependencies": {
     "@google/genai": "^1.30.0",
     "@google/generative-ai": "^0.24.1",
+    "@daily-co/daily-js": "^0.73.0",
     "axios": "^1.13.2",
     "cors": "^2.8.5",
     "dotenv": "^17.2.3",
