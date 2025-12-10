@@ -63,7 +63,8 @@ export default function ConversationDetailPage() {
   const [resolveNotes, setResolveNotes] = useState("");
   const [showVideoCall, setShowVideoCall] = useState(false);
   const [callToken, setCallToken] = useState(null);
-  const [callRoomUrl, setCallRoomUrl] = useState(null);
+  const [callRoomName, setCallRoomName] = useState(null);
+  const [callIdentity, setCallIdentity] = useState(null);
   const [incomingCall, setIncomingCall] = useState(null);
   const messagesEndRef = useRef(null);
   const socketRef = useRef(null);
@@ -247,7 +248,8 @@ export default function ConversationDetailPage() {
       const res = await api.post(`/audio-calls/${conversationId}/create`);
       if (res.data?.success) {
         setCallToken(res.data.data.token);
-        setCallRoomUrl(res.data.data.room.url);
+        setCallRoomName(res.data.data.room.name);
+        setCallIdentity(res.data.data.identity);
         setShowVideoCall(true);
       }
     } catch (error) {
@@ -278,7 +280,8 @@ export default function ConversationDetailPage() {
   const handleAcceptCall = () => {
     if (incomingCall) {
       setCallToken(incomingCall.token);
-      setCallRoomUrl(incomingCall.roomUrl);
+      setCallRoomName(incomingCall.roomName);
+      setCallIdentity(incomingCall.identity);
       setShowVideoCall(true);
       setIncomingCall(null);
     }
@@ -665,7 +668,8 @@ export default function ConversationDetailPage() {
         isOpen={showVideoCall}
         onClose={handleCloseCall}
         callToken={callToken}
-        roomUrl={callRoomUrl}
+        roomName={callRoomName}
+        identity={callIdentity}
         conversationId={conversationId}
       />
     </div>

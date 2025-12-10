@@ -67,7 +67,8 @@ export default function ConversationsPage() {
   const [showNewConversation, setShowNewConversation] = useState(false);
   const [showVideoCall, setShowVideoCall] = useState(false);
   const [callToken, setCallToken] = useState(null);
-  const [callRoomUrl, setCallRoomUrl] = useState(null);
+  const [callRoomName, setCallRoomName] = useState(null);
+  const [callIdentity, setCallIdentity] = useState(null);
   const [incomingCall, setIncomingCall] = useState(null);
   const messagesEndRef = useRef(null);
   const socketRef = useRef(null);
@@ -302,7 +303,8 @@ export default function ConversationsPage() {
       
       if (res.data?.success) {
         setCallToken(res.data.data.token);
-        setCallRoomUrl(res.data.data.room.url);
+        setCallRoomName(res.data.data.room.name);
+        setCallIdentity(res.data.data.identity);
         setShowVideoCall(true);
       }
     } catch (error) {
@@ -340,14 +342,19 @@ export default function ConversationsPage() {
     }
     setShowVideoCall(false);
     setCallToken(null);
-    setCallRoomUrl(null);
+    setCallRoomName(null);
+    setCallIdentity(null);
   };
 
   const handleAcceptCall = () => {
     if (incomingCall) {
       setCallToken(incomingCall.token);
-      setCallRoomUrl(incomingCall.roomUrl);
+      setCallRoomName(incomingCall.roomName);
+      setCallIdentity(incomingCall.identity);
       setShowVideoCall(true);
+      setIncomingCall(null);
+    }
+  };
       setIncomingCall(null);
       // Also select the conversation if not already selected
       if (incomingCall.conversationId !== selectedConversation?._id) {
@@ -730,7 +737,8 @@ export default function ConversationsPage() {
         isOpen={showVideoCall}
         onClose={handleCloseCall}
         callToken={callToken}
-        roomUrl={callRoomUrl}
+        roomName={callRoomName}
+        identity={callIdentity}
         conversationId={selectedConversation?._id}
       />
     </div>

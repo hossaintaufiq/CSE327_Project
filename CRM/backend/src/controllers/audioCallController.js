@@ -1,33 +1,30 @@
 import '../config/env.js'; // Load env vars first
-import axios from 'axios';
 import { Conversation } from '../models/Conversation.js';
 import { emitToUser } from '../services/liveChatService.js';
-
-const DAILY_API_KEY = process.env.DAILY_API_KEY;
-const DAILY_API_BASE = 'https://api.daily.co/v1';
+import { generateVoiceToken, getTwilioClient } from '../services/twilioService.js';
 
 // Debug log on module load
-console.log('[audioCallController] Module loaded. DAILY_API_KEY configured:', !!DAILY_API_KEY);
-if (!DAILY_API_KEY) {
-  console.error('[audioCallController] WARNING: DAILY_API_KEY is not set in environment variables!');
+console.log('[audioCallController] Module loaded. Twilio configured:', !!getTwilioClient());
+if (!getTwilioClient()) {
+  console.error('[audioCallController] WARNING: Twilio not configured. Check TWILIO credentials in .env');
 }
 
 /**
- * Create a Daily.co room for a conversation
+ * Create a Twilio Voice call room for a conversation
  */
 export const createCallRoom = async (req, res) => {
   try {
     const { conversationId } = req.params;
-    const userId = req.user.firebaseUid; // Fixed: use firebaseUid instead of uid
+    const userId = req.user.firebaseUid;
 
     console.log('[createCallRoom] Starting call room creation:', { conversationId, userId });
 
-    // Check if Daily.co API key is configured
-    if (!DAILY_API_KEY || DAILY_API_KEY === 'your-daily-api-key-here' || DAILY_API_KEY.length < 20) {
-      console.log('[createCallRoom] Daily.co service not yet configured (requires payment)');
+    // Check if Twilio is configured
+    if (!getTwilioClient()) {
+      console.log('[createCallRoom] Twilio service not configured');
       return res.status(503).json({
         success: false,
-        message: 'Audio/Video call service requires payment setup. Please upgrade your account to enable calls.',
+        message: 'Audio call service not configured. Please check Twilio credentials.',
         error: 'service-not-configured'
       });
     }
@@ -81,51 +78,27 @@ export const createCallRoom = async (req, res) => {
       });
     }
 
-    // Create Daily.co room (audio-only configuration)
+    // Generate Twilio Voice tokens for both participants
     const roomName = `conversation-${conversationId}-${Date.now()}`;
-    
-    const roomConfig = {
-      name: roomName,
-      properties: {
-        max_participants: 2,
-        enable_screenshare: false,
-        enable_chat: false,
-        enable_knocking: false,
-        enable_prejoin_ui: false,
-        start_video_off: true, // Video disabled by default
-        start_audio_off: false, // Audio enabled by default
-        exp: Math.floor(Date.now() / 1000) + (60 * 60), // 1 hour expiration
-      }
-    };
-
-    console.log('[createCallRoom] Creating Daily.co room:', roomName);
-
-    const roomResponse = await axios.post(
-      `${DAILY_API_BASE}/rooms`,
-      roomConfig,
-      {
-        headers: {
-          'Authorization': `Bearer ${DAILY_API_KEY}`,
-          'Content-Type': 'application/json'
-        }
-      }
-    );
-
-    const room = roomResponse.data;
-    console.log('[createCallRoom] Room created successfully:', room.name);
-
-    // Create meeting tokens for both participants
-    const clientToken = await createMeetingToken(room.name, conversation.clientUserId.name, true);
-    const repToken = conversation.assignedRepresentative 
-      ? await createMeetingToken(room.name, conversation.assignedRepresentative.name, true)
+    const clientIdentity = `client-${conversation.clientUserId._id}`;
+    const repIdentity = conversation.assignedRepresentative 
+      ? `rep-${conversation.assignedRepresentative._id}` 
       : null;
 
-    // Store room info in conversation metadata
+    console.log('[createCallRoom] Generating Twilio tokens');
+
+    const clientToken = generateVoiceToken(clientIdentity);
+    const repToken = repIdentity ? generateVoiceToken(repIdentity) : null;
+
+    console.log('[createCallRoom] Tokens generated successfully');
+
+    // Store call info in conversation metadata
     conversation.metadata = {
       ...conversation.metadata,
       activeCallRoom: {
-        roomName: room.name,
-        roomUrl: room.url,
+        roomName: roomName,
+        clientIdentity: clientIdentity,
+        repIdentity: repIdentity,
         createdAt: new Date(),
         createdBy: userId
       }
@@ -142,8 +115,8 @@ export const createCallRoom = async (req, res) => {
       console.log('[createCallRoom] Notifying recipient:', recipient.email);
       emitToUser(recipient.firebaseUid, 'call:incoming', {
         conversationId: conversation._id,
-        roomUrl: room.url,
-        token: repToken || clientToken,
+        token: isClient ? repToken : clientToken,
+        roomName: roomName,
         caller: {
           name: caller.name,
           email: caller.email
@@ -160,10 +133,10 @@ export const createCallRoom = async (req, res) => {
       success: true,
       data: {
         room: {
-          name: room.name,
-          url: room.url
+          name: roomName
         },
         token: isClient ? clientToken : repToken,
+        identity: isClient ? clientIdentity : repIdentity,
         conversation: {
           id: conversation._id,
           client: conversation.clientUserId?.name,
@@ -175,26 +148,8 @@ export const createCallRoom = async (req, res) => {
   } catch (error) {
     console.error('[createCallRoom] ERROR:', {
       message: error.message,
-      status: error.response?.status
+      stack: error.stack
     });
-    
-    // Check for Daily.co API authentication errors (unpaid/invalid key)
-    if (error.response?.status === 401 || error.response?.status === 403) {
-      return res.status(503).json({
-        success: false,
-        message: 'Audio/Video call service requires valid payment setup. Please upgrade your account.',
-        error: 'service-unavailable'
-      });
-    }
-
-    // Handle network timeout errors
-    if (error.code === 'ECONNABORTED' || error.code === 'ETIMEDOUT' || error.code === 'ENOTFOUND') {
-      return res.status(503).json({
-        success: false,
-        message: 'Unable to connect to call service. Please try again later.',
-        error: 'service-timeout'
-      });
-    }
     
     res.status(500).json({
       success: false,
@@ -243,17 +198,19 @@ export const getCallToken = async (req, res) => {
     }
 
     const roomName = conversation.metadata.activeCallRoom.roomName;
-    const userName = isClient ? conversation.clientUserId.name : conversation.assignedRepresentative.name;
+    const identity = isClient 
+      ? conversation.metadata.activeCallRoom.clientIdentity
+      : conversation.metadata.activeCallRoom.repIdentity;
 
-    // Create meeting token
-    const token = await createMeetingToken(roomName, userName, true);
+    // Generate Twilio Voice token
+    const token = generateVoiceToken(identity);
 
     res.json({
       success: true,
       data: {
         token,
         roomName,
-        roomUrl: conversation.metadata.activeCallRoom.roomUrl
+        identity
       }
     });
 
@@ -299,28 +256,11 @@ export const endCall = async (req, res) => {
 
     // Remove active call room from metadata
     if (conversation.metadata?.activeCallRoom) {
-      const roomName = conversation.metadata.activeCallRoom.roomName;
-      
-      // Delete Daily.co room
-      try {
-        await axios.delete(
-          `${DAILY_API_BASE}/rooms/${roomName}`,
-          {
-            headers: {
-              'Authorization': `Bearer ${DAILY_API_KEY}`
-            }
-          }
-        );
-      } catch (deleteError) {
-        console.error('Error deleting Daily room:', deleteError.response?.data || deleteError.message);
-        // Continue even if delete fails
-      }
-
-      // Remove from metadata
       const metadata = { ...conversation.metadata };
       delete metadata.activeCallRoom;
       conversation.metadata = metadata;
       await conversation.save();
+      console.log('[endCall] Call ended for conversation:', conversationId);
     }
 
     res.json({
@@ -337,35 +277,3 @@ export const endCall = async (req, res) => {
     });
   }
 };
-
-/**
- * Helper function to create Daily.co meeting token
- */
-async function createMeetingToken(roomName, userName, isOwner = false) {
-  try {
-    const tokenConfig = {
-      properties: {
-        room_name: roomName,
-        user_name: userName,
-        is_owner: isOwner,
-        exp: Math.floor(Date.now() / 1000) + (60 * 60) // 1 hour
-      }
-    };
-
-    const response = await axios.post(
-      `${DAILY_API_BASE}/meeting-tokens`,
-      tokenConfig,
-      {
-        headers: {
-          'Authorization': `Bearer ${DAILY_API_KEY}`,
-          'Content-Type': 'application/json'
-        }
-      }
-    );
-
-    return response.data.token;
-  } catch (error) {
-    console.error('Error creating meeting token:', error.response?.data || error.message);
-    throw error;
-  }
-}

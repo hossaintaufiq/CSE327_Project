@@ -9,8 +9,8 @@
     "lint": "next lint"
   },
   "dependencies": {
-    "@daily-co/daily-js": "^0.73.0",
     "@tailwindcss/postcss": "^4.1.17",
+    "@twilio/voice-sdk": "^2.17.0",
     "autoprefixer": "^10.4.22",
     "axios": "^1.13.2",
     "firebase": "^12.5.0",

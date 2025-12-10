@@ -1,51 +1,55 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import DailyIframe from "@daily-co/daily-js";
+import { Device } from "@twilio/voice-sdk";
 import { X, Mic, MicOff, PhoneOff, Phone } from "lucide-react";
 
-export default function AudioCallModal({ isOpen, onClose, callToken, roomUrl, conversationId }) {
-  const callFrameRef = useRef(null);
-  const containerRef = useRef(null);
+export default function AudioCallModal({ isOpen, onClose, callToken, roomName, identity, conversationId }) {
+  const deviceRef = useRef(null);
+  const callRef = useRef(null);
   const [isAudioMuted, setIsAudioMuted] = useState(false);
-  const [callState, setCallState] = useState("initializing"); // initializing, joining, joined, left, error
-  const [participants, setParticipants] = useState({});
+  const [callState, setCallState] = useState("initializing"); // initializing, connecting, connected, disconnected, error
   const [callDuration, setCallDuration] = useState(0);
+  const [remoteParticipant, setRemoteParticipant] = useState(null);
 
   useEffect(() => {
-    if (!isOpen || !callToken || !roomUrl) return;
+    if (!isOpen || !callToken || !identity) return;
 
     const initializeCall = async () => {
       try {
-        setCallState("joining");
+        setCallState("connecting");
 
-        // Create Daily call frame (audio-only mode)
-        const callFrame = DailyIframe.createCallObject({
-          audioSource: true,
-          videoSource: false, // Disable video completely
+        // Initialize Twilio Device with token
+        const device = new Device(callToken, {
+          codecPreferences: ["opus", "pcmu"],
+          closeProtection: true,
+          enableImprovedSignalingErrorPrecision: true
         });
 
-        callFrameRef.current = callFrame;
+        deviceRef.current = device;
 
-        // Set up event listeners
-        callFrame
-          .on("joined-meeting", handleJoinedMeeting)
-          .on("participant-joined", handleParticipantJoined)
-          .on("participant-updated", handleParticipantUpdated)
-          .on("participant-left", handleParticipantLeft)
-          .on("left-meeting", handleLeftMeeting)
-          .on("error", handleError);
-
-        // Join the call (audio-only)
-        await callFrame.join({
-          url: roomUrl,
-          token: callToken,
-          startVideoOff: true,
-          startAudioOff: false,
+        // Set up device event listeners
+        device.on("registered", () => {
+          console.log("Twilio Device registered");
+          // Start outgoing call or wait for incoming
+          makeOutgoingCall(device);
         });
+
+        device.on("error", (error) => {
+          console.error("Twilio Device error:", error);
+          setCallState("error");
+        });
+
+        device.on("incoming", (call) => {
+          console.log("Incoming call received");
+          handleIncomingCall(call);
+        });
+
+        // Register the device
+        await device.register();
 
       } catch (error) {
-        console.error("Error initializing call:", error);
+        console.error("Error initializing Twilio call:", error);
         setCallState("error");
       }
     };
@@ -54,63 +58,116 @@ export default function AudioCallModal({ isOpen, onClose, callToken, roomUrl, co
 
     // Cleanup on unmount or close
     return () => {
-      if (callFrameRef.current) {
-        callFrameRef.current.destroy();
-        callFrameRef.current = null;
+      if (callRef.current) {
+        callRef.current.disconnect();
+        callRef.current = null;
+      }
+      if (deviceRef.current) {
+        deviceRef.current.unregister();
+        deviceRef.current.destroy();
+        deviceRef.current = null;
       }
     };
-  }, [isOpen, callToken, roomUrl]);
+  }, [isOpen, callToken, identity]);
 
-  const handleJoinedMeeting = (event) => {
-    console.log("Joined meeting:", event);
-    setCallState("joined");
-    updateParticipants();
-  };
+  const makeOutgoingCall = (device) => {
+    try {
+      // Make a call to the other participant
+      const call = device.connect({
+        params: {
+          To: roomName, // Use room name as destination
+          Identity: identity
+        }
+      });
 
-  const handleParticipantJoined = (event) => {
-    console.log("Participant joined:", event);
-    updateParticipants();
-  };
+      callRef.current = call;
 
-  const handleParticipantUpdated = (event) => {
-    console.log("Participant updated:", event);
-    updateParticipants();
-  };
+      // Set up call event listeners
+      call.on("accept", (connection) => {
+        console.log("Call accepted");
+        setCallState("connected");
+      });
 
-  const handleParticipantLeft = (event) => {
-    console.log("Participant left:", event);
-    updateParticipants();
-  };
+      call.on("disconnect", () => {
+        console.log("Call disconnected");
+        setCallState("disconnected");
+        onClose();
+      });
 
-  const handleLeftMeeting = () => {
-    console.log("Left meeting");
-    setCallState("left");
-    onClose();
-  };
+      call.on("cancel", () => {
+        console.log("Call cancelled");
+        setCallState("disconnected");
+        onClose();
+      });
 
-  const handleError = (error) => {
-    console.error("Call error:", error);
-    setCallState("error");
-  };
+      call.on("reject", () => {
+        console.log("Call rejected");
+        setCallState("disconnected");
+        onClose();
+      });
 
-  const updateParticipants = () => {
-    if (callFrameRef.current) {
-      const currentParticipants = callFrameRef.current.participants();
-      setParticipants(currentParticipants);
+      call.on("error", (error) => {
+        console.error("Call error:", error);
+        setCallState("error");
+      });
+
+      // Monitor volume for visual feedback
+      call.on("volume", (inputVolume, outputVolume) => {
+        // Could use this for audio wave visualization
+      });
+
+    } catch (error) {
+      console.error("Error making outgoing call:", error);
+      setCallState("error");
     }
   };
 
+  const handleIncomingCall = (call) => {
+    callRef.current = call;
+
+    // Accept the incoming call
+    call.accept();
+
+    // Set up call event listeners
+    call.on("accept", () => {
+      console.log("Incoming call accepted");
+      setCallState("connected");
+      setRemoteParticipant({ name: "Participant" });
+    });
+
+    call.on("disconnect", () => {
+      console.log("Call disconnected");
+      setCallState("disconnected");
+      onClose();
+    });
+
+    call.on("cancel", () => {
+      console.log("Call cancelled");
+      setCallState("disconnected");
+      onClose();
+    });
+
+    call.on("error", (error) => {
+      console.error("Call error:", error);
+      setCallState("error");
+    });
+  };
+
   const toggleAudio = () => {
-    if (callFrameRef.current) {
+    if (callRef.current) {
       const newMutedState = !isAudioMuted;
-      callFrameRef.current.setLocalAudio(!newMutedState);
+      callRef.current.mute(newMutedState);
       setIsAudioMuted(newMutedState);
     }
   };
 
   const leaveCall = async () => {
-    if (callFrameRef.current) {
-      await callFrameRef.current.destroy();
+    if (callRef.current) {
+      callRef.current.disconnect();
+    }
+    if (deviceRef.current) {
+      deviceRef.current.unregister();
+      deviceRef.current.destroy();
     }
     onClose();
   };
@@ -118,7 +175,7 @@ export default function AudioCallModal({ isOpen, onClose, callToken, roomUrl, co
   // Track call duration
   useEffect(() => {
     let interval;
-    if (callState === "joined") {
+    if (callState === "connected") {
       interval = setInterval(() => {
         setCallDuration(prev => prev + 1);
       }, 1000);
@@ -146,8 +203,8 @@ export default function AudioCallModal({ isOpen, onClose, callToken, roomUrl, co
             <div>
               <h2 className="text-xl font-bold text-white">Audio Call</h2>
               <p className="text-sm text-gray-400">
-                {callState === "joining" && "Connecting..."}
-                {callState === "joined" && formatDuration(callDuration)}
+                {callState === "connecting" && "Connecting..."}
+                {callState === "connected" && formatDuration(callDuration)}
                 {callState === "error" && "Connection error"}
               </p>
             </div>
@@ -162,7 +219,7 @@ export default function AudioCallModal({ isOpen, onClose, callToken, roomUrl, co
 
         {/* Call Status Display */}
         <div className="flex-1 relative bg-gradient-to-br from-gray-800 to-gray-900 p-8">
-          {callState === "joining" && (
+          {callState === "connecting" && (
             <div className="flex flex-col items-center justify-center h-64">
               <div className="relative mb-6">
                 <div className="animate-ping absolute h-24 w-24 rounded-full bg-green-400 opacity-20"></div>
@@ -175,7 +232,7 @@ export default function AudioCallModal({ isOpen, onClose, callToken, roomUrl, co
             </div>
           )}
 
-          {callState === "joined" && (
+          {callState === "connected" && (
             <div className="flex flex-col items-center justify-center h-64">
               <div className="relative mb-6">
                 <div className="h-32 w-32 rounded-full bg-gradient-to-br from-green-500 to-blue-500 flex items-center justify-center">
@@ -191,9 +248,7 @@ export default function AudioCallModal({ isOpen, onClose, callToken, roomUrl, co
                 </div>
               </div>
               <p className="text-white text-xl font-bold">{formatDuration(callDuration)}</p>
-              <p className="text-gray-400 text-sm mt-1">
-                {Object.keys(participants).length} participant(s) connected
-              </p>
+              <p className="text-gray-400 text-sm mt-1">Call in progress</p>
             </div>
           )}
 
