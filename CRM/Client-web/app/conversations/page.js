@@ -350,7 +350,6 @@ export default function ConversationsPage() {
       alert(errorMessage);
     }
   };
-  };
 
   const handleCloseCall = async () => {
     if (selectedConversation) {
