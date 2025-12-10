@@ -65,6 +65,7 @@ export default function ConversationDetailPage() {
   const [callToken, setCallToken] = useState(null);
   const [callRoomName, setCallRoomName] = useState(null);
   const [callIdentity, setCallIdentity] = useState(null);
+  const [targetIdentity, setTargetIdentity] = useState(null);
   const [isIncomingCall, setIsIncomingCall] = useState(false);
   const [incomingCall, setIncomingCall] = useState(null);
   const messagesEndRef = useRef(null);
@@ -251,6 +252,7 @@ export default function ConversationDetailPage() {
         setCallToken(res.data.data.token);
         setCallRoomName(res.data.data.room.name);
         setCallIdentity(res.data.data.identity);
+        setTargetIdentity(res.data.data.targetIdentity);
         setIsIncomingCall(false);
         setShowVideoCall(true);
       }
@@ -284,6 +286,8 @@ export default function ConversationDetailPage() {
       setCallToken(incomingCall.token);
       setCallRoomName(incomingCall.roomName);
       setCallIdentity(incomingCall.identity);
+      setTargetIdentity(incomingCall.targetIdentity);
+      setIsIncomingCall(true);
       setShowVideoCall(true);
       setIncomingCall(null);
     }
@@ -672,6 +676,7 @@ export default function ConversationDetailPage() {
         callToken={callToken}
         roomName={callRoomName}
         identity={callIdentity}
+        targetIdentity={targetIdentity}
         isIncoming={isIncomingCall}
         conversationId={conversationId}
       />

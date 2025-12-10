@@ -4,7 +4,7 @@ import { useEffect, useRef, useState } from "react";
 import { Device } from "@twilio/voice-sdk";
 import { X, Mic, MicOff, PhoneOff, Phone } from "lucide-react";
 
-export default function AudioCallModal({ isOpen, onClose, callToken, roomName, identity, conversationId, isIncoming = false }) {
+export default function AudioCallModal({ isOpen, onClose, callToken, roomName, identity, targetIdentity, conversationId, isIncoming = false }) {
   const deviceRef = useRef(null);
   const callRef = useRef(null);
   const [isAudioMuted, setIsAudioMuted] = useState(false);
@@ -77,11 +77,12 @@ export default function AudioCallModal({ isOpen, onClose, callToken, roomName, i
 
   const makeOutgoingCall = async (device) => {
     try {
-      // Make a call to the other participant
+      // Make a call to the other participant using their identity
+      console.log('[makeOutgoingCall] Calling identity:', targetIdentity);
+      
       const call = await device.connect({
         params: {
-          To: roomName, // Use room name as destination
-          Identity: identity
+          To: targetIdentity // Call the other person's identity
         }
       });
 

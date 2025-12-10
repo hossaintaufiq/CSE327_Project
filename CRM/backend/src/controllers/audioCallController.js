@@ -125,6 +125,7 @@ export const createCallRoom = async (req, res) => {
         token: recipientToken,
         roomName: roomName,
         identity: recipientIdentity,
+        targetIdentity: isClient ? clientIdentity : repIdentity, // Who the recipient should call back
         caller: {
           name: caller.name,
           email: caller.email
@@ -147,6 +148,7 @@ export const createCallRoom = async (req, res) => {
         },
         token: isClient ? clientToken : repToken,
         identity: isClient ? clientIdentity : repIdentity,
+        targetIdentity: isClient ? repIdentity : clientIdentity, // Who to call
         conversation: {
           id: conversation._id,
           client: conversation.clientUserId?.name,

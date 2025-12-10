@@ -27,7 +27,7 @@ function getModel(options = {}) {
     genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
   }
 
-  const modelName = process.env.GEMINI_MODEL || 'gemini-1.5-flash';
+  const modelName = 'gemini-2.5-flash-lite'; // Always use 2.5 flash lite
   console.log(`[Gemini] Using model: ${modelName}`);
   return genAI.getGenerativeModel({ model: modelName, ...options });
 }
