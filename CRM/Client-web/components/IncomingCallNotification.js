@@ -32,7 +32,7 @@ export default function IncomingCallNotification({
   }, [onReject]);
 
   return (
-    <div className="fixed inset-0 bg-black/80 flex items-center justify-center z-[100] animate-fade-in">
+    <div className="fixed inset-0 bg-black/80 flex items-center justify-center z-50 animate-fade-in">
       {/* Ringtone audio */}
       <audio ref={audioRef} loop>
         <source src="data:audio/wav;base64,UklGRnoGAABXQVZFZm10IBAAAAABAAEAQB8AAEAfAAABAAgAZGF0YQoGAACBhYqFbF1fdJivrJBhNjVgodDbq2EcBj+a2/LDciUFLIHO8tiJNwgZaLvt559NEAxQp+PwtmMcBjiR1/LMeSwFJHfH8N2QQAoUXrTp66hVFApGn+DyvmwhBzGA0fPTgjMGHm7A7+OZUB0OV6zo8bljHAY4kdfy" type="audio/wav" />

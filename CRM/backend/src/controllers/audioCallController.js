@@ -23,11 +23,11 @@ export const createCallRoom = async (req, res) => {
     console.log('[createCallRoom] Starting call room creation:', { conversationId, userId });
 
     // Check if Daily.co API key is configured
-    if (!DAILY_API_KEY || DAILY_API_KEY === 'your-daily-api-key-here') {
+    if (!DAILY_API_KEY || DAILY_API_KEY === 'your-daily-api-key-here' || DAILY_API_KEY.length < 20) {
       console.log('[createCallRoom] Daily.co service not yet configured (requires payment)');
       return res.status(503).json({
         success: false,
-        message: 'Audio call service requires payment setup. Please upgrade your account to enable video calls.',
+        message: 'Audio/Video call service requires payment setup. Please upgrade your account to enable calls.',
         error: 'service-not-configured'
       });
     }

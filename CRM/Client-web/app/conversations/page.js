@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, useCallback } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import {
   MessageSquare,
@@ -111,7 +111,7 @@ export default function ConversationsPage() {
         }
       };
     }
-  }, [mounted, activeCompanyId, activeCompanyRole, user?.firebaseUid, router]);
+  }, [mounted, activeCompanyId, activeCompanyRole, user?.firebaseUid, router, fetchConversations]);
 
   useEffect(() => {
     scrollToBottom();
@@ -121,7 +121,7 @@ export default function ConversationsPage() {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
   };
 
-  const fetchConversations = async () => {
+  const fetchConversations = useCallback(async () => {
     try {
       setLoading(true);
       
@@ -210,7 +210,7 @@ export default function ConversationsPage() {
     } finally {
       setLoading(false);
     }
-  };
+  }, [activeCompanyId, activeCompanyRole, searchParams]);
 
   const handleSelectConversation = (conversation) => {
     setSelectedConversation(conversation);
@@ -346,13 +346,10 @@ export default function ConversationsPage() {
       } else if (errorData?.message) {
         errorMessage = errorData.message;
       }
-      }
       
       alert(errorMessage);
-      
-      // Don't let the error propagate to avoid redirect
-      return;
     }
+  };
   };
 
   const handleCloseCall = async () => {
