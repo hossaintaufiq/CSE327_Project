@@ -25,6 +25,7 @@ export function PipelineBoard({
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [draggedItem, setDraggedItem] = useState(null);
+  const [dragOverStage, setDragOverStage] = useState(null);
   const [pendingApprovals, setPendingApprovals] = useState([]);
   const [showApprovalModal, setShowApprovalModal] = useState(false);
   const [selectedApproval, setSelectedApproval] = useState(null);
@@ -103,8 +104,24 @@ export function PipelineBoard({
   };
 
   // Handle drag over
-  const handleDragOver = (e) => {
+  const handleDragOver = (e, stage) => {
     e.preventDefault();
+    e.stopPropagation();
+    if (stage !== dragOverStage) {
+      setDragOverStage(stage);
+    }
+  };
+
+  // Handle drag leave
+  const handleDragLeave = (e) => {
+    e.preventDefault();
+    // Only clear if leaving the column entirely
+    const rect = e.currentTarget.getBoundingClientRect();
+    const isOutside = e.clientX < rect.left || e.clientX > rect.right ||
+                      e.clientY < rect.top || e.clientY > rect.bottom;
+    if (isOutside) {
+      setDragOverStage(null);
+    }
   };
 
   // Handle drop on a stage
@@ -119,36 +136,68 @@ export function PipelineBoard({
       return;
     }
 
-    // Check if transition is valid
+    // Optimistic update - move the card immediately in UI
+    const updatedStageData = { ...stageData };
+    
+    // Remove from old stage
+    updatedStageData[fromStage] = (updatedStageData[fromStage] || []).filter(
+      e => e._id !== entity._id
+    );
+    
+    // Add to new stage
+    updatedStageData[targetStage] = [
+      ...(updatedStageData[targetStage] || []),
+      entity
+    ];
+    
+    setStageData(updatedStageData);
+    setDraggedItem(null);
+
+    // Check if transition is valid and sync with server
     try {
+      setMovingEntity(entity._id);
+      
       const validation = await pipelineApi.validateTransition(pipelineType, fromStage, targetStage);
       
       if (!validation.success || !validation.data.validation.valid) {
+        // Revert optimistic update
+        setStageData(stageData);
         setError(validation.data?.validation?.reason || 'Invalid transition');
-        setDraggedItem(null);
+        setMovingEntity(null);
         return;
       }
 
-      // Move entity
-      setMovingEntity(entity._id);
+      // Move entity on server
       const result = await pipelineApi.moveToStage(pipelineType, entity._id, targetStage);
 
       if (result.success) {
         if (result.data.pending) {
-          // Approval required - show notification
+          // Approval required - revert UI change and show notification
+          setStageData(stageData);
           setError(null);
           setPendingApprovals(prev => [...prev, result.data.approval]);
+          if (onError) onError('This transition requires admin approval');
         } else {
-          // Reload data from server to ensure we have the latest state
-          await loadPipelineData();
+          // Success - update entity with server response if available
+          if (result.data.entity) {
+            const serverUpdatedData = { ...updatedStageData };
+            serverUpdatedData[targetStage] = serverUpdatedData[targetStage].map(
+              e => e._id === entity._id ? result.data.entity : e
+            );
+            setStageData(serverUpdatedData);
+          }
+          setError(null);
         }
       } else {
+        // Revert optimistic update on failure
+        setStageData(stageData);
         setError(result.error?.message || 'Failed to move entity');
       }
     } catch (err) {
+      // Revert optimistic update on error
+      setStageData(stageData);
       setError(err.message || 'Failed to move entity');
     } finally {
-      setDraggedItem(null);
       setMovingEntity(null);
     }
   };
@@ -272,9 +321,9 @@ export function PipelineBoard({
             colorClass={getStageColor(stage)}
             entities={stageData[stage] || []}
             requiresApproval={config?.requiresApproval?.includes(stage)}
-            onDragOver={handleDragOver}
+            onDragOver={(e) => handleDragOver(e, stage)}
             onDrop={() => handleDrop(stage)}
-            isDragTarget={draggedItem && draggedItem.fromStage !== stage}
+            isDragTarget={draggedItem && dragOverStage === stage && draggedItem.fromStage !== stage}
           >
             {(stageData[stage] || []).map((entity) => (
               <PipelineCard

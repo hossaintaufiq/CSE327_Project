@@ -16,13 +16,25 @@ export function PipelineColumn({
   isDragTarget,
   children,
 }) {
+  const handleDrop = (e) => {
+    e.preventDefault();
+    e.stopPropagation();
+    onDrop?.(e);
+  };
+
+  const handleDragOver = (e) => {
+    e.preventDefault();
+    e.stopPropagation();
+    onDragOver?.(e);
+  };
+
   return (
     <div
-      className={`shrink-0 w-72 rounded-lg border-2 ${colorClass} ${
-        isDragTarget ? 'ring-2 ring-blue-400 ring-offset-2' : ''
+      className={`shrink-0 w-72 rounded-lg border-2 transition-all duration-200 ${colorClass} ${
+        isDragTarget ? 'ring-2 ring-blue-500 ring-offset-2 scale-105 shadow-lg' : ''
       }`}
-      onDragOver={onDragOver}
-      onDrop={onDrop}
+      onDragOver={handleDragOver}
+      onDrop={handleDrop}
     >
       {/* Column Header */}
       <div className="p-3 border-b border-gray-200 bg-white bg-opacity-50 rounded-t-lg">

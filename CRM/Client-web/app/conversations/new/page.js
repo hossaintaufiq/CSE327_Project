@@ -96,15 +96,11 @@ export default function NewConversationPage() {
     }
   };
 
+  // Products feature is not implemented yet - keeping for future enhancement
   const fetchProducts = async (companyId) => {
-    try {
-      const res = await api.get(`/company/${companyId}/products`);
-      setProducts(res.data.data || []);
-    } catch (err) {
-      console.error("Error fetching products:", err);
-      // Products are optional
-      setProducts([]);
-    }
+    // TODO: Implement products endpoint when product catalog feature is added
+    // For now, products are not available
+    setProducts([]);
   };
 
   const handleSelectCompany = (company) => {

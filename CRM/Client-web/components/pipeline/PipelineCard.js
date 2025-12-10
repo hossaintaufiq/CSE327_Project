@@ -71,15 +71,22 @@ export function PipelineCard({
     return colors[badgeValue?.toLowerCase()] || 'bg-gray-100 text-gray-700';
   };
 
+  const handleDragStart = (e) => {
+    e.dataTransfer.effectAllowed = 'move';
+    e.dataTransfer.setData('text/html', e.currentTarget);
+    // Add a slight delay to show visual feedback
+    setTimeout(() => onDragStart?.(), 0);
+  };
+
   return (
     <div
-      draggable
-      onDragStart={onDragStart}
+      draggable={!isMoving}
+      onDragStart={handleDragStart}
       onClick={onClick}
       className={`
-        bg-white rounded-lg shadow-sm border border-gray-200 p-3 cursor-pointer
+        relative bg-white rounded-lg shadow-sm border border-gray-200 p-3 cursor-move
         hover:shadow-md hover:border-gray-300 transition-all duration-200
-        ${isMoving ? 'opacity-50 scale-95' : ''}
+        ${isMoving ? 'opacity-50 scale-95 cursor-wait' : ''}
       `}
     >
       {/* Title */}
