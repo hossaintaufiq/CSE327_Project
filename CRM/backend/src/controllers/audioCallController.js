@@ -3,12 +3,6 @@ import { Conversation } from '../models/Conversation.js';
 import { emitToUser } from '../services/liveChatService.js';
 import { generateVoiceToken, getTwilioClient } from '../services/twilioService.js';
 
-// Debug log on module load
-console.log('[audioCallController] Module loaded. Twilio configured:', !!getTwilioClient());
-if (!getTwilioClient()) {
-  console.error('[audioCallController] WARNING: Twilio not configured. Check TWILIO credentials in .env');
-}
-
 /**
  * Create a Twilio Voice call room for a conversation
  */
