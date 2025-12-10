@@ -46,100 +46,30 @@ export default function AudioCallModal({ isOpen, onClose, callToken, roomName, i
   useEffect(() => {
     if (!isOpen) return;
 
-    // If we have an incoming call object, use it directly
+    // If we have an incoming/existing call object, use it directly
     if (incomingCall) {
-      console.log('[AudioCallModal] Using existing incoming call');
+      console.log('[AudioCallModal] Using existing call object');
       callRef.current = incomingCall;
-      setCallState("connected");
+      
+      // Check call status
+      const status = incomingCall.status();
+      console.log('[AudioCallModal] Call status:', status);
+      
+      if (status === "open") {
+        setCallState("connected");
+      } else if (status === "connecting" || status === "ringing" || status === "pending") {
+        setCallState("connecting");
+      }
+      
       setupCallEventListeners(incomingCall);
       return;
     }
 
-    // Otherwise, initialize new outgoing call
-    if (!callToken || !identity) return;
+    // No call object - this shouldn't happen with the new flow
+    console.warn('[AudioCallModal] No call object provided');
+    setCallState("error");
 
-    const initializeCall = async () => {
-      try {
-        setCallState("connecting");
-
-        // Initialize Twilio Device with token
-        const device = new Device(callToken, {
-          codecPreferences: ["opus", "pcmu"],
-          closeProtection: true,
-          enableImprovedSignalingErrorPrecision: true
-        });
-
-        deviceRef.current = device;
-
-        // Set up device event listeners
-        device.on("registered", () => {
-          console.log("Twilio Device registered");
-          // Only make outgoing call if we initiated it
-          if (!isIncoming) {
-            makeOutgoingCall(device);
-          } else {
-            console.log("Waiting for incoming call...");
-            setCallState("waiting");
-          }
-        });
-
-        device.on("error", (error) => {
-          console.error("Twilio Device error:", error);
-          setCallState("error");
-        });
-
-        device.on("incoming", (call) => {
-          console.log("Incoming call received in modal");
-          handleIncomingCall(call);
-        });
-
-        // Register the device
-        await device.register();
-
-      } catch (error) {
-        console.error("Error initializing Twilio call:", error);
-        setCallState("error");
-      }
-    };
-
-    initializeCall();
-
-    // Cleanup on unmount or close
-    return () => {
-      if (callRef.current) {
-        callRef.current.disconnect();
-        callRef.current = null;
-      }
-      if (deviceRef.current) {
-        deviceRef.current.unregister();
-        deviceRef.current.destroy();
-        deviceRef.current = null;
-      }
-    };
-  }, [isOpen, callToken, identity, incomingCall]);
-
-  const makeOutgoingCall = async (device) => {
-    try {
-      // Make a call to the other participant using their identity
-      console.log('[makeOutgoingCall] Calling identity:', targetIdentity);
-      
-      const call = await device.connect({
-        params: {
-          To: targetIdentity // Call the other person's identity
-        }
-      });
-
-      callRef.current = call;
-      console.log("Call object created:", call);
-
-      // Set up call event listeners
-      setupCallEventListeners(call);
-
-    } catch (error) {
-      console.error("Error making outgoing call:", error);
-      setCallState("error");
-    }
-  };
+  }, [isOpen, incomingCall]);
 
   const toggleAudio = () => {
     if (callRef.current) {
@@ -152,10 +82,7 @@ export default function AudioCallModal({ isOpen, onClose, callToken, roomName, i
   const leaveCall = async () => {
     if (callRef.current) {
       callRef.current.disconnect();
-    }
-    if (deviceRef.current) {
-      deviceRef.current.unregister();
-      deviceRef.current.destroy();
+      callRef.current = null;
     }
     onClose();
   };

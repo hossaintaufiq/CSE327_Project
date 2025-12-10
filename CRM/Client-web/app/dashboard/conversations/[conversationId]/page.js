@@ -252,7 +252,7 @@ export default function ConversationDetailPage() {
   };
 
   const handleStartCall = async () => {
-    if (!conversation) return;
+    if (!conversation || !twilioDevice || !deviceRegistered) return;
 
     // Check if AI is active (no representative assigned)
     if (conversation.status === 'active' && !conversation.assignedRepresentative) {
@@ -261,21 +261,38 @@ export default function ConversationDetailPage() {
     }
 
     try {
-      const token = localStorage.getItem('idToken');
-      
-      if (!token) {
-        alert('You are not logged in. Please refresh the page and log in again.');
-        return;
-      }
-      
+      // Get the target identity (who to call)
       const res = await api.post(`/audio-calls/${conversationId}/create`);
       if (res.data?.success) {
-        setCallToken(res.data.data.token);
-        setCallRoomName(res.data.data.room.name);
-        setCallIdentity(res.data.data.identity);
-        setTargetIdentity(res.data.data.targetIdentity);
+        const { targetIdentity } = res.data.data;
+        
+        // Use the already-registered Device to make the call
+        console.log('[handleStartCall] Making call to:', targetIdentity);
+        const call = await twilioDevice.connect({
+          params: {
+            To: targetIdentity
+          }
+        });
+        
+        // Store call reference and open modal
+        incomingCallRef.current = call;
         setIsIncomingCall(false);
         setShowVideoCall(true);
+        
+        // Set up call listeners
+        call.on("accept", () => {
+          console.log('[handleStartCall] Call connected');
+        });
+        
+        call.on("disconnect", () => {
+          console.log('[handleStartCall] Call disconnected');
+          setShowVideoCall(false);
+        });
+        
+        call.on("error", (error) => {
+          console.error('[handleStartCall] Call error:', error);
+          alert('Call failed: ' + error.message);
+        });
       }
     } catch (error) {
       console.error('[handleStartCall] Error:', error.response?.status, error.response?.data?.message || error.message);
