@@ -77,46 +77,6 @@ export default function ConversationsPage() {
     setMounted(true);
   }, []);
 
-  useEffect(() => {
-    if (!mounted) return;
-    
-    const storedUser = localStorage.getItem("user");
-    if (!storedUser) {
-      router.push("/login");
-      return;
-    }
-    
-    fetchConversations();
-
-    // Initialize Socket.IO for incoming call notifications
-    if (user?.firebaseUid) {
-      const socketUrl = process.env.NEXT_PUBLIC_API_URL?.replace('/api', '') || 'http://localhost:5000';
-      socketRef.current = io(socketUrl, {
-        auth: {
-          userId: user.firebaseUid,
-          token: localStorage.getItem('idToken')
-        }
-      });
-
-      // Listen for incoming calls
-      socketRef.current.on('call:incoming', (data) => {
-        console.log('[Socket] Incoming call:', data);
-        setIncomingCall(data);
-      });
-
-      // Cleanup on unmount
-      return () => {
-        if (socketRef.current) {
-          socketRef.current.disconnect();
-        }
-      };
-    }
-  }, [mounted, activeCompanyId, activeCompanyRole, user?.firebaseUid, router, fetchConversations]);
-
-  useEffect(() => {
-    scrollToBottom();
-  }, [messages]);
-
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
   };
@@ -182,11 +142,8 @@ export default function ConversationsPage() {
           type: "order",
           title: "Order #12345 Status",
           status: "with_representative",
-          assignedRepresentative: { name: "John Smith" },
           messages: [
-            { _id: "m3", content: "I placed an order last week but haven't received any updates.", senderType: "client", createdAt: new Date(Date.now() - 172800000).toISOString() },
-            { _id: "m4", content: "I apologize for the delay. Let me check the status of your order.", senderType: "ai", createdAt: new Date(Date.now() - 172700000).toISOString() },
-            { _id: "m5", content: "I've escalated this to a representative for you. They will be with you shortly.", senderType: "ai", createdAt: new Date(Date.now() - 172600000).toISOString() },
+            { _id: "m5", content: "I need an update on my order #12345.", senderType: "client", createdAt: new Date(Date.now() - 172800000).toISOString() },
             { _id: "m6", content: "Hi, I'm John from Global Supplies. I've looked into your order and it's currently in transit. Expected delivery is tomorrow.", senderType: "representative", createdAt: new Date(Date.now() - 86400000).toISOString() },
           ],
           lastActivity: new Date(Date.now() - 86400000).toISOString(),
@@ -211,6 +168,46 @@ export default function ConversationsPage() {
       setLoading(false);
     }
   }, [activeCompanyId, activeCompanyRole, searchParams]);
+
+  useEffect(() => {
+    if (!mounted) return;
+    
+    const storedUser = localStorage.getItem("user");
+    if (!storedUser) {
+      router.push("/login");
+      return;
+    }
+    
+    fetchConversations();
+
+    // Initialize Socket.IO for incoming call notifications
+    if (user?.firebaseUid) {
+      const socketUrl = process.env.NEXT_PUBLIC_API_URL?.replace('/api', '') || 'http://localhost:5000';
+      socketRef.current = io(socketUrl, {
+        auth: {
+          userId: user.firebaseUid,
+          token: localStorage.getItem('idToken')
+        }
+      });
+
+      // Listen for incoming calls
+      socketRef.current.on('call:incoming', (data) => {
+        console.log('[Socket] Incoming call:', data);
+        setIncomingCall(data);
+      });
+
+      // Cleanup on unmount
+      return () => {
+        if (socketRef.current) {
+          socketRef.current.disconnect();
+        }
+      };
+    }
+  }, [mounted, activeCompanyId, activeCompanyRole, user?.firebaseUid, router, fetchConversations]);
+
+  useEffect(() => {
+    scrollToBottom();
+  }, [messages]);
 
   const handleSelectConversation = (conversation) => {
     setSelectedConversation(conversation);
