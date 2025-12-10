@@ -1,6 +1,7 @@
 import { initializeApp } from 'firebase/app';
 import { getAuth, signInWithEmailAndPassword } from 'firebase/auth';
 import dotenv from 'dotenv';
+import fs from 'fs';
 
 dotenv.config();
 
@@ -16,6 +17,38 @@ const firebaseConfig = {
 
 async function testFirebaseAuth() {
   console.log('🔧 Testing Firebase Authentication...');
+  console.log('\n💡 TIP: Use test-credentials-generator.js to generate test credentials');
+  console.log('   node test-credentials-generator.js --login your-email@example.com your-password\n');
+
+  // Check for test credentials
+  let testEmail, testPassword;
+  
+  try {
+    const testConfig = JSON.parse(fs.readFileSync('./test-config.json', 'utf-8'));
+    if (testConfig.credentials.client) {
+      testEmail = testConfig.credentials.client.email;
+      console.log(`📋 Found test credentials for: ${testEmail}`);
+    }
+  } catch (error) {
+    console.log('⚠️  No test-config.json found. Using command line arguments.');
+  }
+
+  // Get credentials from command line or use test config
+  if (process.argv.length >= 4) {
+    testEmail = process.argv[2];
+    testPassword = process.argv[3];
+  } else if (!testEmail) {
+    console.log('❌ No credentials provided!');
+    console.log('\nUsage: node test-auth.js <email> <password>');
+    console.log('   OR: Generate credentials first with test-credentials-generator.js');
+    process.exit(1);
+  }
+
+  if (!testPassword) {
+    console.log('❌ Password required!');
+    console.log('Usage: node test-auth.js <email> <password>');
+    process.exit(1);
+  }
 
   try {
     const app = initializeApp(firebaseConfig);
@@ -23,13 +56,9 @@ async function testFirebaseAuth() {
 
     console.log('✅ Firebase initialized');
 
-    // Test login with your credentials
+    // Test login
     console.log('🔑 Attempting login...');
-    const userCredential = await signInWithEmailAndPassword(
-      auth,
-      'nazmul.sakib01@northsouth.edu', // Replace with your test email
-      'your-password' // Replace with your test password
-    );
+    const userCredential = await signInWithEmailAndPassword(auth, testEmail, testPassword);
 
     console.log('✅ Login successful');
     console.log('User ID:', userCredential.user.uid);
@@ -40,9 +69,26 @@ async function testFirebaseAuth() {
     console.log('✅ ID Token obtained (length:', idToken.length, ')');
 
     // Test token decoding
-    const payload = JSON.parse(atob(idToken.split('.')[1]));
+    const payload = JSON.parse(Buffer.from(idToken.split('.')[1], 'base64').toString());
     console.log('Token expires:', new Date(payload.exp * 1000).toLocaleString());
     console.log('Token valid for:', Math.floor((payload.exp * 1000 - Date.now()) / 1000 / 60), 'minutes');
+
+    // Save token to test config
+    try {
+      let testConfig = { credentials: {}, companies: [], token: null };
+      if (fs.existsSync('./test-config.json')) {
+        testConfig = JSON.parse(fs.readFileSync('./test-config.json', 'utf-8'));
+      }
+      testConfig.token = idToken;
+      testConfig.tokenExpiry = new Date(payload.exp * 1000).toISOString();
+      fs.writeFileSync('./test-config.json', JSON.stringify(testConfig, null, 2));
+      console.log('✅ Token saved to test-config.json');
+    } catch (error) {
+      console.log('⚠️  Could not save token to test-config.json');
+    }
+
+    console.log('\n📋 You can now use this token in API tests');
+    console.log('Token:', idToken.substring(0, 50) + '...');
 
   } catch (error) {
     console.error('❌ Firebase auth test failed:', error.message);
@@ -55,6 +101,7 @@ async function testFirebaseAuth() {
     } else if (error.code === 'auth/invalid-email') {
       console.log('💡 Invalid email format.');
     }
+    process.exit(1);
   }
 }
 

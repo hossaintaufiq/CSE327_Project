@@ -3,3 +3,9 @@ node_modules/
 *.log
 .DS_Store
 
+# Test credentials and results (generated files)
+test-credentials.json
+test-config.json
+test-results.json
+test-api-template.js
+
