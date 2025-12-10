@@ -31,9 +31,6 @@ export const initTwilioClient = () => {
  * Get Twilio client
  */
 export const getTwilioClient = () => {
-  if (!client) {
-    initTwilioClient();
-  }
   return client;
 };
 
@@ -51,8 +48,9 @@ export const getTwilioPhoneNumber = () => {
  * @param {object} options - Additional options
  */
 export const makeCall = async (to, callbackUrl, options = {}) => {
-  if (!client) {
-    throw new Error('Twilio client not initialized');
+  const twilioClient = getTwilioClient();
+  if (!twilioClient) {
+    throw new Error('Twilio client not initialized. Check TWILIO_ACCOUNT_SID and TWILIO_AUTH_TOKEN in .env');
   }
 
   const callOptions = {
@@ -64,7 +62,7 @@ export const makeCall = async (to, callbackUrl, options = {}) => {
     ...options,
   };
 
-  const call = await client.calls.create(callOptions);
+  const call = await twilioClient.calls.create(callOptions);
   return {
     success: true,
     callSid: call.sid,
