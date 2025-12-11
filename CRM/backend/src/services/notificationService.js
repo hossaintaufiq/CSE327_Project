@@ -2,6 +2,7 @@ import { Notification } from '../models/Notification.js';
 import { User } from '../models/User.js';
 import { Company } from '../models/Company.js';
 import { sendStatusUpdateEmail, sendIssueAlertEmail } from './emailService.js';
+import { sendNotification as sendTelegramNotification } from './telegramService.js';
 
 // Create a notification
 export const createNotification = async (notificationData) => {
@@ -77,6 +78,17 @@ export const sendStatusChangeNotification = async (companyId, entityType, entity
         },
       });
       notifications.push(notification);
+      
+      // Send Telegram notification
+      const telegramMessage = 
+        `🔔 *Status Update*\n\n` +
+        `*${entityType.charAt(0).toUpperCase() + entityType.slice(1)}:* ${entity.title || entity.name || entity.orderNumber || `Issue #${entity._id}`}\n` +
+        `*Status:* ${oldStatus || 'Unknown'} → ${newStatus}\n` +
+        `*Priority:* ${entity.priority || 'Normal'}`;
+      
+      await sendTelegramNotification(recipient, telegramMessage).catch(err => 
+        console.log(`⚠️ Failed to send Telegram notification to ${recipient}:`, err.message)
+      );
     }
 
     // Send emails
@@ -163,6 +175,19 @@ export const sendIssueAlertNotification = async (companyId, issueId, issue, reci
         },
       });
       notifications.push(notification);
+      
+      // Send Telegram notification for issues
+      const telegramMessage = 
+        `🚨 *New Issue Alert*\n\n` +
+        `*Issue:* ${issue.title}\n` +
+        `*Priority:* ${issue.priority}\n` +
+        `*Status:* ${issue.status}\n` +
+        `*Category:* ${issue.category || 'N/A'}\n\n` +
+        `${issue.description ? issue.description.substring(0, 100) + '...' : 'No description'}`;
+      
+      await sendTelegramNotification(recipient, telegramMessage).catch(err => 
+        console.log(`⚠️ Failed to send Telegram notification to ${recipient}:`, err.message)
+      );
     }
 
     // Send emails
@@ -351,6 +376,196 @@ export const createNotificationForStatusChange = async (entityType, entity, newS
     return notifications;
   } catch (error) {
     console.error('❌ Error creating notifications for status change:', error);
+    throw error;
+  }
+};
+
+/**
+ * Send task assignment notification (with Telegram)
+ */
+export const sendTaskAssignmentNotification = async (companyId, taskId, task, assigneeId) => {
+  try {
+    const notification = await createNotification({
+      userId: assigneeId,
+      companyId,
+      type: 'task',
+      entityId: taskId,
+      title: `New Task Assigned: ${task.title}`,
+      message: `You have been assigned a new task`,
+      priority: task.priority === 'urgent' || task.priority === 'high' ? 'high' : 'medium',
+      relatedEntity: taskId,
+      entityType: 'Task',
+      metadata: {
+        taskTitle: task.title,
+        priority: task.priority,
+        dueDate: task.dueDate,
+        status: task.status,
+      },
+    });
+
+    // Send Telegram notification
+    const dueDate = task.dueDate ? `\n*Due:* ${new Date(task.dueDate).toLocaleDateString()}` : '';
+    const telegramMessage = 
+      `📋 *New Task Assigned*\n\n` +
+      `*Task:* ${task.title}\n` +
+      `*Priority:* ${task.priority || 'Normal'}` +
+      dueDate +
+      `\n*Status:* ${task.status || 'To Do'}`;
+    
+    await sendTelegramNotification(assigneeId, telegramMessage).catch(err => 
+      console.log(`⚠️ Failed to send Telegram notification to ${assigneeId}:`, err.message)
+    );
+
+    return notification;
+  } catch (error) {
+    console.error('❌ Error sending task assignment notification:', error);
+    throw error;
+  }
+};
+
+/**
+ * Send order notification to specific roles
+ */
+export const sendOrderNotification = async (companyId, orderId, order, notificationType = 'created') => {
+  try {
+    // Get admins and managers
+    const admins = await User.find({
+      'companies.companyId': companyId,
+      'companies.role': { $in: ['company_admin', 'manager'] },
+      isActive: true,
+    }).select('_id');
+
+    if (admins.length === 0) {
+      console.log(`⚠️ No admins found for order notification`);
+      return;
+    }
+
+    const notifications = [];
+    const orderTitle = order.orderNumber || `Order #${orderId}`;
+    const title = notificationType === 'created' 
+      ? `New Order: ${orderTitle}`
+      : `Order Update: ${orderTitle}`;
+
+    for (const admin of admins) {
+      const notification = await createNotification({
+        userId: admin._id,
+        companyId,
+        type: 'order',
+        entityId: orderId,
+        title,
+        message: `Order ${notificationType}`,
+        priority: 'medium',
+        relatedEntity: orderId,
+        entityType: 'Order',
+        metadata: {
+          orderNumber: order.orderNumber,
+          status: order.status,
+          totalAmount: order.totalAmount,
+        },
+      });
+      notifications.push(notification);
+
+      // Send Telegram notification to admins only
+      const telegramMessage = 
+        `📦 *${notificationType === 'created' ? 'New Order' : 'Order Update'}*\n\n` +
+        `*Order:* ${orderTitle}\n` +
+        `*Status:* ${order.status}\n` +
+        `*Amount:* $${order.totalAmount || 0}\n` +
+        `*Client:* ${order.clientName || 'N/A'}`;
+      
+      await sendTelegramNotification(admin._id, telegramMessage).catch(err => 
+        console.log(`⚠️ Failed to send Telegram notification to admin ${admin._id}:`, err.message)
+      );
+    }
+
+    return notifications;
+  } catch (error) {
+    console.error('❌ Error sending order notification:', error);
+    throw error;
+  }
+};
+
+/**
+ * Send client notification to assigned employee
+ */
+export const sendClientNotification = async (companyId, clientId, client, assigneeId) => {
+  try {
+    if (!assigneeId) {
+      console.log(`⚠️ No assignee for client notification`);
+      return;
+    }
+
+    const notification = await createNotification({
+      userId: assigneeId,
+      companyId,
+      type: 'client',
+      entityId: clientId,
+      title: `Client Assigned: ${client.name}`,
+      message: `You have been assigned a new client`,
+      priority: 'medium',
+      relatedEntity: clientId,
+      entityType: 'Client',
+      metadata: {
+        clientName: client.name,
+        clientEmail: client.email,
+        status: client.status,
+      },
+    });
+
+    // Send Telegram notification to assigned employee only
+    const telegramMessage = 
+      `👤 *New Client Assigned*\n\n` +
+      `*Client:* ${client.name}\n` +
+      `*Email:* ${client.email || 'N/A'}\n` +
+      `*Phone:* ${client.phone || 'N/A'}\n` +
+      `*Status:* ${client.status || 'Active'}`;
+    
+    await sendTelegramNotification(assigneeId, telegramMessage).catch(err => 
+      console.log(`⚠️ Failed to send Telegram notification to ${assigneeId}:`, err.message)
+    );
+
+    return notification;
+  } catch (error) {
+    console.error('❌ Error sending client notification:', error);
+    throw error;
+  }
+};
+
+/**
+ * Send message notification to specific user (for conversations)
+ */
+export const sendMessageNotification = async (companyId, recipientId, sender, message) => {
+  try {
+    const notification = await createNotification({
+      userId: recipientId,
+      companyId,
+      type: 'message',
+      entityId: message._id,
+      title: `New Message from ${sender.name}`,
+      message: message.text?.substring(0, 100) || 'New message received',
+      priority: 'medium',
+      relatedEntity: message.conversationId,
+      entityType: 'Message',
+      metadata: {
+        senderName: sender.name,
+        conversationId: message.conversationId,
+      },
+    });
+
+    // Send Telegram notification
+    const messagePreview = message.text?.substring(0, 80) || 'New message';
+    const telegramMessage = 
+      `💬 *New Message*\n\n` +
+      `*From:* ${sender.name}\n` +
+      `*Message:* ${messagePreview}${message.text?.length > 80 ? '...' : ''}`;
+    
+    await sendTelegramNotification(recipientId, telegramMessage).catch(err => 
+      console.log(`⚠️ Failed to send Telegram notification to ${recipientId}:`, err.message)
+    );
+
+    return notification;
+  } catch (error) {
+    console.error('❌ Error sending message notification:', error);
     throw error;
   }
 };

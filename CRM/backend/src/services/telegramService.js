@@ -161,6 +161,11 @@ const setupBotHandlers = () => {
     await handleUnlinkCommand(ctx);
   });
 
+  // Test notification command
+  bot.command('test', async (ctx) => {
+    await handleTestNotificationCommand(ctx);
+  });
+
   // Handle callback queries (button clicks)
   bot.callbackQuery('link_account', async (ctx) => {
     await ctx.answerCallbackQuery();
@@ -179,6 +184,16 @@ const setupBotHandlers = () => {
   bot.callbackQuery('help', async (ctx) => {
     await ctx.answerCallbackQuery();
     await sendHelpMessage(ctx);
+  });
+
+  bot.callbackQuery('show_menu', async (ctx) => {
+    await ctx.answerCallbackQuery();
+    await showRoleBasedMenu(ctx);
+  });
+
+  bot.callbackQuery('show_quick', async (ctx) => {
+    await ctx.answerCallbackQuery();
+    await showQuickActions(ctx);
   });
 
   // Handle all other callback queries for quick actions and menu items
@@ -228,7 +243,29 @@ const setupBotHandlers = () => {
         await ctx.reply(response, { parse_mode: 'Markdown' });
       } catch (error) {
         console.error('Error handling quick action:', error);
-        await ctx.reply(`❌ Failed to process your request.`);
+        
+        // Check if it's a rate limit error
+        if (error.message && error.message.includes('rate limit')) {
+          await ctx.reply(
+            `⏱️ *AI Rate Limit Reached*\n\n` +
+            `The AI assistant has reached its daily quota.\n\n` +
+            `*Alternative:* Use direct commands instead:\n` +
+            `• /tasks - View tasks\n` +
+            `• /clients - View clients\n` +
+            `• /orders - View orders\n` +
+            `• /menu - See all commands`,
+            { parse_mode: 'Markdown' }
+          );
+        } else {
+          await ctx.reply(
+            `❌ *Error Processing Request*\n\n` +
+            `Something went wrong. Please try:\n` +
+            `• Using /menu for direct commands\n` +
+            `• Checking your account status with /status\n` +
+            `• Contacting support if the issue persists`,
+            { parse_mode: 'Markdown' }
+          );
+        }
       }
     }
   });
@@ -547,17 +584,51 @@ const handleClientsCommand = async (ctx) => {
   try {
     await ctx.replyWithChatAction('typing');
 
-    const query = role === 'employee' 
-      ? `Show me my assigned clients`
-      : `Show me recent clients`;
+    // Try AI first
+    try {
+      const query = role === 'employee' 
+        ? `Show me my assigned clients`
+        : `Show me recent clients`;
 
-    const response = await geminiService.generateWithTools(
-      query,
-      companyId.toString(),
-      user._id.toString()
-    );
+      const response = await geminiService.generateWithTools(
+        query,
+        companyId.toString(),
+        user._id.toString()
+      );
 
-    await ctx.reply(response, { parse_mode: 'Markdown' });
+      await ctx.reply(response, { parse_mode: 'Markdown' });
+    } catch (aiError) {
+      // AI failed, use direct database query
+      if (aiError.message && aiError.message.includes('rate limit')) {
+        const Client = (await import('../models/Client.js')).Client;
+        
+        let query = { companyId };
+        if (role === 'employee') {
+          query.assignedTo = user._id;
+        }
+        
+        const clients = await Client.find(query)
+          .sort({ createdAt: -1 })
+          .limit(10)
+          .lean();
+
+        if (clients.length === 0) {
+          await ctx.reply('No clients found.');
+          return;
+        }
+
+        const clientList = clients.map(c => 
+          `• *${c.name}*\n  Email: ${c.email || 'N/A'}\n  Status: ${c.status || 'Active'}`
+        ).join('\n\n');
+
+        await ctx.reply(
+          `👥 *Clients* (${clients.length})\n\n${clientList}\n\n_AI unavailable - showing direct data_`,
+          { parse_mode: 'Markdown' }
+        );
+      } else {
+        throw aiError;
+      }
+    }
   } catch (error) {
     console.error('Error handling clients command:', error);
     await ctx.reply(`❌ Failed to fetch clients. Please try again.`);
@@ -579,17 +650,53 @@ const handleOrdersCommand = async (ctx) => {
   try {
     await ctx.replyWithChatAction('typing');
 
-    const query = role === 'client'
-      ? `Show me my orders`
-      : `Show me pending orders`;
+    // Try AI first
+    try {
+      const query = role === 'client'
+        ? `Show me my orders`
+        : `Show me pending orders`;
 
-    const response = await geminiService.generateWithTools(
-      query,
-      companyId.toString(),
-      user._id.toString()
-    );
+      const response = await geminiService.generateWithTools(
+        query,
+        companyId.toString(),
+        user._id.toString()
+      );
 
-    await ctx.reply(response, { parse_mode: 'Markdown' });
+      await ctx.reply(response, { parse_mode: 'Markdown' });
+    } catch (aiError) {
+      // AI failed, use direct database query
+      if (aiError.message && aiError.message.includes('rate limit')) {
+        const Order = (await import('../models/Order.js')).Order;
+        
+        let query = { companyId };
+        if (role === 'client') {
+          query.clientId = user._id;
+        } else {
+          query.status = { $in: ['pending', 'processing'] };
+        }
+        
+        const orders = await Order.find(query)
+          .sort({ createdAt: -1 })
+          .limit(10)
+          .lean();
+
+        if (orders.length === 0) {
+          await ctx.reply('No orders found.');
+          return;
+        }
+
+        const orderList = orders.map(o => 
+          `• *${o.orderNumber || o._id}*\n  Status: ${o.status}\n  Amount: $${o.totalAmount || 0}`
+        ).join('\n\n');
+
+        await ctx.reply(
+          `📦 *Orders* (${orders.length})\n\n${orderList}\n\n_AI unavailable - showing direct data_`,
+          { parse_mode: 'Markdown' }
+        );
+      } else {
+        throw aiError;
+      }
+    }
   } catch (error) {
     console.error('Error handling orders command:', error);
     await ctx.reply(`❌ Failed to fetch orders. Please try again.`);
@@ -609,20 +716,60 @@ const handlePipelineCommand = async (ctx) => {
   }
 
   if (role !== 'company_admin' && role !== 'manager') {
-    await ctx.reply(`❌ This command is only available for administrators and managers.`);
+    const keyboard = new InlineKeyboard()
+      .text('📋 My Menu', 'show_menu')
+      .text('❓ Help', 'help');
+    
+    await ctx.reply(
+      `🔒 *Access Restricted*\n\n` +
+      `The \`/pipeline\` command is available for administrators and managers only.\n\n` +
+      `*Your role:* ${role}\n` +
+      `*Available commands:* Send /menu to see what you can do!`,
+      { parse_mode: 'Markdown', reply_markup: keyboard }
+    );
     return;
   }
 
   try {
     await ctx.replyWithChatAction('typing');
 
-    const response = await geminiService.generateWithTools(
-      `Show me the sales pipeline status with statistics`,
-      companyId.toString(),
-      user._id.toString()
-    );
+    try {
+      const response = await geminiService.generateWithTools(
+        `Show me the sales pipeline status with statistics`,
+        companyId.toString(),
+        user._id.toString()
+      );
 
-    await ctx.reply(response, { parse_mode: 'Markdown' });
+      await ctx.reply(response, { parse_mode: 'Markdown' });
+    } catch (aiError) {
+      // AI failed, show basic pipeline info
+      if (aiError.message && aiError.message.includes('rate limit')) {
+        const Project = (await import('../models/Project.js')).Project;
+        
+        const projects = await Project.find({ companyId })
+          .select('title status priority')
+          .lean();
+
+        const statusCounts = projects.reduce((acc, p) => {
+          acc[p.status] = (acc[p.status] || 0) + 1;
+          return acc;
+        }, {});
+
+        const pipelineText = Object.entries(statusCounts)
+          .map(([status, count]) => `• *${status}:* ${count}`)
+          .join('\n');
+
+        await ctx.reply(
+          `🎯 *Sales Pipeline*\n\n` +
+          `Total Projects: ${projects.length}\n\n` +
+          `*By Status:*\n${pipelineText || 'No data'}\n\n` +
+          `_AI unavailable - showing basic stats_`,
+          { parse_mode: 'Markdown' }
+        );
+      } else {
+        throw aiError;
+      }
+    }
   } catch (error) {
     console.error('Error handling pipeline command:', error);
     await ctx.reply(`❌ Failed to fetch pipeline data. Please try again.`);
@@ -642,20 +789,58 @@ const handleStatsCommand = async (ctx) => {
   }
 
   if (role !== 'company_admin' && role !== 'manager') {
-    await ctx.reply(`❌ This command is only available for administrators and managers.`);
+    const keyboard = new InlineKeyboard()
+      .text('📋 My Menu', 'show_menu')
+      .text('❓ Help', 'help');
+    
+    await ctx.reply(
+      `🔒 *Access Restricted*\n\n` +
+      `The \`/stats\` command is available for administrators and managers only.\n\n` +
+      `*Your role:* ${role}\n` +
+      `*Available commands:* Send /menu to see what you can do!`,
+      { parse_mode: 'Markdown', reply_markup: keyboard }
+    );
     return;
   }
 
   try {
     await ctx.replyWithChatAction('typing');
 
-    const response = await geminiService.generateWithTools(
-      `Analyze company performance and show me key statistics for this month`,
-      companyId.toString(),
-      user._id.toString()
-    );
+    try {
+      const response = await geminiService.generateWithTools(
+        `Analyze company performance and show me key statistics for this month`,
+        companyId.toString(),
+        user._id.toString()
+      );
 
-    await ctx.reply(response, { parse_mode: 'Markdown' });
+      await ctx.reply(response, { parse_mode: 'Markdown' });
+    } catch (aiError) {
+      // AI failed, show basic stats
+      if (aiError.message && aiError.message.includes('rate limit')) {
+        const [Task, Order, Client] = await Promise.all([
+          import('../models/Task.js').then(m => m.Task),
+          import('../models/Order.js').then(m => m.Order),
+          import('../models/Client.js').then(m => m.Client),
+        ]);
+
+        const [taskCount, orderCount, clientCount] = await Promise.all([
+          Task.countDocuments({ companyId }),
+          Order.countDocuments({ companyId }),
+          Client.countDocuments({ companyId }),
+        ]);
+
+        await ctx.reply(
+          `📊 *Company Statistics*\n\n` +
+          `• *Total Tasks:* ${taskCount}\n` +
+          `• *Total Orders:* ${orderCount}\n` +
+          `• *Total Clients:* ${clientCount}\n\n` +
+          `_AI unavailable - showing basic stats_`,
+          { parse_mode: 'Markdown' }
+        );
+      } else {
+        throw aiError;
+      }
+    }
   } catch (error) {
     console.error('Error handling stats command:', error);
     await ctx.reply(`❌ Failed to fetch statistics. Please try again.`);
@@ -883,6 +1068,65 @@ const handleUnlinkCommand = async (ctx) => {
 };
 
 /**
+ * Handle test notification command
+ */
+const handleTestNotificationCommand = async (ctx) => {
+  const chatId = ctx.chat.id;
+
+  try {
+    const user = await User.findOne({ telegramChatId: chatId.toString() })
+      .populate('companies.companyId');
+    
+    if (!user) {
+      await ctx.reply(
+        `⚠️ Your account is not linked.\n\n` +
+        `Please use /start to link your account first.`
+      );
+      return;
+    }
+
+    const activeCompany = user.companies?.find(c => c.isActive);
+    const companyName = activeCompany?.companyId?.name || 'Your Company';
+
+    // Send comprehensive test notification
+    const testMessage = 
+      `🧪 *Test Notification*\n\n` +
+      `✅ Your Telegram integration is working perfectly!\n\n` +
+      `📊 *Connection Details:*\n` +
+      `• User: ${user.name}\n` +
+      `• Email: ${user.email}\n` +
+      `• Company: ${companyName}\n` +
+      `• Role: ${activeCompany?.role || 'N/A'}\n` +
+      `• Linked: ${user.telegramLinkedAt ? new Date(user.telegramLinkedAt).toLocaleString() : 'Recently'}\n\n` +
+      `🔔 *Notification Types You'll Receive:*\n` +
+      `• Task assignments\n` +
+      `• Order updates\n` +
+      `• Client messages\n` +
+      `• Project changes\n` +
+      `• Important alerts\n\n` +
+      `💡 *Tip:* Use /menu to see all available commands!`;
+
+    await ctx.reply(testMessage, { parse_mode: 'Markdown' });
+
+    // Send a follow-up with quick actions
+    const keyboard = new InlineKeyboard()
+      .text('📋 My Menu', 'show_menu')
+      .text('❓ Help', 'help')
+      .row()
+      .text('⚡ Quick Actions', 'show_quick');
+
+    await ctx.reply(
+      `Ready to get started? Choose an option:`,
+      { reply_markup: keyboard }
+    );
+
+  } catch (error) {
+    console.error('Error handling test notification:', error);
+    await ctx.reply(`❌ Failed to send test notification. Please try again.`);
+  }
+};
+
+/**
  * Send help message
  */
 const sendHelpMessage = async (ctx) => {
@@ -893,6 +1137,7 @@ const sendHelpMessage = async (ctx) => {
     `/start - Link your account\n` +
     `/menu - Show role-based menu\n` +
     `/status - View account status\n` +
+    `/test - Test notification system\n` +
     `/help - Show this help\n` +
     `/unlink - Unlink your account\n\n`;
 
@@ -1024,7 +1269,28 @@ const handleAIQuery = async (ctx, query) => {
 
   } catch (error) {
     console.error('Error handling AI query:', error);
-    await ctx.reply(`❌ Failed to process your request. Please try again.`);
+    // Check if it's a rate limit error
+    if (error.message && error.message.includes('rate limit')) {
+      await ctx.reply(
+        `⏱️ *AI Service Temporarily Unavailable*\n\n` +
+        `The AI assistant has reached its daily quota (20 requests/day for free tier).\n\n` +
+        `*You can still use direct commands:*\n` +
+        `• /tasks - View your tasks\n` +
+        `• /clients - View clients\n` +
+        `• /orders - View orders\n` +
+        `• /projects - View projects\n` +
+        `• /menu - See all available commands\n\n` +
+        `The AI will be available again tomorrow!`,
+        { parse_mode: 'Markdown' }
+      );
+    } else {
+      await ctx.reply(
+        `❌ *Error*\n\n` +
+        `Failed to process your message.\n\n` +
+        `Try using /menu for direct commands instead.`,
+        { parse_mode: 'Markdown' }
+      );
+    }
   }
 };
 
